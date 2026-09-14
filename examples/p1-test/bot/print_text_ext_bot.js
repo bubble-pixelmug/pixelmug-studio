@@ -1,5 +1,5 @@
-﻿import { BubbleBot, isNeedBindDeviceError } from "../../../../../mps/jeejio-bubble/sdk/BubbleSDK.js";
-import PixelMug, { Specifications } from "../../../../../mps/jeejio-bubble/devices/ext/PixelMug_1.1.ext.js";
+﻿import { BubbleBot, isNeedBindDeviceError } from "@jeejio-bubble/bot/sdk/BubbleSDK.js";
+import PixelMug, { Specifications } from "@jeejio-bubble/bot/devices/ext/PixelMug_1.1.ext.js";
 
 import { apiBaseUrl, token } from "./config.dev.js";
 

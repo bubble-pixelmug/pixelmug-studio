@@ -1,3 +1,4 @@
+import { browserSdkFiles } from "./sdk-assets.mjs";
 import { LaunchManager } from "./launch.mjs";
 import { createServer } from "node:http";
 import { randomUUID, randomBytes, timingSafeEqual } from "node:crypto";
@@ -7,8 +8,8 @@ import { fileURLToPath } from "node:url";
 import { fork } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 
-const sdkRoot = fileURLToPath(new URL("../../../mps/jeejio-bubble/sdk/", import.meta.url));
-const browserSDK = new Set(["WebApp.js", "BleManager.js", "constants.js", "errors.js", "utils.js"]);
+const sdkRoot = fileURLToPath(new URL("./", import.meta.resolve("@jeejio-bubble/bot/sdk/WebApp.js")));
+const browserSDK = browserSdkFiles;
 const runtimeRoot = fileURLToPath(new URL("./runtime/", import.meta.url));
 const browserRuntime = new Set(["StudioDebug.js", "StudioDebugWeb.js", "StudioLaunch.js", "WebAppAdapter.js"]);
 const MAX_BODY = 256 * 1024;

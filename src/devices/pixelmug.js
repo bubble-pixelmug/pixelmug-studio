@@ -1,4 +1,4 @@
-import PixelMugS1 from "../../../../mps/jeejio-bubble/devices/PixelMugS1_1.0.js";
+import PixelMugS1 from "@jeejio-bubble/bot/devices/PixelMugS1_1.0.js";
 import { studioDeviceRef } from "../runtime/StudioLaunch.js";
 
 export function createMpsHooks(chat, to, bound, slot, studioOptions = {}) {

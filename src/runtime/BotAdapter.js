@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { NeedBindDeviceError } from "../../../../mps/jeejio-bubble/sdk/errors.js";
+import { NeedBindDeviceError } from "@jeejio-bubble/bot/sdk/errors.js";
 import { StudioBindings } from "./StudioBindings.js";
 import { studioLaunchEnabled, studioLaunchMps, studioDeviceRef, studioPrepareMps } from "./StudioLaunch.js";
 import { createMpsHooks } from "../devices/pixelmug.js";

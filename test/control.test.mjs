@@ -32,7 +32,7 @@ async function setup(t,botSource) {
   return studio;
 }
 test("WebApp launch and PC rerun execute all auxiliary RPCs in bot after the page disconnects", {timeout:15000}, async t=>{
-  const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
+  const sdk=import.meta.resolve("@jeejio-bubble/bot/sdk/BubbleBot.js");
   const launchSDK=new URL("../src/runtime/StudioLaunch.js",import.meta.url).href;
   const source=`import { createMpsHooks } from ${JSON.stringify(new URL("../src/devices/pixelmug.js",import.meta.url).href)};
 import { BubbleBot } from ${JSON.stringify(sdk)};
@@ -81,7 +81,7 @@ process.send({type:"test:ready"});
 });
 
 test("Node preload drives a bot launch through real parent/child IPC without forwarding the launch RPC to cloud", {timeout:15000}, async t=>{
-  const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
+  const sdk=import.meta.resolve("@jeejio-bubble/bot/sdk/BubbleBot.js");
   const source=`import { BubbleBot } from ${JSON.stringify(sdk)};
 const timer=setTimeout(()=>{throw new Error("IPC test timed out");},10000);
 let bootRequest;
@@ -108,7 +108,7 @@ console.log("IPC_LAUNCH_ACCEPTED",response.tal.result);
 
 
 test("PC runs a discovered binding through bot without any talMpyExecOneScript call", {timeout:20000}, async t=>{
-  const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
+  const sdk=import.meta.resolve("@jeejio-bubble/bot/sdk/BubbleBot.js");
   const source=`import { bindingsFor } from ${JSON.stringify(new URL("../src/runtime/BotAdapter.js",import.meta.url).href)};
 import { BubbleBot } from ${JSON.stringify(sdk)};
 setInterval(()=>{},1000);
@@ -140,7 +140,7 @@ await bindingsFor(bot).observe({event:"message",chat:{id:"chat",type:"private"},
 
 
 test("agent restart enters Python Dev and waits for an explicit launch without a second reboot", {timeout:20000}, async t => {
-  const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
+  const sdk=import.meta.resolve("@jeejio-bubble/bot/sdk/BubbleBot.js");
   const adapter=new URL("../src/runtime/BotAdapter.js",import.meta.url).href;
   const source=`import {BubbleBot} from ${JSON.stringify(sdk)};
 import {bindingsFor} from ${JSON.stringify(adapter)};

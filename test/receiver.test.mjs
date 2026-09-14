@@ -118,3 +118,30 @@ test("stopping Studio closes the active bot and its output streams", { timeout: 
   await s.close();
   assert.ok(s.child.exitCode !== null || s.child.signalCode !== null);
 });
+test("npm browser SDK serves its complete import graph without exposing Node modules", async t => {
+  const { init, parse } = await import("es-module-lexer/minimal");
+  await init();
+  const s = await fixture(t);
+  const visited = new Set();
+  async function visit(path) {
+    if (visited.has(path)) return;
+    visited.add(path);
+    assert.ok(path.startsWith("/sdk/"), path);
+    const response = await fetch(s.baseUrl + path);
+    assert.equal(response.status, 200, path);
+    assert.match(response.headers.get("content-type"), /javascript/);
+    const [imports] = parse(await response.text());
+    for (const entry of imports) {
+      if (entry.d === -2) continue;
+      assert.ok(entry.n?.startsWith("."), entry.n);
+      await visit(new URL(entry.n, s.baseUrl + path).pathname);
+    }
+  }
+  for (const entry of ["WebApp.js", "BleAppClient.js", "BleAppSession.js", "errors.js"]) {
+    await visit("/sdk/" + entry);
+  }
+  assert.ok([...visited].some(path => path.includes("/chunks/")));
+  for (const entry of ["BubbleBot.js", "InputFile.js", "index.js", "package.json", "chunks/unknown.js"]) {
+    assert.equal((await fetch(s.baseUrl + "/sdk/" + entry)).status, 404, entry);
+  }
+});

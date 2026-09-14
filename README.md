@@ -1,12 +1,11 @@
-﻿# PixelMug Studio
+# PixelMug Studio
 
 PixelMug Studio 是冒泡智能体应用的本地开发、运行和调试工具。一个应用必须包含 Bot，可以按需包含 WebApp 和 MPY 设备代码。
 
 ## 环境要求
 
 - Node.js 20.6 或更高版本
-- 当前源码目录位于 PixelMug 仓库的 `tools/studio/`
-- 同级 PixelMug 仓库中包含 `mps/jeejio-bubble/`
+- Bubble SDK 通过 npm 依赖 @jeejio-bubble/bot 安装，无需本地 SDK 源码目录
 - 设备端 MPY 调试需要支持 `talMpyRebootStartREPL` 和 `talMpyGetStudioState` 的固件
 
 ## 安装与启动

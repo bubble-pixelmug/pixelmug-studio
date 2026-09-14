@@ -2,8 +2,8 @@ import { installBotAdapter, bindingsFor } from "../src/runtime/BotAdapter.js";
 installBotAdapter(BubbleBot);
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BubbleBot } from "../../../mps/jeejio-bubble/sdk/BubbleBot.js";
-import { BubbleContext } from "../../../mps/jeejio-bubble/sdk/Context.js";
+import { BubbleBot } from "@jeejio-bubble/bot/sdk/BubbleBot.js";
+import { BubbleContext } from "@jeejio-bubble/bot/sdk/Context.js";
 import { installStudioLaunch } from "../src/runtime/StudioLaunch.js";
 
 const slot={id:"slot-1",slot:1,device:{id:"mug-1",online:1,name:"Test mug"}};

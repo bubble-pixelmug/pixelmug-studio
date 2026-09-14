@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { BubbleBot } from "../../../mps/jeejio-bubble/sdk/BubbleBot.js";
-import { BubbleWebApp } from "../../../mps/jeejio-bubble/sdk/WebApp.js";
+import { BubbleBot } from "@jeejio-bubble/bot/sdk/BubbleBot.js";
+import { BubbleWebApp } from "@jeejio-bubble/bot/sdk/WebApp.js";
 import { installStudioLaunch } from "../src/runtime/StudioLaunch.js";
 
-const sdk = new URL("../../../mps/jeejio-bubble/sdk/", import.meta.url);
+const sdk = new URL("./", import.meta.resolve("@jeejio-bubble/bot/sdk/WebApp.js"));
 test("generic SDK has no Studio modules, device imports or debug transport dependencies", async () => {
   for (const name of await readdir(sdk)) {
     assert.ok(!/studio/i.test(name), name);

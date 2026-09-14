@@ -1,2 +1,2 @@
-export { BubbleWebApp } from "../../../../mps/jeejio-bubble/sdk/WebApp.js";
-export { DeviceRpcError } from "../../../../mps/jeejio-bubble/sdk/errors.js";
+export { BubbleWebApp } from "@jeejio-bubble/bot/sdk/WebApp.js";
+export { DeviceRpcError } from "@jeejio-bubble/bot/sdk/errors.js";

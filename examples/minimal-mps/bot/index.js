@@ -1,5 +1,5 @@
-import { BubbleBot, InlineKeyboard } from "../../../../../mps/jeejio-bubble/sdk/BubbleSDK.js";
-import PixelMugS1 from "../../../../../mps/jeejio-bubble/devices/ext/PixelMugS1_1.0.ext.js";
+import { BubbleBot, InlineKeyboard } from "@jeejio-bubble/bot/sdk/BubbleSDK.js";
+import PixelMugS1 from "@jeejio-bubble/bot/devices/ext/PixelMugS1_1.0.ext.js";
 if (!process.env.BOT_TOKEN) throw new Error("请设置 BOT_TOKEN");
 const bot = new BubbleBot(process.env.BOT_TOKEN, {
   ...(process.env.BOT_API_BASE_URL ? { apiBaseUrl: process.env.BOT_API_BASE_URL } : {}),

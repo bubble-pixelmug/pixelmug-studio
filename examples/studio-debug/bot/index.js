@@ -1,4 +1,4 @@
-import { BubbleBot, InlineKeyboard } from "../../../../../mps/jeejio-bubble/sdk/BubbleSDK.js";
+import { BubbleBot, InlineKeyboard } from "@jeejio-bubble/bot/sdk/BubbleSDK.js";
 
 const token = process.env.BOT_TOKEN;
 if (!token) throw new Error("请设置 BOT_TOKEN。无需 token 的日志测试请使用 smoke-bot.js。");
