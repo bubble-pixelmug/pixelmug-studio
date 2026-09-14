@@ -63,18 +63,18 @@ npm start         # 启动 Studio
 ## 目录说明
 
 ```text
-assets/       Studio 图片资源
-bindings.mjs  应用设备绑定状态
-creator.mjs   CreatorHub 登录和设备查询
-runtime/      Bot、WebApp 日志及 Studio 运行适配
-launch.mjs    MPY 启动、重启、部署和停止流程
-receiver.mjs  单轮日志与 WebApp 接收服务
-gateway.mjs   固定 WebApp 局域网入口
-workbench.mjs Studio 管理 API 和页面服务
-ui/           Vue 前端源码
-ui-dist/      可直接运行的前端构建产物
-test/         自动化测试
-examples/     示例应用
+src/               Studio Node 后端源码
+src/runtime/       Bot、WebApp 日志及运行适配
+src/devices/       PixelMug 设备 SDK 适配
+src/launch.mjs     MPY 启动、重启、部署和停止流程
+src/receiver.mjs   单轮日志与 WebApp 接收服务
+src/gateway.mjs    固定 WebApp 局域网入口
+src/workbench.mjs  Studio 管理 API 和页面服务
+ui/                Vue 前端源码
+ui/assets/         前端图片资源
+ui-dist/           可直接运行的前端构建产物
+test/              自动化测试
+examples/          示例应用
 ```
 
 ## 示例

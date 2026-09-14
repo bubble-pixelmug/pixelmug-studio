@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { BubbleBot } from "../../../mps/jeejio-bubble/sdk/BubbleBot.js";
 import { BubbleWebApp } from "../../../mps/jeejio-bubble/sdk/WebApp.js";
-import { installStudioLaunch } from "../runtime/StudioLaunch.js";
+import { installStudioLaunch } from "../src/runtime/StudioLaunch.js";
 
 const sdk = new URL("../../../mps/jeejio-bubble/sdk/", import.meta.url);
 test("generic SDK has no Studio modules, device imports or debug transport dependencies", async () => {

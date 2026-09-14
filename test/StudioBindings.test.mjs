@@ -1,10 +1,10 @@
-import { installBotAdapter, bindingsFor } from "../runtime/BotAdapter.js";
+import { installBotAdapter, bindingsFor } from "../src/runtime/BotAdapter.js";
 installBotAdapter(BubbleBot);
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BubbleBot } from "../../../mps/jeejio-bubble/sdk/BubbleBot.js";
 import { BubbleContext } from "../../../mps/jeejio-bubble/sdk/Context.js";
-import { installStudioLaunch } from "../runtime/StudioLaunch.js";
+import { installStudioLaunch } from "../src/runtime/StudioLaunch.js";
 
 const slot={id:"slot-1",slot:1,device:{id:"mug-1",online:1,name:"Test mug"}};
 const context=bot=>new BubbleContext(bot,{event:"message",events:["message:text"],chat:{id:"chat-1",type:"private"},from:{id:"user-1"}});

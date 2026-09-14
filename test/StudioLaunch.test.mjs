@@ -1,13 +1,13 @@
-import { installWebAppAdapter } from "../runtime/WebAppAdapter.js";
+import { installWebAppAdapter } from "../src/runtime/WebAppAdapter.js";
 installWebAppAdapter(BubbleWebApp);
-import { installBotAdapter } from "../runtime/BotAdapter.js";
-import { createMpsHooks } from "../devices/pixelmug.js";
+import { installBotAdapter } from "../src/runtime/BotAdapter.js";
+import { createMpsHooks } from "../src/devices/pixelmug.js";
 installBotAdapter(BubbleBot);
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BubbleWebApp } from "../../../mps/jeejio-bubble/sdk/WebApp.js";
 import { BubbleBot } from "../../../mps/jeejio-bubble/sdk/BubbleBot.js";
-import { installStudioLaunch } from "../runtime/StudioLaunch.js";
+import { installStudioLaunch } from "../src/runtime/StudioLaunch.js";
 const device = { deviceId: "mug-1", slotId: "slot-1", slot: 1 };
 const rpc = { method: "talMpyExecOneScript", params: { id: "", version: "" } };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

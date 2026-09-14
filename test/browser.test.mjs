@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import WebSocket from "ws";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-import { startStudio } from "../receiver.mjs";
+import { startStudio } from "../src/receiver.mjs";
 
 test("real browser loads demo, captures button logs/global errors and removes token from page URL", {
   skip: !process.env.STUDIO_TEST_BROWSER, timeout: 30000,

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
-import { WebRepl } from "../webrepl.mjs";
+import { WebRepl } from "../src/webrepl.mjs";
 
 // Protocol fixture only, not a product device simulator.
 test("WebREPL authenticates, parses fragmented raw responses, uploads binary/empty files and streams execution", async () => {

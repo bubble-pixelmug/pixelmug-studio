@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {mkdtemp,rm,readFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {LaunchManager} from "../launch.mjs";
+import {LaunchManager} from "../src/launch.mjs";
 const scope={botKey:"a".repeat(64),contactId:"chat-1",chat:{id:"chat-1",type:"private"},to:{id:"user-1"}};
 const device={deviceId:"mug-1",slotId:"slot-1",slot:1,online:true};
 const msg=(op,extra={})=>({op,clientId:"bot-1",runId:"r",...extra});

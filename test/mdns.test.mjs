@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createSocket } from "node:dgram";
 import { once } from "node:events";
-import { parseQuestions, createAddressResponse, startMdnsResponder } from "../mdns.mjs";
+import { parseQuestions, createAddressResponse, startMdnsResponder } from "../src/mdns.mjs";
 
 function query(name, unicast = false) {
   const labels = name.split(".").flatMap(label => {

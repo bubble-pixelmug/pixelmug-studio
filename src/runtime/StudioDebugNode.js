@@ -1,4 +1,4 @@
-import { BubbleBot } from "../../../mps/jeejio-bubble/sdk/BubbleBot.js";
+import { BubbleBot } from "../../../../mps/jeejio-bubble/sdk/BubbleBot.js";
 import { installBotAdapter } from "./BotAdapter.js";
 import { installNodeLaunch } from "./StudioLaunchNode.js";
 import { createStudioDebug } from "./StudioDebug.js";

@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.mjs",
+    "start": "node src/server.mjs",
     "dev": "vite --config vite.config.js",
     "build": "vite build --config vite.config.js",
     "pretest": "npm run build",
     "test": "node --test test/*.test.mjs",
-    "example:mps": "node server.mjs --project examples/minimal-mps --bot bot/index.js",
-    "example:studio": "node server.mjs --project examples/studio-debug --bot bot/smoke-bot.js",
-    "example:studio:bot": "node server.mjs --project examples/studio-debug --bot bot/index.js"
+    "example:mps": "node src/server.mjs --project examples/minimal-mps --bot bot/index.js",
+    "example:studio": "node src/server.mjs --project examples/studio-debug --bot bot/smoke-bot.js",
+    "example:studio:bot": "node src/server.mjs --project examples/studio-debug --bot bot/index.js"
   },
   "engines": {
     "node": ">=20.6"

@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import WebSocket from 'ws';
-import { CreatorClient } from '../creator.mjs';
-import { startWorkbench } from '../workbench.mjs';
+import { CreatorClient } from '../src/creator.mjs';
+import { startWorkbench } from '../src/workbench.mjs';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function upstream() {
   const calls = [], state = { devices: [{ id: 'cup-one', name: '测试杯', sn: 'S001', online: 'ONLINE' }], expired: false };

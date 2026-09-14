@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { fork } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 
-const sdkRoot = fileURLToPath(new URL("../../mps/jeejio-bubble/sdk/", import.meta.url));
+const sdkRoot = fileURLToPath(new URL("../../../mps/jeejio-bubble/sdk/", import.meta.url));
 const browserSDK = new Set(["WebApp.js", "BleManager.js", "constants.js", "errors.js", "utils.js"]);
 const runtimeRoot = fileURLToPath(new URL("./runtime/", import.meta.url));
 const browserRuntime = new Set(["StudioDebug.js", "StudioDebugWeb.js", "StudioLaunch.js", "WebAppAdapter.js"]);

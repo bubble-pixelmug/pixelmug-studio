@@ -4,8 +4,8 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
-import { startStudio } from "../receiver.mjs";
-import { createStudioDebug } from "../runtime/StudioDebug.js";
+import { startStudio } from "../src/receiver.mjs";
+import { createStudioDebug } from "../src/runtime/StudioDebug.js";
 
 async function fixture(t, extra = {}) {
   const project = await mkdtemp(join(tmpdir(), "pixelmug-studio-test-"));
@@ -68,7 +68,7 @@ test("static routes expose only dedicated web content and browser SDK modules, w
   for (const name of ["StudioDebugWeb.js", "StudioDebug.js", "StudioLaunch.js", "WebAppAdapter.js", "sdk-web.js"]) {
     assert.equal((await fetch(s.baseUrl + "/studio-runtime/" + name)).status, 200, name);
   }
-  for (const name of ["StudioDebugNode.js", "BotAdapter.js", "studio-preload.js", "../devices/pixelmug.js"]) {
+  for (const name of ["StudioDebugNode.js", "BotAdapter.js", "studio-preload.js", "../src/devices/pixelmug.js"]) {
     assert.ok((await fetch(s.baseUrl + "/studio-runtime/" + name)).status >= 400, name);
   }
   const script = await (await fetch(s.baseUrl + "/studio-debug-config.js")).text();

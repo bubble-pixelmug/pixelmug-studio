@@ -61,7 +61,7 @@ class HelpersTest(unittest.TestCase):
             try:
                 sys.modules["os"] = fake
                 sys.print_exception = lambda error: traceback.print_exception(error, file=sys.stdout)
-                exec(compile((STUDIO / "device-bootstrap.py").read_text(encoding="utf-8"), "device-bootstrap.py", "exec"), namespace)
+                exec(compile((STUDIO / "src" / "device-bootstrap.py").read_text(encoding="utf-8"), "device-bootstrap.py", "exec"), namespace)
                 with contextlib.redirect_stdout(output):
                     namespace["run"]("test-launch", "test-nonce")
             finally:

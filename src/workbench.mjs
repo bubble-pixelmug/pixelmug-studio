@@ -120,12 +120,12 @@ export async function startWorkbench(options = {}) {
         } finally { busy = false; }
       }
       if (req.method !== 'GET') return reply(res, 405, { error: 'Method not allowed' });
-      if (url.pathname === '/') return reply(res, 200, await readFile(new URL('./ui-dist/index.html', import.meta.url)), 'text/html; charset=utf-8');
+      if (url.pathname === '/') return reply(res, 200, await readFile(new URL('../ui-dist/index.html', import.meta.url)), 'text/html; charset=utf-8');
       if (!/^\/assets\/[A-Za-z0-9._-]+$/.test(url.pathname)) return reply(res, 404, { error: 'Not found' });
       const type = url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
         : url.pathname.endsWith('.css') ? 'text/css; charset=utf-8'
         : url.pathname.endsWith('.png') ? 'image/png' : 'application/octet-stream';
-      return reply(res, 200, await readFile(new URL('./ui-dist' + url.pathname, import.meta.url)), type);
+      return reply(res, 200, await readFile(new URL('../ui-dist' + url.pathname, import.meta.url)), type);
     } catch (error) {
       const message = String(error.message || '操作失败');
       const safe = creator.session?.token ? message.replaceAll(creator.session.token, '[REDACTED]') : message;

@@ -1,12 +1,12 @@
-﻿<script setup>
+<script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import StageNavigation from './components/StageNavigation.vue';
 import DevicePanel from './components/DevicePanel.vue';
 import LogWorkspace from './components/LogWorkspace.vue';
-import deviceIcon from '../assets/device-icon.png';
+import deviceIcon from './assets/device-icon.png';
 import { deviceIconFor } from './deviceIcon.js';
-import bubbleIcon from '../assets/bubble-transparent.png';
-import indexBackground from '../assets/index-bg.png';
+import bubbleIcon from './assets/bubble-transparent.png';
+import indexBackground from './assets/index-bg.png';
 
 const params = new URLSearchParams(location.hash.slice(1));
 const credential = params.get('studioToken') || sessionStorage.getItem('studio-workbench-token');

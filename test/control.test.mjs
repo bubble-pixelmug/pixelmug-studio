@@ -4,8 +4,8 @@ import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { EventEmitter, once } from "node:events";
-import { startStudio } from "../receiver.mjs";
-import { installStudioLaunch, studioLaunchMps, httpStudioControl } from "../runtime/StudioLaunch.js";
+import { startStudio } from "../src/receiver.mjs";
+import { installStudioLaunch, studioLaunchMps, httpStudioControl } from "../src/runtime/StudioLaunch.js";
 const device = { deviceId:"mug-test",slotId:"slot-test",slot:1 };
 class DeviceProtocolFixture extends EventEmitter {
   async connect() { return this; }
@@ -33,8 +33,8 @@ async function setup(t,botSource) {
 }
 test("WebApp launch and PC rerun execute all auxiliary RPCs in bot after the page disconnects", {timeout:15000}, async t=>{
   const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
-  const launchSDK=new URL("../runtime/StudioLaunch.js",import.meta.url).href;
-  const source=`import { createMpsHooks } from ${JSON.stringify(new URL("../devices/pixelmug.js",import.meta.url).href)};
+  const launchSDK=new URL("../src/runtime/StudioLaunch.js",import.meta.url).href;
+  const source=`import { createMpsHooks } from ${JSON.stringify(new URL("../src/devices/pixelmug.js",import.meta.url).href)};
 import { BubbleBot } from ${JSON.stringify(sdk)};
 import { studioPrepareMps } from ${JSON.stringify(launchSDK)};
 const keepAlive=setInterval(()=>{},1000);
@@ -109,7 +109,7 @@ console.log("IPC_LAUNCH_ACCEPTED",response.tal.result);
 
 test("PC runs a discovered binding through bot without any talMpyExecOneScript call", {timeout:20000}, async t=>{
   const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
-  const source=`import { bindingsFor } from ${JSON.stringify(new URL("../runtime/BotAdapter.js",import.meta.url).href)};
+  const source=`import { bindingsFor } from ${JSON.stringify(new URL("../src/runtime/BotAdapter.js",import.meta.url).href)};
 import { BubbleBot } from ${JSON.stringify(sdk)};
 setInterval(()=>{},1000);
 let bootRequest;
@@ -141,7 +141,7 @@ await bindingsFor(bot).observe({event:"message",chat:{id:"chat",type:"private"},
 
 test("agent restart enters Python Dev and waits for an explicit launch without a second reboot", {timeout:20000}, async t => {
   const sdk=new URL("../../../mps/jeejio-bubble/sdk/BubbleBot.js",import.meta.url).href;
-  const adapter=new URL("../runtime/BotAdapter.js",import.meta.url).href;
+  const adapter=new URL("../src/runtime/BotAdapter.js",import.meta.url).href;
   const source=`import {BubbleBot} from ${JSON.stringify(sdk)};
 import {bindingsFor} from ${JSON.stringify(adapter)};
 import {readFileSync,writeFileSync,appendFileSync} from "node:fs";

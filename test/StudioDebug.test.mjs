@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createStudioDebug, serializeStudioValue } from "../runtime/StudioDebug.js";
+import { createStudioDebug, serializeStudioValue } from "../src/runtime/StudioDebug.js";
 
 function runtime() {
   const printed = [];
@@ -71,7 +71,7 @@ test("oversized records stay within receiver byte limit", async () => {
 });
 
 test("WebApp global errors are collected without cancelling default events; dispose removes listeners", async () => {
-  const { enableStudioDebug } = await import("../runtime/StudioDebugWeb.js");
+  const { enableStudioDebug } = await import("../src/runtime/StudioDebugWeb.js");
   const target = new EventTarget();
   const oldAdd = globalThis.addEventListener, oldRemove = globalThis.removeEventListener;
   globalThis.addEventListener = target.addEventListener.bind(target);

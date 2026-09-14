@@ -1,7 +1,7 @@
-﻿import s1ProIcon from '../assets/s1pro.png';
-import s1LiteIcon from '../assets/s1lite.png';
-import p1Icon from '../assets/p1.png';
-import fallbackIcon from '../assets/device-icon.png';
+import s1ProIcon from './assets/s1pro.png';
+import s1LiteIcon from './assets/s1lite.png';
+import p1Icon from './assets/p1.png';
+import fallbackIcon from './assets/device-icon.png';
 
 export function deviceIconFor(device={}) {
   const modelCode=String(device.sn||'').toUpperCase().slice(4,8);
