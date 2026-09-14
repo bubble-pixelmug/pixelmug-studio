@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio 日志测试</title>
+<style>
+body{font:16px system-ui;margin:24px;color:#223047;background:#f3f6f9}
+button{display:block;width:100%;padding:13px;margin:10px 0;border:0;border-radius:8px;background:#146c94;color:white;font:inherit}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:15px;border-radius:8px}
+</style>
+<h2>PixelMug · 日志测试</h2>
+<p>此页面是 MPS WebApp；在电脑的 Studio 窗口观察日志。</p>
+<p id="connection"></p>
+<button id="log">console.log：对象、循环引用、BigInt</button>
+<button id="warn">console.warn / error：带错误堆栈</button>
+<button id="throw">触发未捕获异常</button>
+<button id="reject">触发未处理 Promise rejection</button>
+<button id="echo">通过冒泡 App 请求 bot</button>
+<button id="fail">通过冒泡 App 触发 bot 处理错误</button>
+<pre id="result">等待操作…</pre>
+<!-- Development-only configuration. Production omits this script. -->
+<script src="/studio-debug-config.js"></script>
+<script type="module">
+import { enableStudioDebugFromPage } from "/studio-runtime/StudioDebugWeb.js";
+const debug = enableStudioDebugFromPage();
+document.querySelector("#connection").textContent = debug.enabled ? "Studio 日志采集已开启" : "未开启采集，请使用本轮运行生成的完整 WebApp 地址";
+try { await import("./main.js"); }
+catch (error) { console.error("WebApp 启动失败", error); throw error; }
+</script></html>

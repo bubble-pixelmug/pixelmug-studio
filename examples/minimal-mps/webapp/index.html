@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio 真机 MPS 测试</title>
+<style>body{font:16px system-ui;padding:18px;background:#eef3f7;color:#203143}button,select{font:inherit;padding:12px;margin:8px 0;width:100%}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:12px}</style>
+<h2>Studio 真机 MPS 测试</h2><p>将当前项目上传到 PixelMug，屏幕显示 STUDIO 和移动方块，并持续输出心跳。</p>
+<p>每次新的调试运行会重启设备并清除旧应用文件和数据，保留 WebREPL 启动配置。</p>
+<button id="refresh">刷新绑定设备</button><select id="devices"></select><button id="launch" disabled>启动当前本地 MPS</button>
+<pre id="status">请在冒泡 App 中打开本页。</pre>
+<script src="/studio-debug-config.js"></script>
+<script type="module">
+import { enableStudioDebugFromPage } from "/studio-runtime/StudioDebugWeb.js";
+enableStudioDebugFromPage();
+await import("./main.js");
+</script></html>
+

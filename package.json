@@ -1,0 +1,26 @@
+{
+  "name": "pixelmug-studio-local",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "vite --config vite.config.js",
+    "build": "vite build --config vite.config.js",
+    "pretest": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "example:mps": "node server.mjs --project examples/minimal-mps --bot bot/index.js",
+    "example:studio": "node server.mjs --project examples/studio-debug --bot bot/smoke-bot.js",
+    "example:studio:bot": "node server.mjs --project examples/studio-debug --bot bot/index.js"
+  },
+  "engines": {
+    "node": ">=20.6"
+  },
+  "dependencies": {
+    "vue": "^3.5.42",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "vite": "^6.4.3"
+  }
+}

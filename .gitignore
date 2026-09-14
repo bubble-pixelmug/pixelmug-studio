@@ -1,0 +1,10 @@
+debug/
+
+node_modules/
+examples/**/debug/
+examples/**/devices.local.json
+
+__pycache__/
+*.pyc
+.env
+.env.*

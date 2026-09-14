@@ -1,0 +1,10 @@
+{
+  "name": "studio-minimal-mps",
+  "version": "1.0.0",
+  "description": "Minimal PixelMug Studio hardware test.",
+  "author": "PixelMug",
+  "category": "Tool",
+  "dependencies": [
+    { "name": "micropyxel", "version": ">=1.0.0" }
+  ]
+}

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>PixelMug Studio · 日志</title>
+<style>
+body{font:15px system-ui;margin:28px;background:#111820;color:#e0e9f2}header{display:flex;gap:20px;align-items:center}
+button,select{padding:8px;background:#233243;color:inherit;border:1px solid #526579;border-radius:5px}
+#status{color:#8bbbc4}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:9px;border-bottom:1px solid #293643;font:13px monospace}
+.error{color:#ff9999}.warn{color:#ffd791}.meta{color:#8fabbf}#logs{margin-top:20px}
+</style>
+<header><h2>PixelMug Studio</h2><select id="source"><option value="">全部来源</option><option>bot</option><option>webapp</option><option>mpy</option></select>
+<select id="level"><option value="">全部级别</option><option>log</option><option>info</option><option>warn</option><option>error</option><option>debug</option></select>
+<button id="clear">清空当前视图</button></header>
+<p id="status">正在连接…</p><p class="meta" id="files"></p>
+<p class="meta">这里只显示最近 1000 条记录。完整日志在项目 debug/ 目录；bot 崩溃详情另见 bot.stderr.log。</p>
+<div id="launches"></div><p id="control-status"></p><div id="logs"></div>
+<script src="/studio-debug-config.js"></script>
+<script type="module">
+const config = globalThis.__PIXELMUG_STUDIO_DEBUG__;
+const status = document.querySelector("#status"), logs = document.querySelector("#logs");
+let after = 0, items = [];
+function renderLaunches(data) {
+  const target = document.querySelector("#launches");
+  const jobs = [...(data.launches || [])].reverse(), bindings = data.bindings || [];
+  const rows = bindings.map(binding => ({binding, job:jobs.find(j=>j.device.deviceId===binding.device.deviceId)}));
+  for (const job of jobs) if (!bindings.some(b=>b.device.deviceId===job.device.deviceId)) rows.push({job});
+  target.replaceChildren(...rows.map(({binding,job}) => {
+    const row = document.createElement("p");
+    const label = document.createElement("span");
+    const device = binding?.device || job.device;
+    const network = job?.network;
+    label.textContent = (network ? "Wi-Fi: " + (network.ssid || "名称未获取") + " · IP: " + (network.ip || "未获取") + " · " : "Wi-Fi / IP: 待获取 · ") + device.deviceId + " · " + (job?.state || "已绑定，尚未运行") +
+      (binding ? " · 槽位 " + device.slot + " · 会话 " + binding.chat.id : "") + (job?.error ? " · " + job.error : "");
+    const button = document.createElement("button");
+    button.textContent = job ? "重新运行（重启并清空旧应用）" : "运行 MPY";
+    button.disabled = (binding ? !binding.available : job.canRerun === false) ||
+      Boolean(job && !["running", "failed", "completed", "stopped", "unknown"].includes(job.state));
+    button.onclick = async () => {
+      button.disabled = true;
+      const message = document.querySelector("#control-status");
+      try {
+        const response = await fetch("/api/launch", { method: "POST", headers: {
+          "Content-Type": "application/json", Authorization: "Bearer " + config.token,
+        }, body: JSON.stringify(binding ? {op:"runBinding",bindingId:binding.bindingId} : {op:"rerun",launchId:job.launchId}) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error?.message || "启动失败");
+        message.textContent = "已创建新的真机启动任务。请保持本地 bot 在线。";
+      } catch (error) { message.textContent = error.message; button.disabled = false; }
+    };
+    row.append(label, document.createTextNode(" "), button); return row;
+  }));
+}
+function render() {
+  const source = document.querySelector("#source").value, level = document.querySelector("#level").value;
+  logs.replaceChildren(...items.filter(r => (!source || r.source === source) && (!level || r.level === level)).map(r => {
+    const line = document.createElement("pre"); line.className = r.level;
+    line.textContent = "[" + r.timestamp + "][" + r.source + "][" + r.level + "][" + (r.deviceId || r.clientId.slice(0, 8)) + ":" + r.seq + "] " + r.message;
+    return line;
+  }));
+}
+document.querySelector("#source").onchange = render;
+document.querySelector("#level").onchange = render;
+document.querySelector("#clear").onclick = () => { items = []; render(); };
+async function poll() {
+  if (!config.enabled) { status.textContent = "请使用接收程序终端输出的完整 Studio 地址打开页面。"; return; }
+  try {
+    const response = await fetch("/api/events?after=" + after, { headers: { Authorization: "Bearer " + config.token } });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const data = await response.json();
+    after = data.cursor; items = items.concat(data.records).slice(-1000);
+    status.textContent = "已连接 · " + data.runId + (data.bot ? " · bot " + (data.bot.exitCode === null && !data.bot.signal ? "运行中" : "已退出，请查看 bot.stderr.log") : "");
+    document.querySelector("#files").textContent = data.debugDir;
+    render();
+    renderLaunches(data);
+  } catch (error) { status.textContent = "接收端未连接：" + error.message; }
+  setTimeout(poll, 700);
+}
+poll();
+</script></html>
