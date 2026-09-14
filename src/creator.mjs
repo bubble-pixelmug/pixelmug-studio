@@ -54,9 +54,45 @@ export class CreatorClient {
     const result = await this.request('/creator/devices', undefined, session.token);
     if (session !== this.session) throw new Error('登录状态已变化，请刷新');
     if (!Array.isArray(result)) throw new Error('设备接口返回格式错误');
-    this.devices = result.filter(d => d?.id).map(d => ({ id: String(d.id), name: String(d.name || d.id), sn: String(d.sn || ''), online: d.online === 'ONLINE' ? 'ONLINE' : 'OFFLINE' }));
+    this.devices = result.filter(d => d?.id).map(d => ({ id: String(d.id), name: String(d.name || d.id), sn: String(d.sn || ''), avatar: String(d.avatar || ''), talId: String(d.talId || ''), online: d.online === 'ONLINE' ? 'ONLINE' : 'OFFLINE' }));
     this.updatedAt = new Date().toISOString();
     return this.devices;
+  }
+  async botSlots(botToken) {
+    const session = this.session;
+    if (!session) throw new Error('请先登录冒泡账号');
+    if (!botToken) throw new Error('尚未设置 Bot token');
+    let result;
+    try {
+      result = await this.request('/creator/bot/slot-details?botToken=' + encodeURIComponent(botToken), undefined, session.token);
+    } catch {
+      throw new Error(this.session ? '无法查询设备槽位，请检查 Bot token 和网络后重试' : '登录已过期，请重新登录');
+    }
+    if (session !== this.session) throw new Error('登录状态已变化，请刷新');
+    const list = Array.isArray(result) ? result : result?.list;
+    if (!Array.isArray(list)) throw new Error('设备槽位接口返回格式错误');
+    return list.filter(slot => slot?.id).map(slot => ({
+      id: String(slot.id), talId: String(slot.talId || ''),
+      compatible: Array.isArray(slot.compatible) ? slot.compatible.filter(id => typeof id === 'string') : [],
+      device: slot.device?.id ? {
+        id: String(slot.device.id), name: String(slot.device.name || slot.device.id),
+        sn: String(slot.device.sn || ''), avatar: String(slot.device.avatar || ''),
+        online: slot.device.online === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
+      } : null,
+    }));
+  }
+  async bindBotSlot(botToken, slotId, deviceId) {
+    const session = this.session;
+    if (!slotId || !deviceId) throw new Error('请选择槽位和设备');
+    const slots = await this.botSlots(botToken);
+    const devices = await this.refresh();
+    const slot = slots.find(item => item.id === slotId);
+    const device = devices.find(item => item.id === deviceId);
+    if (!slot) throw new Error('当前 Bot 中已不存在此槽位，请刷新');
+    if (!device) throw new Error('目标设备未绑定在当前登录用户下');
+    if (!device.talId || ![slot.talId, ...slot.compatible].includes(device.talId)) throw new Error('设备类型与此槽位不兼容');
+    if (session !== this.session) throw new Error('登录状态已变化，请刷新');
+    await this.request('/creator/bot/slot/device/bind', { slotId, deviceId }, session.token);
   }
   async authorize(ref, { allowOffline = false } = {}) {
     if (!ref?.deviceId || !ref?.slotId) throw new Error('SDK 调用缺少目标设备或绑定槽位');

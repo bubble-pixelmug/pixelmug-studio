@@ -28,7 +28,7 @@ const statusText=status=>status==='ok'?'Studio 服务正常':status==='error'?'S
         </button>
         <div v-if="tab.id==='debug'&&active&&debugDevices.length" class="debug-device-tabs">
           <button v-for="device in debugDevices" :key="device.id" type="button" :class="{active:activeTab==='device:'+device.id}" @click="$emit('change','device:'+device.id)">
-            <span class="debug-device-image"><img :class="deviceIconFor(device).kind" :src="deviceIconFor(device).src" alt=""></span>
+            <span class="debug-device-image"><img v-if="deviceIconFor(device).src" :class="deviceIconFor(device).kind" :src="deviceIconFor(device).src" alt=""></span>
             <span><strong>{{ device.name||device.sn||'PixelMug' }}</strong><small>{{ device.status }}</small></span>
           </button>
         </div>

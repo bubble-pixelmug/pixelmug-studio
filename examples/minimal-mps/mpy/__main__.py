@@ -22,7 +22,7 @@ class App:
 
     def draw(self, rt):
         pyxel.cls(0)
-        pyxel.text(1, 0, "JEEJIO", 10)
+        pyxel.text(1, 0, "t.t.", 10)
         pyxel.text(1, 6, str(self.frame // FPS), 10)
         x = (self.frame // 2) % (pyxel.width - BLOCK_SIZE + 1)
         pyxel.rect(x, pyxel.height - BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, 11)

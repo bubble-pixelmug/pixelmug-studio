@@ -9,12 +9,23 @@ import { CreatorClient } from '../src/creator.mjs';
 import { startWorkbench } from '../src/workbench.mjs';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function upstream() {
-  const calls = [], state = { devices: [{ id: 'cup-one', name: '测试杯', sn: 'S001', online: 'ONLINE' }], expired: false };
+  const calls = [], state = { devices: [{ id: 'cup-one', name: '测试杯', sn: 'S001', online: 'ONLINE' }], expired: false, slots: [] };
   const fetchImpl = async (url, options) => {
     calls.push({ url, ...options, body: options.body ? JSON.parse(options.body) : undefined });
     if (state.expired) return Response.json({ code: 401 }, { status: 401 });
     if (url.endsWith('/login')) return Response.json({ code: 200, result: { id: 'user-one', name: '测试开发者', token: 'private-creator-token' } });
     if (url.endsWith('/devices')) { assert.equal(options.headers.token, 'private-creator-token'); return Response.json({ code: 200, result: state.devices }); }
+    if (url.includes('/creator/bot/slot-details?')) {
+      assert.equal(options.headers.token, 'private-creator-token');
+      if (state.slotWait) await state.slotWait;
+      return Response.json({ code: 200, result: { list: state.slots } });
+    }
+    if (url.endsWith('/creator/bot/slot/device/bind')) {
+      assert.equal(options.headers.token, 'private-creator-token');
+      const body=JSON.parse(options.body);
+      const slot=state.slots.find(slot=>slot.id===body.slotId);
+      slot.device=state.devices.find(device=>device.id===body.deviceId);
+    }
     return Response.json({ code: 200 });
   };
   return { fetchImpl, calls, state };
@@ -202,3 +213,146 @@ for (const [web, mpy] of [[false,false],[true,false],[false,true],[true,true]]) 
     assert.equal(restarted.status,200); assert.notEqual(restarted.data.runId,started.data.runId);
   });
 }
+
+test('Creator preserves avatar and talId in local device state and refreshes them', async () => {
+  const mock = upstream(), client = new CreatorClient({ fetchImpl: mock.fetchImpl });
+  Object.assign(mock.state.devices[0], { avatar: 'https://images.example.test/s1.png', talId: 'PixelMugS1' });
+  await client.login(login);
+  await client.refresh();
+  assert.equal(client.devices[0].avatar, 'https://images.example.test/s1.png');
+  assert.equal(client.devices[0].talId, 'PixelMugS1');
+  mock.state.devices[0].avatar = 'https://images.example.test/p1.png';
+  mock.state.devices[0].talId = 'PixelMug';
+  await client.refresh();
+  assert.equal(client.devices[0].avatar, mock.state.devices[0].avatar);
+  assert.equal(client.devices[0].talId, 'PixelMug');
+  delete mock.state.devices[0].avatar;
+  delete mock.state.devices[0].talId;
+  await client.refresh();
+  assert.equal(client.devices[0].avatar, '');
+  assert.equal(client.devices[0].talId, '');
+});
+
+test('workbench allows HTTPS device avatars while keeping scripts same-origin', async t => {
+  const f = await fixture(t);
+  const response = await fetch(f.origin);
+  const policy = response.headers.get('content-security-policy');
+  assert.match(policy, /img-src 'self' data: https:;/);
+  assert.match(policy, /script-src 'self';/);
+  assert.match(policy, /connect-src 'self';/);
+});
+
+
+test('Bot slot contract: encoded token, normalized fields, compatible devices and ownership checks', async () => {
+  const mock=upstream(), client=new CreatorClient({fetchImpl:mock.fetchImpl});
+  await client.login(login);
+  const botToken='bot+secret/&?';
+  mock.state.slots=[{id:'slot-one',talId:'PixelMugS1',compatible:['PixelMug'],device:null}];
+  mock.state.devices=[
+    {id:'primary',talId:'PixelMugS1',name:'Primary',online:'ONLINE'},
+    {id:'compatible',talId:'PixelMug',name:'Compatible',online:'OFFLINE',avatar:'https://example.test/cup.png'},
+    {id:'wrong',talId:'Other'}, {id:'missing-type'}
+  ];
+  assert.deepEqual(await client.botSlots(botToken),mock.state.slots);
+  assert.equal(new URL(mock.calls.at(-1).url).searchParams.get('botToken'),botToken);
+  assert.equal(mock.calls.at(-1).method,'GET');
+  for(const id of ['wrong','missing-type','not-owned']) await assert.rejects(client.bindBotSlot(botToken,'slot-one',id));
+  await assert.rejects(client.bindBotSlot(botToken,'unknown','primary'));
+  assert.equal(mock.calls.filter(call=>call.url.endsWith('/bind')).length,0);
+  await client.bindBotSlot(botToken,'slot-one','primary');
+  assert.deepEqual(mock.calls.at(-1).body,{slotId:'slot-one',deviceId:'primary'});
+  await client.bindBotSlot(botToken,'slot-one','compatible');
+  const slots=await client.botSlots(botToken);
+  assert.equal(slots[0].device.id,'compatible');
+  assert.equal(slots[0].device.online,'OFFLINE');
+  assert.equal(slots[0].device.avatar,'https://example.test/cup.png');
+  client.fetch=async()=>Response.json({code:200,result:mock.state.slots});
+  assert.equal((await client.botSlots(botToken)).length,1);
+  client.fetch=async()=>{throw new Error(botToken)};
+  await assert.rejects(client.botSlots(botToken),error=>!error.message.includes(botToken));
+  client.fetch=async()=>Response.json({code:500,result:{list:[]}});
+  await assert.rejects(client.botSlots(botToken));
+});
+
+test('workbench queries slots on start, refreshes after bind, rejects stale runs and clears on stop', async t => {
+  const f=await fixture(t);
+  f.mock.state.slots=[{id:'slot-one',talId:'PixelMugS1',compatible:[]}];
+  f.mock.state.devices[0].talId='PixelMugS1';
+  await f.api('auth/login',login);
+  await f.api('project/open',{path:f.root});
+  const started=await f.api('run/start',{bot:'bot/index.js',botToken:'test-bot-token'});
+  assert.equal(started.status,200);
+  const runId=started.data.runId;
+  await f.api('run/slots/refresh',{runId});
+  let state=(await f.api('state')).data;
+  assert.equal(state.botSlots.list[0].id,'slot-one');
+  assert.ok(!JSON.stringify(state).includes('test-bot-token'));
+  assert.equal((await f.api('run/slots/bind',{runId:'old',slotId:'slot-one',deviceId:'cup-one'})).status,400);
+  const bound=await f.api('run/slots/bind',{runId,slotId:'slot-one',deviceId:'cup-one'});
+  assert.equal(bound.status,200);
+  assert.equal(bound.data.list[0].device.id,'cup-one');
+  const bindIndex=f.mock.calls.findIndex(call=>call.url.endsWith('/bind'));
+  assert.ok(f.mock.calls.slice(bindIndex+1).some(call=>call.url.includes('/slot-details?')));
+  await f.api('run/stop',{});
+  state=(await f.api('state')).data;
+  assert.deepEqual(state.botSlots.list,[]);
+  assert.equal(state.botSlots.loading,false);
+  assert.equal((await f.api('run/slots/bind',{runId,slotId:'slot-one',deviceId:'cup-one'})).status,400);
+});
+
+test('late slot responses cannot repopulate stopped run state', async t => {
+  const f=await fixture(t);
+  let release;
+  f.mock.state.slotWait=new Promise(resolve=>{release=resolve});
+  t.after(()=>release());
+  f.mock.state.slots=[{id:'late',talId:'PixelMug',compatible:[]}];
+  await f.api('auth/login',login);
+  await f.api('project/open',{path:f.root});
+  assert.equal((await f.api('run/start',{bot:'bot/index.js',botToken:'test-bot-token'})).status,200);
+  await f.api('run/stop',{});
+  release();
+  await sleep(30);
+  assert.deepEqual((await f.api('state')).data.botSlots.list,[]);
+});
+
+
+test('real browser: slot cards filter candidates, bind and disappear on stop', { skip: !process.env.STUDIO_TEST_BROWSER, timeout:40000 }, async t => {
+  const f = await fixture(t), profile = join(f.root, 'chrome-profile');
+  const child = spawn(process.env.STUDIO_TEST_BROWSER, ['--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'--window-size=1440,1050','about:blank'], { windowsHide:true, stdio:'ignore' });
+  f.cleanup.browser = async () => { child.kill(); await sleep(500); };
+  let port;
+  for(let i=0;i<100;i++){ try { port=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]); break; } catch { await sleep(100); } }
+  assert.ok(port,'Chrome started');
+  const pages = await (await fetch('http://127.0.0.1:'+port+'/json/list')).json();
+  const ws = new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);
+  await new Promise((r,j)=>{ws.once('open',r);ws.once('error',j);}); t.after(()=>ws.close());
+  let serial=0; const pending = new Map();
+  ws.on('message',raw=>{const msg=JSON.parse(raw);if(msg.id){const p=pending.get(msg.id);pending.delete(msg.id);msg.error?p.reject(new Error(msg.error.message)):p.resolve(msg.result);}});
+  const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
+  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
+  const waitFor=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await sleep(100);}throw new Error('UI timed out: '+expression);};
+
+  f.mock.state.slots=[{id:'slot-one',talId:'Primary',compatible:['Compatible'],device:null}];
+  f.mock.state.devices=[
+    {id:'primary',name:'Primary device',talId:'Primary',online:'ONLINE',sn:'SN1'},
+    {id:'compatible',name:'Compatible device',talId:'Compatible',online:'OFFLINE',sn:'SN2'},
+    {id:'wrong',name:'Wrong device',talId:'Other',online:'ONLINE'},
+  ];
+  await f.api('auth/login',login);
+  await f.api('project/open',{path:f.root});
+  await f.api('run/start',{bot:'bot/index.js',botToken:'browser-test-token'});
+  await send('Page.navigate',{url:f.app.studioUrl});
+  await waitFor('document.querySelectorAll(".section-tabs > button").length === 3');
+  await evaluate('document.querySelectorAll(".section-tabs > button")[2].click()');
+  await waitFor('document.querySelectorAll(".slot-card").length === 1');
+  await evaluate('document.querySelector(".slot-action button").click()');
+  await waitFor('document.querySelector(".slot-picker").open && document.querySelectorAll(".picker-device").length === 2 && !document.querySelector(".picker-device").disabled');
+  assert.equal(await evaluate('document.querySelector(".picker-devices").textContent.includes("Wrong device")'),false);
+  await evaluate('document.querySelectorAll(".picker-device")[1].click()');
+  await waitFor('document.querySelector(".slot-device")?.textContent.includes("Compatible device")');
+  assert.equal(await evaluate('document.querySelector(".slot-picker").open'),false);
+  assert.equal(f.mock.calls.filter(call=>call.url.endsWith('/bind')).length,1);
+  assert.equal(f.mock.calls.find(call=>call.url.endsWith('/bind')).body.deviceId,'compatible');
+  await evaluate('document.querySelector("#stop").click()');
+  await waitFor('!document.querySelector(".bot-slots")');
+});

@@ -28,14 +28,15 @@ const isBound=device=>props.active&&Boolean(bindingFor(device)||jobFor(device));
 
     <div id="devices" class="device-list">
       <article v-for="device in devices" :key="device.id" :class="['device-card',{bound:isBound(device)}]">
-        <div class="device-image"><img :class="iconFor(device).kind" :src="iconFor(device).src" :alt="iconFor(device).model"></div>
+        <div class="device-image"><img v-if="iconFor(device).src" :class="iconFor(device).kind" :src="iconFor(device).src" :alt="iconFor(device).model"></div>
         <div class="device-content">
           <div class="device-top">
             <strong>{{ device.name }}</strong>
-            <span v-if="isBound(device)" class="bound-status">已绑定</span>
+            <span v-if="isBound(device)" class="bound-status">已与智能体关联</span>
             <span v-else class="online-status" :class="{offline:device.online!=='ONLINE'}">{{ device.online==='ONLINE'?'● 在线':'○ 离线' }}</span>
           </div>
           <div class="device-serial">SN {{ device.sn||'—' }}</div>
+          <div class="device-serial">TALID：{{ device.talId||'—' }}</div>
           <div v-if="isBound(device)" class="bound-details">
             <span class="online-status" :class="{offline:device.online!=='ONLINE'}">{{ device.online==='ONLINE'?'● 在线':'○ 离线' }}</span>
             <span>{{ networkText(jobFor(device)?.network) }}</span>

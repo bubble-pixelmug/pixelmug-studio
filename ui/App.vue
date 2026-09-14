@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import StageNavigation from './components/StageNavigation.vue';
 import DevicePanel from './components/DevicePanel.vue';
+import BotSlots from './components/BotSlots.vue';
 import LogWorkspace from './components/LogWorkspace.vue';
 import deviceIcon from './assets/device-icon.png';
 import { deviceIconFor } from './deviceIcon.js';
@@ -57,6 +58,13 @@ async function logout(){ await perform(async()=>{ await api('auth/logout',{}); l
 async function refreshDevices(){ await api('devices/refresh',{}); lastRefresh=Date.now(); }
 async function refresh(){ await perform(async()=>{ await refreshDevices(); notify('设备状态已更新。'); }); }
 
+async function refreshSlots(){ await perform(()=>api('run/slots/refresh',{runId:state.value?.run?.runId})); }
+async function bindSlot(selection){
+  await perform(async()=>{
+    const result=await api('run/slots/bind',{...selection,runId:state.value?.run?.runId});
+    notify(result.error ? '设备已关联，但状态刷新失败，请刷新槽位。' : '设备已关联。',Boolean(result.error));
+  });
+}
 async function startRun(){
   launchRequested.value=true;
   await perform(async()=>{
@@ -130,7 +138,7 @@ const debugDevices=computed(()=>{
     seen.add(id);
     const accountDevice=(state.value?.devices||[]).find(item=>item.id===id)||{};
     const job=latestJobs.value.find(item=>item.device?.deviceId===id);
-    result.push({id,name:device.name||accountDevice.name||device.sn||accountDevice.sn||'PixelMug',sn:device.sn||accountDevice.sn||'',status:deviceProcessStatus(job),binding,job});
+    result.push({id,name:device.name||accountDevice.name||device.sn||accountDevice.sn||'PixelMug',sn:device.sn||accountDevice.sn||'',avatar:accountDevice.avatar||device.avatar||'',talId:accountDevice.talId||device.talId||'',status:deviceProcessStatus(job),binding,job});
   }
   return result;
 });
@@ -316,6 +324,8 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
 
         <section class="next-step" :class="{invalid:guide.errors?.length}" aria-live="polite"><span class="guide-icon"></span><div><span class="eyebrow">当前状态</span><h2 id="guide-title"><a v-if="guideLinksToProject" class="guide-title-link" href="#" @click.prevent="activeSection='project'">{{ guide.title }}</a><template v-else>{{ guide.title }}</template></h2><p id="guide-body">{{ guide.body }}</p><ul v-if="guide.errors?.length" class="configuration-errors"><li v-for="error in guide.errors" :key="error">{{ error }}</li></ul></div><p v-if="!runStarted&&!guide.errors?.length" id="operation-hint" class="operation-hint">{{ operationHint }}</p></section>
 
+        <BotSlots v-if="active" :slots="state?.botSlots" :devices="state?.devices || []" :busy="working || state?.busy" @refresh="refreshSlots" @choose="perform(refreshDevices)" @bind="bindSlot" />
+
         <section v-if="project" class="card runtime-card">
           <div class="section-heading"><div><span class="eyebrow">RUNTIME</span><h2>运行状态</h2></div><span class="topology-status">{{ active?'智能体运行中':'等待启动' }}</span></div>
           <div class="runtime-topology" :class="{active}">
@@ -350,7 +360,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
 
       <section v-if="active&&selectedDevice" class="section-page device-debug-page">
         <section class="card device-overview-card">
-          <div class="device-overview-image"><img :class="selectedDeviceIcon.kind" :src="selectedDeviceIcon.src" :alt="selectedDeviceIcon.model"></div>
+          <div class="device-overview-image"><img v-if="selectedDeviceIcon.src" :class="selectedDeviceIcon.kind" :src="selectedDeviceIcon.src" :alt="selectedDeviceIcon.model"></div>
           <div class="device-overview-content">
             <span class="eyebrow">DEVICE</span>
             <h2>{{ selectedDevice.name }}</h2>

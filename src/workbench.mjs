@@ -16,8 +16,42 @@ export async function startWorkbench(options = {}) {
     hostname: webAppHostname, mdns: options.mdns !== false, mdnsPort: options.mdnsPort ?? 5353 });
   let run = null, project = null, busy = false, stopped = false;
   let runtimeConfig = {};
+  let slotState = { list: [], loading: false, error: '', updatedAt: null };
+  let slotTimer, slotGeneration = 0, slotPending;
+  function clearSlots() {
+    clearTimeout(slotTimer);
+    slotGeneration++;
+    slotPending = null;
+    slotState = { list: [], loading: false, error: '', updatedAt: null };
+  }
+  async function refreshSlots() {
+    if (!run || stopped || !creator.session) return;
+    if (slotPending) return slotPending;
+    clearTimeout(slotTimer);
+    const generation = slotGeneration;
+    slotState = { ...slotState, loading: true };
+    const pending = (async () => {
+      try {
+        const list = await creator.botSlots(runtimeConfig.botToken);
+        if (generation === slotGeneration) slotState = { list, loading: false, error: '', updatedAt: new Date().toISOString() };
+      } catch (error) {
+        if (generation === slotGeneration) slotState = { ...slotState, loading: false, error: error.message };
+      } finally {
+        if (generation === slotGeneration) {
+          slotPending = null;
+          if (run && !stopped && creator.session) {
+            slotTimer = setTimeout(() => void refreshSlots(), slotState.list.length ? 10000 : 2000);
+            slotTimer.unref?.();
+          }
+        }
+      }
+    })();
+    slotPending = pending;
+    return pending;
+  }
   const inspect = inspectProject;
   async function stopRun(rebootDevices = false) {
+    clearSlots();
     if (!run) return { devices: [], unconfirmed: 0 };
     const current = run;
     const result = await current.close({ rebootDevices });
@@ -55,10 +89,11 @@ export async function startWorkbench(options = {}) {
     if (webRoot) gateway.activate(root, run);
     runtimeConfig = { botToken, botApiBaseUrl, autoRunMpy };
     project = { ...selectedProject, bot, webRoot };
+    void refreshSlots();
     return { runId: run.runId, webAppUrl: run.webAppUrl, debugDir: run.debugDir };
   }
   function reply(res, code, value, type = 'application/json; charset=utf-8') {
-    res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'" });
+    res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'" });
     res.end(type.startsWith('application/json') ? JSON.stringify(value) : value);
   }
   async function bodyOf(req) {
@@ -76,6 +111,7 @@ export async function startWorkbench(options = {}) {
         if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return reply(res, 401, { error: '请使用启动终端提供的完整 Studio 地址' });
         if (req.method === 'GET' && url.pathname === '/api/state') return reply(res, 200, {
           user: creator.publicSession(), creatorUrl: creator.baseUrl, devices: creator.devices, devicesUpdatedAt: creator.updatedAt,
+          botSlots: creator.session ? slotState : { list: [], loading: false, error: '', updatedAt: null },
           project, runtimeConfig: { botApiBaseUrl: runtimeConfig.botApiBaseUrl || '', autoRunMpy: runtimeConfig.autoRunMpy === true, hasBotToken: Boolean(runtimeConfig.botToken || process.env.BOT_TOKEN) }, webAppHostname, webAppPort: gateway.port, busy,
           run: run ? { runId: run.runId, webAppUrl: run.webAppUrl, debugDir: run.debugDir } : null,
           events: await events(url.searchParams.get('runId') === run?.runId ? url.searchParams.get('after') : 0),
@@ -108,6 +144,20 @@ export async function startWorkbench(options = {}) {
             }
             case '/api/run/start': result = await launch(body); break;
             case '/api/run/stop': result = await stopRun(true); break;
+            case '/api/run/slots/refresh':
+              if (!run || body.runId !== run.runId) throw new Error('运行已变化，请刷新后重试');
+              await refreshSlots(); result = slotState; break;
+            case '/api/run/slots/bind':
+              if (!run || body.runId !== run.runId) throw new Error('运行已变化，请刷新后重试');
+              clearTimeout(slotTimer);
+              if (slotPending) await slotPending;
+              clearTimeout(slotTimer);
+              try {
+                await creator.bindBotSlot(runtimeConfig.botToken, body.slotId, body.deviceId);
+              } finally {
+                await refreshSlots();
+              }
+              result = slotState; break;
             case '/api/run/device':
               if (!run) throw new Error('尚未开始调试');
               result = await run.launches.bindings.run(body.bindingId); break;
