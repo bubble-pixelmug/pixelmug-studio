@@ -1,0 +1,8 @@
+{
+  "name": "ble-custom-client-lib",
+  "version": "1.0.0",
+  "description": "开放 BLE 示例：ESP32-C3 使用 PixelMugBLECentral 控制 PixelMug 绘图",
+  "dependencies": [
+    { "name": "micropyxel", "version": ">=1.0.0" }
+  ]
+}

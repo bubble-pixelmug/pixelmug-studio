@@ -59,6 +59,12 @@ export class LaunchManager {
   }
   state(job, state, error) {
     if (terminal.has(state)) clearInterval(job.healthTimer);
+    if (state === "running" && job.repl && !job.abort.signal.aborted) {
+      clearInterval(job.healthTimer);
+      job.healthTimer = setInterval(() => { void this.checkRunning(job); }, 10000);
+      job.healthTimer.unref?.();
+    }
+    if (state !== "rerunning") { clearTimeout(job.rerunTimer); job.rerunTimer = null; }
     const plan = this.restartPlans.get(job.device.deviceId);
     if (plan && job.id === plan.requestId) {
       plan.state = state; plan.message = error ? String(error.message || error) : state;
@@ -69,12 +75,15 @@ export class LaunchManager {
     if (error) job.error = String(error.message || error);
     writeFileSync(join(job.dir, "launch.json"), JSON.stringify(this.view(job), null, 2));
     this.log(job, state === "failed" ? "error" : state === "unknown" ? "warn" : "info",
-      state + (job.error ? ": " + job.error : ""), "studio");
+      state + (job.error ? ": " + job.error : ""), "studio",
+      { lifecycle: job.started && ["running", "completed", "stopped", "failed", "unknown"].includes(state) ? state : undefined });
     for (const owner of job.owners.values()) this.event(job, owner);
   }
   view(job) {
     return { launchId: job.id, device: job.device, network: job.network || null, state: job.state, fingerprint: job.fingerprint,
-      startedAt: job.startedAt, updatedAt: job.updatedAt, error: job.error || null, canRerun: this.contexts.has(job.contextId), connectionWarning: job.connectionWarning || null };
+      startedAt: job.startedAt, updatedAt: job.updatedAt, error: job.error || null, canRerun: this.contexts.has(job.contextId),
+      canRunMpyAgain: Boolean(job.deployed && job.repl && !job.repl.closed && ["completed", "failed"].includes(job.state)),
+      connectionWarning: job.connectionWarning || null };
   }
   list() { return [...this.jobs.values()].map(job => this.view(job)); }
   restartList() { return [...this.restartPlans.values()].map(({deviceId, state, message}) => ({deviceId, state, message})); }
@@ -208,6 +217,38 @@ export class LaunchManager {
       throw new Error("本地 bot 执行器未连接，请检查 bot 进程后重新发起启动");
     }
     return this.launch(job.executor.key, job.executor.ownerId, { ...job.device, contextId: job.contextId }, true);
+  }
+  async runMpyAgain(launchId) {
+    const job = [...this.jobs.values()].find(item => item.id === launchId);
+    if (!job) throw new Error("Launch no longer exists");
+    while (this.locks.has(job.device.deviceId)) await this.locks.get(job.device.deviceId);
+    let releaseLock;
+    const lock = new Promise(resolve => { releaseLock = resolve; });
+    this.locks.set(job.device.deviceId, lock);
+    try {
+      if (!job.deployed || !job.repl || job.repl.closed || !["completed", "failed"].includes(job.state)) {
+        throw new Error("MPY 尚未完成首次加载，或设备执行会话已不可用");
+      }
+      job.error = "";
+      job.connectionWarning = null;
+      this.state(job, "rerunning");
+      const attempt = (job.executionAttempt || 0) + 1;
+      job.executionAttempt = attempt;
+      job.rerunTimer = setTimeout(() => {
+        if (job.executionAttempt === attempt && job.state === "rerunning" && !job.abort.signal.aborted) {
+          this.state(job, "failed", "Application start confirmation timed out");
+        }
+      }, this.timings.startTimeout);
+      job.rerunTimer.unref?.();
+      await job.repl.restart("import __studio_bootstrap__; __studio_bootstrap__.run(" + JSON.stringify(job.id) + ", " + JSON.stringify(job.nonce) + ")");
+      return this.view(job);
+    } catch (error) {
+      if (!job.abort.signal.aborted && job.state === "rerunning") this.state(job, "failed", error);
+      throw error;
+    } finally {
+      if (this.locks.get(job.device.deviceId) === lock) this.locks.delete(job.device.deviceId);
+      releaseLock();
+    }
   }
   async launch(key, ownerId, ref, force = false) {
     if (this.stopping || this.stopped) throw new Error("Studio is stopping");
@@ -351,6 +392,7 @@ export class LaunchManager {
     if (job.abort.signal.aborted) { job.repl.close(); return; }
     this.state(job, "uploading");
     await deploy(job.repl, snapshot, progress => this.log(job, "info", "Upload " + progress.index + "/" + progress.total + " " + progress.file, "studio"));
+    job.deployed = true;
     this.state(job, "uploaded");
     let pending = "", readyResolve, readyReject;
     const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
@@ -364,7 +406,12 @@ export class LaunchManager {
       if (i >= 0) {
         try {
           const event = JSON.parse(value.slice(i + prefix.length));
-          if (event.launchId !== job.id || !["running","completed","stopped","failed"].includes(event.state)) return;
+          if (event.launchId !== job.id) return;
+          if (event.type === "exception" && typeof event.message === "string") {
+            this.log(job, "error", event.message, "console");
+            return;
+          }
+          if (!["running","completed","stopped","failed"].includes(event.state)) return;
           this.state(job, event.state, event.message || undefined);
           if (event.state === "running") readyResolve();
           else if (!job.started) readyReject(new Error(event.message || "Application exited before starting"));
@@ -390,10 +437,6 @@ export class LaunchManager {
       job.executing = true;
       await job.repl.start("import __studio_bootstrap__; __studio_bootstrap__.run(" + JSON.stringify(job.id) + ", " + JSON.stringify(job.nonce) + ")");
       await ready;
-      if (job.state === "running" && !job.abort.signal.aborted) {
-        job.healthTimer = setInterval(() => { void this.checkRunning(job); }, 10000);
-        job.healthTimer.unref?.();
-      }
     } finally { clearTimeout(readyTimer); }
   }
   async checkRunning(job) {

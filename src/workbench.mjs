@@ -1,3 +1,5 @@
+import { webAppAddresses } from './webapp-addresses.mjs';
+import { ProjectFiles } from './project-files.mjs';
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
@@ -10,12 +12,22 @@ import { startWebAppGateway } from './gateway.mjs';
 
 export async function startWorkbench(options = {}) {
   const creator = new CreatorClient({ baseUrl: options.creatorUrl || 'https://connector.devjeejio.com:5443', fetchImpl: options.fetchImpl });
+  const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'http://127.0.0.1:5174/');
+  if (!['http:', 'https:'].includes(docsUrl.protocol) || docsUrl.username || docsUrl.password) throw new Error('Invalid documentation URL');
   const credential = randomBytes(24).toString('hex');
-  const webAppHostname = options.webAppHostname || 'pixelmug-studio.local';
+  const defaultWebAppHostname = options.webAppHostname || 'pixelmug-studio.local';
+  let webAppHostname = defaultWebAppHostname;
+  const addressChoices = () => webAppAddresses(defaultWebAppHostname);
+  function validateWebAppHostname(host) {
+    if (!addressChoices().some(item => item.host === host)) throw new Error('所选访问地址已不可用，请重新选择当前电脑的局域网 IP 或 .local 地址');
+    return host;
+  }
   const gateway = await startWebAppGateway({ port: options.gatewayPort ?? (options.port === 0 ? 0 : 7979),
     hostname: webAppHostname, mdns: options.mdns !== false, mdnsPort: options.mdnsPort ?? 5353 });
   let run = null, project = null, busy = false, stopped = false;
   let runtimeConfig = {};
+  let fileQueue = Promise.resolve();
+  let deviceRefresh;
   let slotState = { list: [], loading: false, error: '', updatedAt: null };
   let slotTimer, slotGeneration = 0, slotPending;
   function clearSlots() {
@@ -74,9 +86,11 @@ export async function startWorkbench(options = {}) {
     const webRoot = selectedProject.webRoot;
     // Validate inputs before preparing device reboots or replacing the existing run.
     await creator.refresh();
-    const botToken = String(body.botToken || '').trim() || runtimeConfig.botToken || process.env.BOT_TOKEN;
+    const botId = String(body.botId ?? runtimeConfig.botId ?? '');
+    const botToken = creator.getBotToken(botId);
     const botApiBaseUrl = body.botApiBaseUrl === undefined ? runtimeConfig.botApiBaseUrl : String(body.botApiBaseUrl || '').trim();
     const autoRunMpy = selectedProject.mpy && (body.autoRunMpy === undefined ? runtimeConfig.autoRunMpy === true : body.autoRunMpy === true);
+    if (webRoot) validateWebAppHostname(webAppHostname);
     const prepared = run ? await run.launches.stopDevices({ enterRepl: true }) : { devices: [] };
     await stopRun();
     const publicWebAppUrl = webRoot ? gateway.webAppUrl(root, webAppHostname) : null;
@@ -87,19 +101,19 @@ export async function startWorkbench(options = {}) {
         prepareOnBinding: selectedProject.mpy, autoRunOnBinding: autoRunMpy },
     });
     if (webRoot) gateway.activate(root, run);
-    runtimeConfig = { botToken, botApiBaseUrl, autoRunMpy };
+    runtimeConfig = { botId, botToken, botApiBaseUrl, autoRunMpy };
     project = { ...selectedProject, bot, webRoot };
     void refreshSlots();
     return { runId: run.runId, webAppUrl: run.webAppUrl, debugDir: run.debugDir };
   }
   function reply(res, code, value, type = 'application/json; charset=utf-8') {
-    res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'" });
+    res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'nonce-" + credential + "'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-src " + docsUrl.origin + "; frame-ancestors 'none'" });
     res.end(type.startsWith('application/json') ? JSON.stringify(value) : value);
   }
-  async function bodyOf(req) {
+  async function bodyOf(req, limit = 16384) {
     if (!String(req.headers['content-type']).startsWith('application/json')) throw new Error('JSON required');
     let size = 0; const chunks = [];
-    for await (const chunk of req) { size += chunk.length; if (size > 16384) throw new Error('Request too large'); chunks.push(chunk); }
+    for await (const chunk of req) { size += chunk.length; if (size > limit) throw new Error('Request too large'); chunks.push(chunk); }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   }
   const server = createServer(async (req, res) => {
@@ -110,9 +124,10 @@ export async function startWorkbench(options = {}) {
         const actual = Buffer.from(req.headers.authorization || ''), expected = Buffer.from('Bearer ' + credential);
         if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return reply(res, 401, { error: '请使用启动终端提供的完整 Studio 地址' });
         if (req.method === 'GET' && url.pathname === '/api/state') return reply(res, 200, {
+          bots: creator.publicBots(), botsError: creator.botsError,
           user: creator.publicSession(), creatorUrl: creator.baseUrl, devices: creator.devices, devicesUpdatedAt: creator.updatedAt,
           botSlots: creator.session ? slotState : { list: [], loading: false, error: '', updatedAt: null },
-          project, runtimeConfig: { botApiBaseUrl: runtimeConfig.botApiBaseUrl || '', autoRunMpy: runtimeConfig.autoRunMpy === true, hasBotToken: Boolean(runtimeConfig.botToken || process.env.BOT_TOKEN) }, webAppHostname, webAppPort: gateway.port, busy,
+          project, runtimeConfig: { botApiBaseUrl: runtimeConfig.botApiBaseUrl || '', autoRunMpy: runtimeConfig.autoRunMpy === true, botId: runtimeConfig.botId || '', hasBotToken: Boolean(creator.botTokens.get(runtimeConfig.botId)) }, webAppHostname, webAppAddresses: addressChoices(), webAppPort: gateway.port, docsUrl: docsUrl.href, busy,
           run: run ? { runId: run.runId, webAppUrl: run.webAppUrl, debugDir: run.debugDir } : null,
           events: await events(url.searchParams.get('runId') === run?.runId ? url.searchParams.get('after') : 0),
         });
@@ -125,23 +140,67 @@ export async function startWorkbench(options = {}) {
           return reply(res, 200, { path, parent: dirname(path), directories, drives });
         }
         if (req.method !== 'POST') return reply(res, 404, { error: 'Not found' });
-        const body = await bodyOf(req);
+        const body = await bodyOf(req, url.pathname === '/api/files/save' ? 7 * 1024 * 1024 : 16384);
+        if (stopped) return reply(res, 409, { error: 'Studio is stopping' });
+        if (url.pathname === '/api/devices/refresh') {
+          const session = creator.session;
+          if (!deviceRefresh || deviceRefresh.session !== session) {
+            const current = { session, promise: creator.refresh() };
+            deviceRefresh = current;
+            current.promise.finally(() => { if (deviceRefresh === current) deviceRefresh = null; }).catch(() => {});
+          }
+          return reply(res, 200, await deviceRefresh.promise);
+        }
+        if (['list', 'read', 'save'].some(action => url.pathname === '/api/files/' + action)) {
+          const fileSession = creator.session;
+          const operation = fileQueue.then(async () => {
+            if (fileSession !== creator.session) throw new Error("Login session changed; please retry");
+            if (stopped) throw new Error('Studio is stopping');
+            let result;
+            if (!creator.session || !project) throw new Error('请先登录并选择应用');
+            if (body.project !== project.path) throw new Error('当前应用已变化，请刷新后重试');
+            const files = new ProjectFiles(project.path);
+            const action = url.pathname.split('/').pop();
+            if (action === 'list') result = await files.list(body.path);
+            if (action === 'read') result = await files.read(body.path);
+            if (action === 'save') result = await files.save(body.path,body.content,body.revision);
+            return result;
+          });
+          fileQueue = operation.catch(() => {});
+          return reply(res, 200, await operation);
+        }
         if (busy || stopped) return reply(res, 409, { error: '正在处理上一项操作，请稍后重试' });
         busy = true;
         try {
           let result = { ok: true };
           switch (url.pathname) {
             case '/api/auth/code': await creator.sendCode(body); break;
-            case '/api/auth/login': result = await creator.login(body); break;
+            case '/api/auth/login':
+              if (!creator.session) { await stopRun(); runtimeConfig = {}; }
+              result = await creator.login(body); break;
+            case '/api/bots/refresh': result = await creator.refreshBots(); break;
+            case '/api/bots/token':
+              if (run && runtimeConfig.botId === body.botId) throw new Error('请先停止智能体，再修改正在使用的 Bot token');
+              creator.setBotToken(String(body.botId || ''), body.token); break;
+            case '/api/bots/select': {
+              if (run) throw new Error('请先停止智能体，再选择 Bot');
+              const botId = String(body.botId || '');
+              if (!creator.session || !creator.bots.some(bot => bot.id && bot.id === botId)) throw new Error('请选择当前账号下的 Bot');
+              runtimeConfig = { ...runtimeConfig, botId, botToken: undefined };
+              break;
+            }
             case '/api/auth/logout': await stopRun(); runtimeConfig = {}; await creator.logout(); break;
-            case '/api/devices/refresh': result = await creator.refresh(); break;
             case '/api/project/open': {
               const next = await inspect(String(body.path || ''));
               if (!body.path) throw new Error('请选择项目目录');
               if (run) throw new Error('切换项目之前请先停止当前调试');
-              if (project?.path !== next.path) runtimeConfig = {};
+              if (project?.path !== next.path) runtimeConfig = { botId: runtimeConfig.botId };
               project = next; result = project; break;
             }
+            case '/api/webapp/address':
+              if (run) throw new Error('请先停止智能体，再修改 WebApp 访问地址');
+              webAppHostname = validateWebAppHostname(String(body.host || ''));
+              result = { host: webAppHostname }; break;
             case '/api/run/start': result = await launch(body); break;
             case '/api/run/stop': result = await stopRun(true); break;
             case '/api/run/slots/refresh':
@@ -164,6 +223,9 @@ export async function startWorkbench(options = {}) {
             case '/api/run/rerun':
               if (!run) throw new Error('尚未开始调试');
               result = await run.launches.rerun(body.launchId); break;
+            case '/api/run/mpy/again':
+              if (!run) throw new Error('尚未开始调试');
+              result = await run.launches.runMpyAgain(body.launchId); break;
             default: return reply(res, 404, { error: 'Not found' });
           }
           return reply(res, 200, result);
@@ -178,7 +240,10 @@ export async function startWorkbench(options = {}) {
       return reply(res, 200, await readFile(new URL('../ui-dist' + url.pathname, import.meta.url)), type);
     } catch (error) {
       const message = String(error.message || '操作失败');
-      const safe = creator.session?.token ? message.replaceAll(creator.session.token, '[REDACTED]') : message;
+      let safe = message;
+      for (const secret of [creator.session?.token, runtimeConfig.botToken, ...creator.botTokens.values()]) {
+        if (secret) safe = safe.replaceAll(secret, '[REDACTED]');
+      }
       if (!res.headersSent) reply(res, 400, { error: safe }); else res.destroy();
     }
   });
@@ -187,6 +252,6 @@ export async function startWorkbench(options = {}) {
   await new Promise((done, reject) => { server.once('error', reject); server.listen(options.port ?? 8787, '127.0.0.1', done); });
   const port = server.address().port;
   for (const host of ['127.0.0.1', 'localhost']) { allowed.add(host + ':' + port); origins.add('http://' + host + ':' + port); }
-  async function close() { stopped = true; await stopRun(); creator.session = null; await gateway.close(); await new Promise(done => { server.close(done); server.closeAllConnections(); }); }
+  async function close() { stopped = true; await stopRun(); creator.session = null; creator.botTokens.clear(); creator.bots = []; await gateway.close(); await new Promise(done => { server.close(done); server.closeAllConnections(); }); }
   return { server, port, gatewayPort: gateway.port, studioUrl: 'http://127.0.0.1:' + port + '/#studioToken=' + credential, close };
 }

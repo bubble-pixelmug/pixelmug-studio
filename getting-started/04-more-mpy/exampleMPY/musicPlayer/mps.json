@@ -1,0 +1,19 @@
+{
+  "name": "getting-started-music-player",
+  "version": "1.0.0",
+  "description": "点击播放本地 Ogg Opus 音乐并显示默认频谱",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "mpy_button",
+      "version": ">=1.0.0"
+    }
+  ]
+}

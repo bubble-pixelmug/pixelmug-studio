@@ -1,10 +1,37 @@
-debug/
-
+﻿# Dependencies and generated output
 node_modules/
-examples/**/debug/
-examples/**/devices.local.json
+ui-dist/
+dist/
+build/
+coverage/
+.vite/
+.cache/
+managed_components/
+sdkconfig
+sdkconfig.old
 
-__pycache__/
-*.pyc
+# Runtime data and local credentials
+debug/
+devices.local.json
 .env
 .env.*
+!.env.example
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.tmp/
+tmp/
+temp/
+.DS_Store
+Thumbs.db

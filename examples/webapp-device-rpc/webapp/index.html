@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PixelMug 屏幕控制</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="card">
+    <p class="eyebrow">WebApp 直接调用设备 RPC</p>
+    <h1>PixelMug 屏幕控制</h1>
+    <p id="device" class="device">正在获取关联设备…</p>
+
+    <div class="actions">
+      <button id="turn-on" type="button" disabled>Turn on display</button>
+      <button id="turn-off" type="button" class="secondary" disabled>Turn off display</button>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

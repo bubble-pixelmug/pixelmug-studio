@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BLE 配置上传</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <button id="connect" disabled>连接</button>
+  <p>已预填五种类型的默认值，连接后可直接发送。字符串请使用英文或拼音。</p>
+  <form>
+    <fieldset disabled>
+      <label>config1 · 数字 <input name="config1" type="number" value="42" step="any" required></label>
+      <label>config2 · 字符串 <input name="config2" value="hello" maxlength="128" pattern="[ -~]*"></label>
+      <label>config3 · 布尔
+        <select name="config3">
+          <option value="true" selected>true</option>
+          <option value="false">false</option>
+        </select>
+      </label>
+      <label>config4 · 数组（JSON）
+        <textarea name="config4" rows="2" maxlength="128" required>[1, 2, 3]</textarea>
+      </label>
+      <label>config5 · 对象（JSON）
+        <textarea name="config5" rows="3" maxlength="128" required>{"x": 1, "y": 2}</textarea>
+      </label>
+      <button id="send" type="submit">发送到杯子</button>
+    </fieldset>
+  </form>
+  <p id="result" role="status">请先连接杯子</p>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+﻿{
+  "name": "network-udp-cast",
+  "version": "1.0.0",
+  "description": "udp cast example",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

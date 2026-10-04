@@ -1,0 +1,15 @@
+{
+  "name": "upyxel-sprite-animation",
+  "version": "1.0.0",
+  "description": "使用 VAD 驱动 MicroPyxel 小鸟逐帧动画",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

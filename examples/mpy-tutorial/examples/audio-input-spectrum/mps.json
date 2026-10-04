@@ -1,0 +1,15 @@
+{
+  "name": "audio-input-spectrum",
+  "version": "1.0.0",
+  "description": "显示麦克风频谱",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ await init();
 const root = new URL("./", import.meta.resolve("@jeejio-bubble/bot/sdk/WebApp.js"));
 const rootPath = realpathSync(fileURLToPath(root));
 export const browserSdkFiles = new Set();
+export const browserDeviceFiles = new Map();
 function visit(url) {
   const file = realpathSync(fileURLToPath(url));
   const name = relative(rootPath, file).replaceAll("\\", "/");
@@ -28,3 +29,24 @@ function visit(url) {
 for (const name of ["WebApp.js", "BleManager.js", "BleAppClient.js", "BleAppSession.js", "constants.js", "errors.js", "utils.js"]) {
   visit(new URL(name, root));
 }
+
+const packageRoot = new URL("./", import.meta.resolve("@jeejio-bubble/bot/package.json"));
+const packageRootPath = realpathSync(fileURLToPath(packageRoot));
+function visitDevice(url) {
+  const file = realpathSync(fileURLToPath(url));
+  const name = relative(packageRootPath, file).split(String.fromCharCode(92)).join("/");
+  if (name.startsWith("../") || isAbsolute(name) || !name.endsWith(".js")) {
+    throw new Error("Browser device SDK dependency escapes package directory");
+  }
+  if (browserDeviceFiles.has(name)) return;
+  browserDeviceFiles.set(name, file);
+  const [imports] = parse(readFileSync(file, "utf8"));
+  for (const entry of imports) {
+    if (entry.d !== -1) continue;
+    if (!entry.n || !entry.n.startsWith(".")) {
+      throw new Error("Browser device SDK contains an unsupported dependency");
+    }
+    visitDevice(new URL(entry.n, url));
+  }
+}
+visitDevice(new URL(import.meta.resolve("@jeejio-bubble/bot/devices/pixelmug/ext")));

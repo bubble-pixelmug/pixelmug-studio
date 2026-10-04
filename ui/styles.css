@@ -71,10 +71,16 @@ dialog{width:min(720px,calc(100vw - 36px));border:1px solid var(--border);border
 .sidebar-service i.disconnected{background:#b8c7da;box-shadow:none}
 /* Per-device debug navigation and pages */
 .debug-device-tabs{display:flex;flex-direction:column;gap:6px;margin:2px 5px 5px 24px;padding:6px 0 3px 13px;border-left:1px solid rgba(255,255,255,.3)}
-.section-tabs .debug-device-tabs button{grid-template-columns:42px minmax(0,1fr);padding:9px 10px;color:#e5f2ff;border:1px solid transparent;border-radius:11px}
-.section-tabs .debug-device-tabs button:hover{background:rgba(255,255,255,.12)}
-.section-tabs .debug-device-tabs button.active{background:#fff7f1;color:#a94a13;border-color:#ffc89f;box-shadow:0 7px 18px rgba(0,45,105,.16)}
-.section-tabs .debug-device-tabs button.active small{color:#b96832}
+.debug-device-entry{border:1px solid transparent;border-radius:11px;overflow:hidden}
+.debug-device-entry.active{background:#fff7f1;color:#a94a13;border-color:#ffc89f;box-shadow:0 7px 18px rgba(0,45,105,.16)}
+.section-tabs .debug-device-tabs .debug-device-card{grid-template-columns:42px minmax(0,1fr);padding:9px 10px;color:#e5f2ff;border:0;border-radius:10px}
+.section-tabs .debug-device-tabs .debug-device-card:hover{background:rgba(255,255,255,.12)}
+.section-tabs .debug-device-tabs .debug-device-entry.active .debug-device-card{color:#a94a13}
+.section-tabs .debug-device-tabs .debug-device-entry.active .debug-device-card small{color:#b96832}
+.section-tabs .debug-device-tabs .rerun-mpy-button{display:block;width:calc(100% - 62px);margin:-3px 10px 8px 52px;padding:5px 7px;border:1px solid rgba(255,255,255,.55);border-radius:7px;background:rgba(255,255,255,.13);color:#fff;font-size:11px;font-weight:700;text-align:center}
+.section-tabs .debug-device-tabs .rerun-mpy-button:hover{background:rgba(255,255,255,.22)}
+.section-tabs .debug-device-tabs .debug-device-entry.active .rerun-mpy-button{border-color:#f0a873;background:#fff;color:#b45418}
+.section-tabs .debug-device-tabs .rerun-mpy-button:disabled{opacity:.55;cursor:not-allowed}
 .debug-device-image{width:40px;height:40px;border-radius:9px;background:#fff;display:grid;place-items:center;overflow:hidden}
 .debug-device-image img{display:block;width:100%;height:100%;object-fit:contain}.debug-device-image img.p1{width:94%;height:94%}.debug-device-image img.fallback{width:80%;height:80%}
 .debug-device-tabs strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -146,3 +152,57 @@ dialog{width:min(720px,calc(100vw - 36px));border:1px solid var(--border);border
 
 
 
+
+.docs-book i{width:22px;height:26px;border:2px solid currentColor;border-radius:3px}.docs-book i:before{left:5px;top:5px;width:10px;height:2px;background:currentColor;box-shadow:0 5px currentColor,0 10px currentColor}
+
+/* Keep desktop navigation and content in separate scroll containers. */
+@media (min-width: 901px) {
+  .studio-shell {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .studio-shell > .app-header,
+  .studio-shell > #notice { flex-shrink: 0; }
+  .studio-shell > #workspace {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    overflow: hidden;
+  }
+  #workspace > .flow-sidebar,
+  #workspace > .workspace-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
+  #workspace > .flow-sidebar {
+    position: static;
+    scrollbar-color: #88bdff transparent;
+  }
+  #workspace > .flow-sidebar > * { flex-shrink: 0; }
+}
+
+/* Hide navigation scrollbars without disabling scrolling. */
+#workspace > .flow-sidebar,
+.flow-sidebar .tree-entries {
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}
+#workspace > .flow-sidebar::-webkit-scrollbar,
+.flow-sidebar .tree-entries::-webkit-scrollbar {
+  display: none;
+}
+/* Hide the main content scrollbar while preserving independent scrolling. */
+#workspace > .workspace-content {
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}
+#workspace > .workspace-content::-webkit-scrollbar {
+  display: none;
+}

@@ -1,0 +1,15 @@
+{
+    "name":  "motion-tap-counter",
+    "version":  "1.0.0",
+    "description":  "拿起并轻放 PixelMug，通过 G-sensor EVENT_TAP 累计次数",
+    "dependencies":  [
+                         {
+                             "name":  "micropyxel",
+                             "version":  "\u003e=1.0.0"
+                         },
+                         {
+                             "name":  "g_sensor",
+                             "version":  "\u003e=1.0.0"
+                         }
+                     ]
+}

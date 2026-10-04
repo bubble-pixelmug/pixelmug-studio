@@ -50,6 +50,42 @@ my-agent/
 
 运行日志保存在应用的 `debug/<runId>/` 下。该目录不会由 Studio 自动删除，建议在应用仓库中忽略 `debug/`。
 
+
+## WebApp 自动构建
+
+应用的 `webapp/index.html` 作为页面入口，使用 `<script type="module" src="./main.js"></script>` 引入业务代码。WebApp 可以和 Bot 一样按 npm 包名引用浏览器兼容的 SDK：
+
+```js
+import { BubbleWebApp } from '@jeejio-bubble/bot/sdk/WebApp.js';
+import PixelMug from '@jeejio-bubble/bot/devices/pixelmug/ext';
+```
+
+启动、重启智能体时，Studio 自动构建 HTML、JS 和 CSS，将产物保存在 `debug/<runId>/webapp/` 并通过局域网入口提供访问。源码不被覆盖；修改后保存并重启即可。构建失败会显示错误并阻止本次启动。SDK 使用 Studio 已安装的版本，不会在启动时自动下载或更新。其他浏览器依赖优先从项目解析，也可使用 Studio 已安装的包。
+
+当前使用 Studio 内置构建配置，支持 HTML、JavaScript、TypeScript、CSS 和静态资源；不会执行应用自己的 Vite 配置。需要原样保留的静态文件放入 `webapp/public/`。SDK 的 `talPrintText()` 可在浏览器使用；依赖 Node.js 的图片转换接口仍需在 Bot 执行。
+
+## 文件浏览与编辑
+
+选择应用后，左侧“选择应用”下方会显示项目目录树。点击文件可编辑，支持常见代码语法高亮、撤销/重做，以及 Ctrl+S / ⌘S 保存。展开目录时自动加载文件列表。
+
+仅编辑当前项目中不超过 1 MB 的 UTF-8 文本文件；目录树跳过 `.git`、`node_modules`、`debug` 及符号链接。保存会检查外部修改；切换文件、项目或关闭页面时会提醒未保存内容。运行中的代码修改保存后，需要重启智能体加载。
+
+## 开发文档
+
+文档站源码位于仓库根目录 `docs/`，与 Studio 独立安装和运行：
+
+```sh
+cd ../../docs
+npm ci
+npm run dev
+```
+
+本地文档地址为 http://127.0.0.1:5174/ 。Studio 的“开发文档”导航通过 iframe 展示该站点，也支持独立打开。首次接入需重启 Studio。
+
+部署远程文档后，可设置 `STUDIO_DOCS_URL` 或使用 `npm start -- --docs-url https://你的文档域名/`。Studio 只允许 iframe 加载配置的文档来源。文档站部署及维护说明见根目录 `docs/README.md`。
+
+完整可运行示例仍放在 `tools/studio/examples/`，文档站只保存说明文档和用法代码片段。
+
 ## 开发命令
 
 ```sh

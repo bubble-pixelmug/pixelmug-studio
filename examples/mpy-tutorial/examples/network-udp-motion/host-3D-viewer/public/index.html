@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PixelMug Motion Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      background: #07111f;
+      color: #eaf4ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: radial-gradient(circle at 50% 35%, #183b63 0, #0a1a2d 42%, #050b14 100%); }
+    #scene { position: fixed; inset: 0; }
+    .panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: min(340px, calc(100vw - 40px));
+      padding: 18px;
+      border: 1px solid rgba(125, 190, 255, 0.22);
+      border-radius: 16px;
+      background: rgba(6, 18, 32, 0.94);
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.28);
+    }
+    h1 { margin: 0 0 6px; font-size: 20px; }
+    .subtitle { margin: 0 0 16px; color: #8eabc8; font-size: 13px; }
+    .status { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; font-weight: 700; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #738399; box-shadow: 0 0 0 4px rgba(115, 131, 153, 0.14); }
+    .dot.online { background: #36d78e; box-shadow: 0 0 0 4px rgba(54, 215, 142, 0.14), 0 0 16px rgba(54, 215, 142, 0.7); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .metric { padding: 10px; border-radius: 10px; background: rgba(76, 132, 187, 0.1); }
+    .metric span { display: block; color: #7f9dbb; font-size: 11px; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 3px; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .details { display: flex; justify-content: space-between; margin: 13px 0; color: #a8bfd6; font-size: 12px; }
+    button {
+      width: 100%;
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #1787ff;
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: #3296ff; }
+    button:disabled { cursor: default; opacity: 0.45; }
+    .hint { position: fixed; right: 20px; bottom: 18px; color: rgba(205, 225, 244, 0.62); font-size: 12px; }
+    @media (max-width: 620px) {
+      .panel { top: 12px; left: 12px; width: calc(100vw - 24px); padding: 14px; }
+      .hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene" aria-label="3D PixelMug motion viewer"></div>
+  <section class="panel">
+    <h1>PixelMug Motion</h1>
+    <p class="subtitle">UDP 9000 · rotation only</p>
+    <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">等待 PixelMug 数据</span></div>
+    <div class="grid">
+      <div class="metric"><span>Yaw</span><strong id="yaw">—</strong></div>
+      <div class="metric"><span>Pitch</span><strong id="pitch">—</strong></div>
+      <div class="metric"><span>Roll</span><strong id="roll">—</strong></div>
+    </div>
+    <div class="details"><span id="rate">0 packets/s</span><span id="lost">lost 0</span></div>
+    <div class="details"><span id="render-rate">render 0 fps</span><span id="frame-time">gap 0 ms · draw 0 ms</span></div>
+    <button id="reset" disabled>将当前姿态设为零点</button>
+  </section>
+  <div class="hint">保持模型位置固定，只同步水杯旋转</div>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

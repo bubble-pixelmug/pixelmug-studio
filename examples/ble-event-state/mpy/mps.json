@@ -1,0 +1,11 @@
+{
+  "name": "ble-event-state",
+  "version": "1.0.0",
+  "description": "BLE 状态与事件：每秒计数、整十通知和重新计数",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

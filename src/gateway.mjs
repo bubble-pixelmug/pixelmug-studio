@@ -43,7 +43,8 @@ export async function startWebAppGateway({ port = 7979, bind = "0.0.0.0", hostna
         return reply(res, 503, html("智能体尚未运行，请在 Studio 中启动后重新打开本页面。"), "text/html; charset=utf-8");
       }
       if (!match && !url.pathname.startsWith("/api/") && url.pathname !== "/studio-debug-config.js" &&
-          !url.pathname.startsWith("/studio-runtime/") && !url.pathname.startsWith("/sdk/")) {
+          !url.pathname.startsWith("/studio-runtime/") && !url.pathname.startsWith("/sdk/") &&
+          !url.pathname.startsWith("/bubble-sdk/")) {
         return reply(res, 404, "Not found");
       }
       if (url.pathname.startsWith("/api/") && !authorized(req, active.credential)) return reply(res, 401, "WebApp access denied");

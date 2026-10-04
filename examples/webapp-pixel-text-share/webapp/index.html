@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixel Text Share</title>
+  <link rel="stylesheet" href="./style.css">
+  <script>
+    if (!globalThis.JeeWeb) {
+      const jeeScript = document.createElement('script');
+      jeeScript.src = 'jeesdk://jeeweb.js';
+      document.head.appendChild(jeeScript);
+    }
+  </script>
+</head>
+<body>
+  <main class="card">
+    <h1>Pixel Text Share</h1>
+
+    <form id="text-form">
+      <label for="text">显示文字</label>
+      <input id="text" name="text" value="Hello" maxlength="20" autocomplete="off">
+
+      <div class="settings">
+        <label>
+          颜色
+          <select id="color">
+            <option value="#ff0000">红色</option>
+            <option value="#00ff00" selected>绿色</option>
+            <option value="#0000ff">蓝色</option>
+          </select>
+        </label>
+
+        <label>
+          字体
+          <select id="size">
+            <option value="LARGE">大</option>
+            <option value="MEDIUM" selected>中</option>
+            <option value="SMALL">小</option>
+          </select>
+        </label>
+
+        <label>
+          滚动方向
+          <select id="direction">
+            <option value="0" selected>静止</option>
+            <option value="1">向左滚动</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="target-title">发送到</p>
+      <div class="devices">
+        <label class="device-option">
+          <input type="radio" name="device" value="1" disabled>
+          <span id="device-1">位置 1 未关联</span>
+        </label>
+
+        <label class="device-option">
+          <input type="radio" name="device" value="2" disabled>
+          <span id="device-2">位置 2 未关联</span>
+        </label>
+      </div>
+
+      <button type="submit" disabled>发送</button>
+    </form>
+
+    <p id="status" aria-live="polite">正在连接冒泡 App…</p>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "prompt-sound",
+  "version": "1.0.0",
+  "description": "泡泡生成与破裂的可打断触摸提示音示例",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "mpy_button",
+      "version": ">=1.0.0"
+    }
+  ]
+}

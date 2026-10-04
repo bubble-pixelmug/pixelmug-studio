@@ -1,0 +1,11 @@
+﻿{
+  "name": "network-udp-cast-host",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generate 32x16 effects and cast them to PixelMug over UDP",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check effects.mjs && node --check public/main.js"
+  }
+}

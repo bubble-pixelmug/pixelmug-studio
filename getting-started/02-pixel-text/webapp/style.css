@@ -1,0 +1,35 @@
+:root {
+  font-family: system-ui, "Microsoft YaHei", sans-serif;
+  color: #193b64;
+  background: #f2f7ff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 600px; margin: auto; padding: 32px 20px; }
+h1 { margin: 12px 0; font-size: clamp(24px, 6vw, 34px); }
+p { color: #60738b; line-height: 1.6; }
+.eyebrow { color: #0867db; font-size: 12px; font-weight: 700; letter-spacing: .1em; }
+label { display: grid; gap: 8px; margin-top: 18px; font-weight: 650; }
+input, select, button {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #cbdcf2;
+  border-radius: 12px;
+  background: white;
+  color: #193b64;
+  font: inherit;
+}
+input[type="color"] { width: 100%; padding: 5px; }
+input[type="range"] { padding: 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.check { display: flex; align-items: center; gap: 10px; }
+.check input { width: 20px; height: 20px; min-height: auto; }
+.check span { display: grid; gap: 2px; }
+.check small { color: #60738b; font-weight: 400; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .5; }
+.primary { width: 100%; margin: 22px 0 4px; border: 0; background: #0867db; color: white; }
+#status { min-height: 48px; font-size: 14px; }
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; }
+}

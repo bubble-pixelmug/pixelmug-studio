@@ -1,0 +1,11 @@
+{
+  "name": "audio-pcm-tone",
+  "version": "1.0.0",
+  "description": "播放 PCM 提示音",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

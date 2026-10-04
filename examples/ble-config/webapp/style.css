@@ -1,0 +1,28 @@
+body {
+  max-width: 420px;
+  margin: 24px auto;
+  padding: 0 16px;
+  font-family: sans-serif;
+}
+
+fieldset {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+}
+
+input, select, textarea, button {
+  box-sizing: border-box;
+  padding: 10px;
+  font: inherit;
+}
+
+p {
+  line-height: 1.6;
+}

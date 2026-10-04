@@ -1,0 +1,8 @@
+{
+  "name": "getting-started-light",
+  "version": "1.0.0",
+  "description": "用手机控制 PixelMug 光点",
+  "dependencies": [
+    { "name": "micropyxel", "version": ">=1.0.0" }
+  ]
+}

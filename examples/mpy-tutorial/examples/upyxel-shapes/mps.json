@@ -1,0 +1,11 @@
+{
+  "name": "upyxel-shapes",
+  "version": "1.0.0",
+  "description": "MicroPyxel 基础图形绘制演示",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

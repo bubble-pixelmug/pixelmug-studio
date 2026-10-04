@@ -1,0 +1,15 @@
+{
+  "name": "upyxel-sound",
+  "version": "1.0.0",
+  "description": "自动演示 MicroPyxel Sound API 与三个声部",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

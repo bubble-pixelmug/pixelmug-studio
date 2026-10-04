@@ -1,0 +1,11 @@
+{
+  "name": "upyxel-image-transform",
+  "version": "1.0.0",
+  "description": "MicroPyxel 图片翻转、旋转与缩放演示",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

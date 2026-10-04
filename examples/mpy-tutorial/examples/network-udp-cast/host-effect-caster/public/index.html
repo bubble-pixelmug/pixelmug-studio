@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PixelMug UDP Cast</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">PIXELMUG · UDP</p>
+      <h1>效果投屏</h1>
+      <p>上位机实时生成 32×16 像素动画，通过局域网 UDP 投射到 PixelMug。</p>
+    </header>
+
+    <section class="panel target-panel">
+      <div>
+        <h2>设备地址</h2>
+        <p>填写 Studio 设备卡片中显示的 PixelMug 局域网 IP。</p>
+      </div>
+      <div class="target-fields">
+        <label>PixelMug IP<input id="device-ip" inputmode="decimal" placeholder="例如 172.16.30.102"></label>
+        <label>UDP 端口<input id="udp-port" type="number" min="1" max="65535" value="9001"></label>
+      </div>
+    </section>
+
+    <section class="preview-panel">
+      <canvas id="preview" width="32" height="16" aria-label="PixelMug 画面预览"></canvas>
+      <div class="cast-state">
+        <span id="status-dot"></span>
+        <strong id="status-text">尚未开始投屏</strong>
+        <span id="stats">0 帧</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div>
+          <h2>选择效果</h2>
+          <p>点击一种效果会立即开始投屏。</p>
+        </div>
+        <div class="transport-buttons">
+          <button id="pause" type="button">暂停</button>
+          <button id="stop" class="stop-button" type="button">停止并清屏</button>
+        </div>
+      </div>
+      <div id="effects" class="effects"></div>
+    </section>
+
+    <section class="panel controls">
+      <label>
+        <span>亮度 <output id="brightness-value">80%</output></span>
+        <input id="brightness" type="range" min="10" max="100" value="80">
+      </label>
+      <label>
+        <span>速度 <output id="speed-value">1.0×</output></span>
+        <input id="speed" type="range" min="50" max="200" value="100">
+      </label>
+    </section>
+
+    <p id="error" role="alert"></p>
+  </main>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

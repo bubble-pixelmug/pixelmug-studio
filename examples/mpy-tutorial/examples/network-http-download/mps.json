@@ -1,0 +1,11 @@
+{
+  "name": "network-http-download",
+  "version": "1.0.0",
+  "description": "使用固定缓冲区通过 HTTPS 流式下载文件",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

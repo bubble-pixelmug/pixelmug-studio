@@ -1,0 +1,11 @@
+{
+  "name": "network-tcp-client",
+  "version": "1.0.0",
+  "description": "使用原始 TCP Socket 完成域名解析、连接、发送和接收",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "upyxel-manual-render",
+  "version": "1.0.0",
+  "description": "MicroPyxel手动刷新像素点移动动画",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
-import { browserSdkFiles } from "./sdk-assets.mjs";
+import { browserDeviceFiles, browserSdkFiles } from "./sdk-assets.mjs";
 import { LaunchManager } from "./launch.mjs";
+import { buildWebApp } from "./webapp-build.mjs";
 import { createServer } from "node:http";
 import { randomUUID, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, appendFileSync, writeFileSync, readFileSync, realpathSync, statSync } from "node:fs";
@@ -20,7 +21,7 @@ const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
 export async function startStudio(options = {}) {
   const { redactText, serializeStudioValue } = await import(new URL("./runtime/StudioDebug.js", import.meta.url));
   const project = realpathSync(resolve(options.project || "."));
-  const webRoot = options.webRoot ? realpathSync(resolve(project, options.webRoot)) : null;
+  let webRoot = options.webRoot ? realpathSync(resolve(project, options.webRoot)) : null;
   if (webRoot === project) throw new Error("webRoot must be a dedicated public directory, not the project root");
   const runId = "run-" + new Date().toISOString().replace(/[:.]/g, "-") + "-" + randomBytes(3).toString("hex");
   const token = randomBytes(24).toString("hex");
@@ -28,6 +29,7 @@ export async function startStudio(options = {}) {
   const secrets = [token, studioToken, options.botToken, process.env.BOT_TOKEN].filter(Boolean);
   const debugDir = join(project, "debug", runId);
   mkdirSync(debugDir, { recursive: true });
+  if (webRoot) webRoot = await buildWebApp(webRoot, join(debugDir, 'webapp'));
   const recordsFile = join(debugDir, "events.jsonl");
   const textFile = join(debugDir, "events.log");
   writeFileSync(recordsFile, "");
@@ -73,11 +75,11 @@ export async function startStudio(options = {}) {
   let mpySeq = 0;
   const launches = new LaunchManager({
     project, debugDir, runId, devices: deviceConfig, ...(options.launchOptions || {}),
-    log: (job, level, message, kind) => {
+    log: (job, level, message, kind, metadata = {}) => {
       const safe = redactText(String(message), [...secrets, "pixelmug"]);
       appendFileSync(join(job.dir, kind === "console" ? "mpy.log" : "deploy.log"), safe + "\n");
       ingest([{ schemaVersion: 1, runId, source: "mpy", clientId: job.id, seq: ++mpySeq,
-        timestamp: new Date().toISOString(), level, kind, message: safe.slice(0,1800),
+        timestamp: new Date().toISOString(), level, kind, ...(metadata.lifecycle ? { lifecycle: metadata.lifecycle } : {}), message: safe.slice(0,1800),
         deviceId: job.device.deviceId, slotId: job.device.slotId, launchId: job.id }], "mpy");
     },
   });
@@ -167,6 +169,10 @@ export async function startStudio(options = {}) {
         const name = url.pathname.slice(5);
         if (!browserSDK.has(name)) return reply(res, 404, { error: "Not found" });
         path = join(sdkRoot, name);
+      } else if (url.pathname.startsWith("/bubble-sdk/")) {
+        const name = url.pathname.slice("/bubble-sdk/".length);
+        path = browserDeviceFiles.get(name);
+        if (!path) return reply(res, 404, { error: "Not found" });
       } else if (webRoot && url.pathname.startsWith("/app/")) {
         const name = decodeURIComponent(url.pathname.slice(5) || "index.html");
         // Only serve a dedicated WebApp directory; reject hidden files and symlink escapes.

@@ -1,0 +1,11 @@
+{
+  "name": "network-http-json",
+  "version": "1.0.0",
+  "description": "通过 HTTPS 获取并显示 Chicago 当前温度",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,readFile,rm,symlink} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {ProjectFiles} from '../src/project-files.mjs';
+test('project files browse, save and reject stale revisions',async t=>{
+ const root=await mkdtemp(join(tmpdir(),'studio-files-'));t.after(()=>rm(root,{recursive:true,force:true}));
+ const files=new ProjectFiles(root);
+ await mkdir(join(root,'bot'));await writeFile(join(root,'bot/main.js'),'');
+ let file=await files.read('bot/main.js');await files.save(file.path,'console.log("hello");\r\n',file.revision);
+ assert.equal((await files.list(''))[0].directory,true);
+ await assert.rejects(files.save(file.path,'overwrite',file.revision));
+ file=await files.read(file.path);await writeFile(join(root,file.path),'external');
+ await assert.rejects(files.save(file.path,'overwrite',file.revision));assert.equal(await readFile(join(root,file.path),'utf8'),'external');
+ for(const path of ['../escape','bot/../../escape','C:/escape','bot/main.js:stream'])await assert.rejects(files.read(path));
+ await writeFile(join(root,'binary'),Buffer.from([0,1]));await assert.rejects(files.read('binary'));
+ await writeFile(join(root,'huge'),'x'.repeat(1024*1024+1));await assert.rejects(files.read('huge'));
+ await symlink(root,join(root,'link'),'junction');await assert.rejects(files.read('link/bot/main.js'));
+ assert.ok(!(await files.list('')).some(e=>e.name==='link'));
+});

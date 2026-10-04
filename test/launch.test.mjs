@@ -33,6 +33,7 @@ async function fixture(t, failUpload = false) {
       const [id,nonce] = [...code.matchAll(/"([^"]+)"/g)].map(m => m[1]);
       this.emit("output", "\x1eSTUDIO:" + nonce + ":" + JSON.stringify({ launchId:id,state:"running" }) + "\nhello mpy\n");
     }
+    async restart(code) { operations.push("restart"); return this.start(code); }
     async probe() { return true; }
     close() { this.emit("disconnect"); }
   }
@@ -79,6 +80,20 @@ test("upload failure never starts the application",async t=>{
   const {manager,operations}=await fixture(t,true);
   await manager.handle("webapp",message("launch",{ownerId:"owner-1",device}));
   await drive(manager);assert.equal(manager.list()[0].state,"failed");assert.ok(!operations.includes("start"));
+});
+test("runMpyAgain executes the deployed entry without rebooting or uploading",async t=>{
+  const {manager,operations,uploads}=await fixture(t);
+  const first=await manager.handle("webapp",message("launch",{ownerId:"owner-1",device}));
+  await drive(manager);
+  const job=[...manager.jobs.values()][0];
+  job.repl.emit("output", "\x1eSTUDIO:"+job.nonce+":"+JSON.stringify({launchId:job.id,state:"completed"})+"\n");
+  assert.equal(manager.view(job).canRunMpyAgain,true);
+  const beforeUploads=uploads.size;
+  const beforeOperations=operations.length;
+  await manager.runMpyAgain(first.launchId);
+  assert.equal(uploads.size,beforeUploads);
+  assert.deepEqual(operations.slice(beforeOperations),["restart","start"]);
+  assert.equal(job.state,"running");
 });
 test("unauthorized device, wrong run and reserved startup files fail before any reboot",async t=>{
   const {root,manager,operations}=await fixture(t);
@@ -401,4 +416,19 @@ test("simultaneous automatic and app launch requests share one deployment",async
   const calls=await drive(manager);
   assert.equal(calls.filter(method=>method==="talMpyRebootStartREPL").length,1);
   assert.equal(manager.jobs.size,1);
+});
+test('device logs carry origin, lifecycle boundaries and structured exception lines',async t=>{
+  const {manager,logs}=await fixture(t);
+  await manager.handle('webapp',message('launch',{ownerId:'owner-1',device}));
+  await drive(manager);
+  assert.ok(logs.some(args=>args[3]==='studio'&&args[4]?.lifecycle==='running'));
+  assert.ok(logs.some(args=>args[2]==='hello mpy'&&args[3]==='console'&&args[1]==='log'));
+  const job=[...manager.jobs.values()][0];
+  const frame=event=>'\x1eSTUDIO:'+job.nonce+':'+JSON.stringify({launchId:job.id,...event})+'\n';
+  job.repl.emit('output',frame({type:'exception',message:'Traceback (most recent call last):'}));
+  job.repl.emit('output',frame({type:'exception',message:'ValueError: example'}));
+  job.repl.emit('output',frame({state:'failed',message:'example'}));
+  assert.ok(logs.some(args=>args[1]==='error'&&args[3]==='console'&&args[2]==='ValueError: example'));
+  assert.ok(logs.some(args=>args[1]==='error'&&args[3]==='studio'&&args[4]?.lifecycle==='failed'));
+  assert.ok(!logs.some(args=>String(args[2]).includes(job.nonce)));
 });

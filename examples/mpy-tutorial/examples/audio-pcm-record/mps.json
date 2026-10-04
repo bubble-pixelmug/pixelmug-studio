@@ -1,0 +1,11 @@
+{
+  "name": "audio-pcm-record",
+  "version": "1.0.0",
+  "description": "录制三秒 PCM 并一次提交回放",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

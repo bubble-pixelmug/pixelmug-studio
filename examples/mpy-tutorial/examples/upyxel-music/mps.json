@@ -1,0 +1,15 @@
+{
+  "name": "upyxel-music",
+  "version": "1.0.0",
+  "description": "使用 MML 和 Music 播放四声部乐曲",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

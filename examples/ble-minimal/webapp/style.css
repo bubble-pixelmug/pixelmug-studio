@@ -1,0 +1,17 @@
+body {
+  margin: 24px;
+  font-family: sans-serif;
+}
+
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+}
+
+button {
+  padding: 12px 20px;
+  font-size: 16px;
+}

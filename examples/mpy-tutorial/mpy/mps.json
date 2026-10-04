@@ -1,0 +1,11 @@
+{
+  "name": "upyxel-font",
+  "version": "1.0.0",
+  "description": "MicroPyxel BDF 字体测宽、居中和滚动文字演示",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

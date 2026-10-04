@@ -1,0 +1,11 @@
+{
+  "name": "audio-opus-record",
+  "version": "1.0.0",
+  "description": "事件型录制 Opus 并流式回放",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

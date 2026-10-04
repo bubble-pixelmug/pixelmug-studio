@@ -1,0 +1,8 @@
+{
+  "name": "ble-simple-text",
+  "version": "1.0.0",
+  "description": "使用 BLE Simple 通道发送 UTF-8 文本",
+  "dependencies": [
+    { "name": "micropyxel", "version": ">=1.0.0" }
+  ]
+}

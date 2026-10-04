@@ -1,0 +1,8 @@
+{
+  "name": "ble-simple-control",
+  "version": "1.0.0",
+  "description": "使用 BLE Simple 通道实时传输网格坐标",
+  "dependencies": [
+    { "name": "micropyxel", "version": ">=1.0.0" }
+  ]
+}

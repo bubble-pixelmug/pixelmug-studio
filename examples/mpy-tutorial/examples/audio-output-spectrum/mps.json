@@ -1,0 +1,15 @@
+{
+  "name": "audio-output-spectrum",
+  "version": "1.0.0",
+  "description": "依次播放16个频段的PCM测试音并显示输出频谱",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

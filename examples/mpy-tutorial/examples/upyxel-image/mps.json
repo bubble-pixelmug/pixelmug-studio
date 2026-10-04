@@ -1,0 +1,11 @@
+{
+  "name": "upyxel-image",
+  "version": "1.0.0",
+  "description": "MicroPyxel PNG 与图像复制 API 演示",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

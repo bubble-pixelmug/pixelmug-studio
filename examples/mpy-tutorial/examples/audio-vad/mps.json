@@ -1,0 +1,11 @@
+{
+  "name": "audio-vad",
+  "version": "1.0.0",
+  "description": "检测 VAD 事件并打印说话状态",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

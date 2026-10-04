@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>通过 WebApp 与 PixelMug 交互</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">02 · WEBAPP + TAL</p>
+    <h1>通过 WebApp 与 PixelMug 交互</h1>
+    <p>输入文字并调整显示效果，然后直接发送到设备。</p>
+
+    <label>显示文字
+      <input id="text" maxlength="60" value="Hello PixelMug">
+    </label>
+    <div class="grid">
+      <label>字体大小
+        <select id="font-size">
+          <option value="SMALL">小</option>
+          <option value="MEDIUM" selected>中</option>
+          <option value="LARGE">大</option>
+        </select>
+      </label>
+      <label>文字颜色
+        <input id="color" type="color" value="#00ff00">
+      </label>
+      <label>滚动方向
+        <select id="direction">
+          <option value="1">从右向左</option>
+          <option value="2">从左向右</option>
+          <option value="3">从下向上</option>
+          <option value="4">从上向下</option>
+        </select>
+      </label>
+      <label>滚动延迟 <span id="speed-value">80</span>
+        <input id="speed" type="range" min="10" max="200" value="80">
+      </label>
+    </div>
+    <label class="check">
+      <input id="scroll" type="checkbox" checked>
+      <span>滚动显示<small>关闭后文字保持静止；延迟数值越大，滚动越慢。</small></span>
+    </label>
+    <button id="send" class="primary" disabled>显示到 PixelMug</button>
+    <p id="status" role="status">正在读取关联设备…</p>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

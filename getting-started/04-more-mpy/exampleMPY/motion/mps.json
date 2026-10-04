@@ -1,0 +1,23 @@
+{
+  "name": "getting-started-motion",
+  "version": "1.0.0",
+  "description": "摇动水杯，让白色粒子柱倾倒、散开和弹跳",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "pixel_dust",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "g_sensor",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "mpy_button",
+      "version": ">=1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+﻿{
+  "name": "upyxel-draw-state",
+  "version": "1.0.0",
+  "description": "MicroPyxel clip裁剪与camera滚动演示",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

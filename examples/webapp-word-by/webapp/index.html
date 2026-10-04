@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word By</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>Word By</h1>
+
+    <form id="word-form">
+      <label for="text">输入两个字或两个单词</label>
+      <input id="text" name="text" value="你好" autocomplete="off">
+
+      <div class="devices">
+        <section class="device-card">
+          <h2 id="device-1">第一个设备</h2>
+
+          <label for="size-1">字体大小</label>
+          <select id="size-1">
+            <option value="LARGE">大</option>
+            <option value="MEDIUM" selected>中</option>
+            <option value="SMALL">小</option>
+          </select>
+
+          <label for="color-1">颜色</label>
+          <select id="color-1">
+            <option value="#ff0000">红色</option>
+            <option value="#00ff00" selected>绿色</option>
+            <option value="#0000ff">蓝色</option>
+          </select>
+        </section>
+
+        <section class="device-card">
+          <h2 id="device-2">第二个设备</h2>
+
+          <label for="size-2">字体大小</label>
+          <select id="size-2">
+            <option value="LARGE">大</option>
+            <option value="MEDIUM" selected>中</option>
+            <option value="SMALL">小</option>
+          </select>
+
+          <label for="color-2">颜色</label>
+          <select id="color-2">
+            <option value="#ff0000">红色</option>
+            <option value="#00ff00" selected>绿色</option>
+            <option value="#0000ff">蓝色</option>
+          </select>
+        </section>
+      </div>
+
+      <button type="submit" disabled>显示</button>
+    </form>
+
+    <p id="status" aria-live="polite">正在获取关联设备…</p>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

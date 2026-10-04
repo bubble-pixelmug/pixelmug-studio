@@ -1,0 +1,11 @@
+{
+  "name": "ble-config",
+  "version": "1.0.0",
+  "description": "BLE 配置上传：五种 JSON 数据类型并逐条显示",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ]
+}

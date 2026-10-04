@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
 import { startStudio } from "../src/receiver.mjs";
+import { startWebAppGateway } from "../src/gateway.mjs";
 import { createStudioDebug } from "../src/runtime/StudioDebug.js";
 
 async function fixture(t, extra = {}) {
@@ -144,4 +145,32 @@ test("npm browser SDK serves its complete import graph without exposing Node mod
   for (const entry of ["BubbleBot.js", "InputFile.js", "index.js", "package.json", "chunks/unknown.js"]) {
     assert.equal((await fetch(s.baseUrl + "/sdk/" + entry)).status, 404, entry);
   }
+});
+
+test("public gateway serves the PixelMug text helper and its static imports", async t => {
+  const { init, parse } = await import("es-module-lexer/minimal");
+  await init();
+  const s = await fixture(t);
+  const gateway = await startWebAppGateway({ port: 0, bind: "127.0.0.1", mdns: false });
+  t.after(() => gateway.close());
+  gateway.activate("pixel-text", s);
+  const baseUrl = `http://127.0.0.1:${gateway.port}`;
+  assert.equal((await fetch(gateway.webAppUrl("pixel-text", "127.0.0.1"))).status, 200);
+  const visited = new Set();
+  async function visit(path) {
+    if (visited.has(path)) return;
+    visited.add(path);
+    assert.ok(path.startsWith("/bubble-sdk/"), path);
+    const response = await fetch(baseUrl + path);
+    assert.equal(response.status, 200, path);
+    const [imports] = parse(await response.text());
+    for (const entry of imports) {
+      if (entry.d !== -1) continue;
+      await visit(new URL(entry.n, s.baseUrl + path).pathname);
+    }
+  }
+  await visit("/bubble-sdk/devices/ext/PixelMug_1.1.ext.js");
+  assert.ok([...visited].some(path => path.includes("/sdk/chunks/")));
+  assert.equal((await fetch(baseUrl + "/bubble-sdk/package.json")).status, 404);
+  assert.equal((await fetch(baseUrl + "/bubble-sdk/devices/ext/image2params.js")).status, 404);
 });

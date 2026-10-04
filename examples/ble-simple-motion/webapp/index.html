@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BLE Simple 运动数据</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="connection">
+    <button id="connect">连接蓝牙</button>
+    <span id="connection-status">蓝牙未连接</span>
+  </div>
+
+  <main>
+    <div><span>ax</span><output id="ax">0.000</output><small>g</small></div>
+    <div><span>ay</span><output id="ay">0.000</output><small>g</small></div>
+    <div><span>az</span><output id="az">0.000</output><small>g</small></div>
+    <div><span>gx</span><output id="gx">0.0</output><small>°/s</small></div>
+    <div><span>gy</span><output id="gy">0.0</output><small>°/s</small></div>
+    <div><span>gz</span><output id="gz">0.0</output><small>°/s</small></div>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

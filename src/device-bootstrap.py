@@ -2,11 +2,19 @@
 import os
 import sys
 import json
+import io
 
 def run(launch_id, nonce):
     prefix = "\x1eSTUDIO:" + nonce + ":"
     def state(value, message=""):
         print(prefix + json.dumps({"launchId": launch_id, "state": value, "message": message}))
+    def exception(error):
+        output = io.StringIO()
+        sys.print_exception(error, output)
+        # Structured frames keep exception output separate from ordinary print().
+        for line in output.getvalue().splitlines():
+            print(prefix + json.dumps({"launchId": launch_id, "type": "exception", "message": line}))
+        output.close()
     os.chdir("/")
     for path in ("/", "/lib"):
         if path not in sys.path:
@@ -19,15 +27,15 @@ def run(launch_id, nonce):
         exec(code, namespace, namespace)
         state("completed")
     except KeyboardInterrupt as error:
-        sys.print_exception(error)
+        exception(error)
         state("stopped", "KeyboardInterrupt")
     except SystemExit as error:
         if not error.args or error.args[0] in (None, 0):
             state("completed")
         else:
-            sys.print_exception(error)
+            exception(error)
             state("failed", str(error))
     except BaseException as error:
-        sys.print_exception(error)
+        exception(error)
         state("failed", str(error))
 

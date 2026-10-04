@@ -140,6 +140,16 @@ export class WebRepl extends EventEmitter {
     this.streaming = true;
     if (this.buffer.length) { this.emit("output", this.decoder.decode(this.buffer, { stream: true })); this.buffer = Buffer.alloc(0); }
   }
+  async restart(code) {
+    if (!this.streaming) return this.start(code);
+    this.healthCheck?.finish(false);
+    this.streaming = false;
+    this.buffer = Buffer.alloc(0);
+    this.decoder = new TextDecoder();
+    this.send("\x02");
+    await this.until(">>> ");
+    return this.start(code);
+  }
   probe(timeout = 3000) {
     if (this.healthCheck) return this.healthCheck.promise;
     if (!this.streaming || this.closed || this.lastError || this.ws?.readyState !== WebSocket.OPEN) return Promise.resolve(false);

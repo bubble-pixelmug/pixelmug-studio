@@ -1,2 +1,0 @@
-This directory must not be copied to the device.
-

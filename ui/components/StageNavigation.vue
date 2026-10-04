@@ -4,13 +4,16 @@ import { deviceIconFor } from '../deviceIcon.js';
 defineProps({
   activeTab:{type:String,required:true},
   active:Boolean,
+  busy:Boolean,
   deviceCount:{type:Number,default:0},
+  botCount:{type:Number,default:0},
   debugDevices:{type:Array,default:()=>[]},
   serviceStatus:{type:String,default:'disconnected'},
 });
-defineEmits(['change']);
+defineEmits(['change','rerun-mpy']);
 const tabs=[
-  {id:'devices',label:'我的设备',description:'查看账号绑定设备',icon:'nav-device'},
+  {id:'docs',label:'开发文档',description:'指南、接口与示例',icon:'docs-book'},
+  {id:'devices',label:'我的冒泡',description:'查看设备与 Bot',icon:'nav-device'},
   {id:'project',label:'选择应用',description:'目录、入口与凭据',icon:'folder'},
   {id:'debug',label:'调试运行',description:'运行状态与应用日志',icon:'terminal'},
 ];
@@ -24,13 +27,17 @@ const statusText=status=>status==='ok'?'Studio 服务正常':status==='error'?'S
       <template v-for="tab in tabs" :key="tab.id">
         <button type="button" :class="{active:activeTab===tab.id||(tab.id==='debug'&&activeTab.startsWith('device:'))}" @click="$emit('change',tab.id)">
           <span :class="['nav-icon',tab.icon]"><i></i></span>
-          <span><strong>{{ tab.label }}</strong><small>{{ tab.id==='devices' ? deviceCount+' 台账号设备' : tab.description }}</small></span>
+          <span><strong>{{ tab.label }}</strong><small>{{ tab.id==='devices' ? deviceCount+' 台设备 · '+botCount+' 个 Bot' : tab.description }}</small></span>
         </button>
+        <slot v-if="tab.id==='project'" name="files"></slot>
         <div v-if="tab.id==='debug'&&active&&debugDevices.length" class="debug-device-tabs">
-          <button v-for="device in debugDevices" :key="device.id" type="button" :class="{active:activeTab==='device:'+device.id}" @click="$emit('change','device:'+device.id)">
-            <span class="debug-device-image"><img v-if="deviceIconFor(device).src" :class="deviceIconFor(device).kind" :src="deviceIconFor(device).src" alt=""></span>
-            <span><strong>{{ device.name||device.sn||'PixelMug' }}</strong><small>{{ device.status }}</small></span>
-          </button>
+          <div v-for="device in debugDevices" :key="device.id" class="debug-device-entry" :class="{active:activeTab==='device:'+device.id}">
+            <button type="button" class="debug-device-card" @click="$emit('change','device:'+device.id)">
+              <span class="debug-device-image"><img v-if="deviceIconFor(device).src" :class="deviceIconFor(device).kind" :src="deviceIconFor(device).src" alt=""></span>
+              <span><strong>{{ device.name||device.sn||'PixelMug' }}</strong><small>{{ device.status }}</small></span>
+            </button>
+            <button v-if="device.canRunMpyAgain" type="button" class="rerun-mpy-button" :disabled="busy" @click.stop="$emit('rerun-mpy',device)">再次运行 MPY</button>
+          </div>
         </div>
       </template>
     </nav>

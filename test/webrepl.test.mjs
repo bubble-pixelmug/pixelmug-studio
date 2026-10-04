@@ -60,6 +60,9 @@ test("WebREPL authenticates, parses fragmented raw responses, uploads binary/emp
     const output = once(repl, "output");
     await repl.start("RUN");
     assert.match((await output)[0], /hello device/);
+    const restartedOutput = once(repl, "output");
+    await repl.restart("RUN AGAIN");
+    assert.match((await restartedOutput)[0], /hello device/);
     const probeOutput = [];
     repl.on("output", text => probeOutput.push(text));
     assert.equal(await repl.probe(500), true);

@@ -5,11 +5,11 @@ import { startWebAppGateway } from "./gateway.mjs";
 
 const options = {};
 const mapping = { "--project": "project", "--bot": "bot",
-  "--port": "port", "--build-id": "buildId", "--devices": "devices", "--creator-url": "creatorUrl" };
+  "--port": "port", "--build-id": "buildId", "--devices": "devices", "--creator-url": "creatorUrl", "--docs-url": "docsUrl" };
 for (let i = 2; i < process.argv.length; i++) {
   const arg = process.argv[i];
   if (arg === "--help") {
-    console.log("UI: node tools/studio/src/server.mjs [--port 8787] [--creator-url <URL>]\nCLI: node tools/studio/src/server.mjs --project <dir> --bot bot/index.js [--devices devices.local.json]");
+    console.log("UI: node tools/studio/src/server.mjs [--port 8787] [--creator-url <URL>] [--docs-url <URL>]\nCLI: node tools/studio/src/server.mjs --project <dir> --bot bot/index.js [--devices devices.local.json]");
     process.exit(0);
   }
   if (!mapping[arg] || !process.argv[i + 1]) throw new Error("Unknown/missing option: " + arg);

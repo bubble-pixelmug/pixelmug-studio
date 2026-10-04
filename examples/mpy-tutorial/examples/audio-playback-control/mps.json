@@ -1,0 +1,11 @@
+{
+  "name": "audio-playback-control",
+  "version": "1.0.0",
+  "description": "播放结束事件、替换声音与主动停止",
+  "dependencies": [
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

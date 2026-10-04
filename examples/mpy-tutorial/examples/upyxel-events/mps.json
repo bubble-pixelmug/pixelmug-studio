@@ -1,0 +1,15 @@
+﻿{
+  "name": "upyxel-events",
+  "version": "1.0.0",
+  "description": "使用触摸按键和MicroPyxel事件控制计数器",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "mpy_button",
+      "version": ">=1.0.0"
+    }
+  ]
+}

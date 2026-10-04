@@ -1,0 +1,11 @@
+{
+  "name": "network-udp-motion",
+  "version": "1.0.0",
+  "description": "通过 UDP 将 G-sensor 姿态发送给 3D PixelMug 查看器",
+  "dependencies": [
+    {
+      "name": "g_sensor",
+      "version": ">=1.0.0"
+    }
+  ]
+}

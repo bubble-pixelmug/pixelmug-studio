@@ -1,0 +1,13 @@
+{
+  "name": "network-udp-motion-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PixelMug UDP motion 3D viewer",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  }
+}

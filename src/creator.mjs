@@ -1,6 +1,7 @@
 export class CreatorClient {
   constructor({ baseUrl = '', fetchImpl = fetch } = {}) {
     this.baseUrl = baseUrl; this.fetch = fetchImpl; this.session = null; this.devices = []; this.updatedAt = null;
+    this.bots = []; this.botTokens = new Map(); this.botsError = "";
   }
   configure(value) {
     const url = new URL(value);
@@ -12,19 +13,20 @@ export class CreatorClient {
     if (!this.baseUrl) throw new Error('请先填写 CreatorHub API 服务地址');
     const response = await this.fetch(this.baseUrl + path, {
       method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
-      headers: { 'Content-Type': 'application/json', ...(token ? { token } : {}) },
+      headers: { Accept: '*/*', 'Content-Type': 'application/json', ...(token ? { token } : {}) },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const data = await response.json();
     if (response.status === 401 || data.code === 401) {
       this.session = null; this.devices = []; this.updatedAt = null;
+      this.bots = []; this.botTokens.clear(); this.botsError = "";
       throw new Error('登录已过期，请重新登录');
     }
     if (!response.ok || data.code !== 200) {
       // Do not forward an upstream body that might echo credentials.
       throw new Error('冒泡接口请求失败（' + (data.code || response.status) + '），请检查账号、验证码或服务配置');
     }
-    return data.result;
+    return data.result ?? data.results;
   }
   account(body) {
     if (!['PHONE', 'EMAIL'].includes(body.accountType)) throw new Error('请选择手机号或邮箱');
@@ -45,6 +47,8 @@ export class CreatorClient {
     if (!result?.token || !result?.id) throw new Error('登录接口未返回用户 ID 或 token');
     this.session = { id: String(result.id), name: String(result.name || result.id), token: result.token };
     this.devices = []; this.updatedAt = null;
+    this.bots = []; this.botTokens.clear(); this.botsError = '';
+    try { await this.refreshBots(); } catch (error) { if (!this.session) throw error; }
     return this.publicSession();
   }
   publicSession() { return this.session ? { id: this.session.id, name: this.session.name } : null; }
@@ -57,6 +61,43 @@ export class CreatorClient {
     this.devices = result.filter(d => d?.id).map(d => ({ id: String(d.id), name: String(d.name || d.id), sn: String(d.sn || ''), avatar: String(d.avatar || ''), talId: String(d.talId || ''), online: d.online === 'ONLINE' ? 'ONLINE' : 'OFFLINE' }));
     this.updatedAt = new Date().toISOString();
     return this.devices;
+  }
+  publicBots() {
+    return this.bots.map(bot => ({ ...bot, hasToken: Boolean(this.botTokens.get(bot.id)) }));
+  }
+  async refreshBots() {
+    const session = this.session;
+    if (!session) throw new Error('请先登录冒泡账号');
+    try {
+      const result = await this.request('/creator/bots', undefined, session.token);
+      if (session !== this.session) throw new Error('登录状态已变化，请刷新');
+      if (!Array.isArray(result)) throw new Error('Bot 接口返回格式错误');
+      this.bots = result.filter(bot => bot && typeof bot === 'object').map((bot, index) => ({
+        key: bot.id ? String(bot.id) : 'missing-id-' + index,
+        id: String(bot.id || ''), name: String(bot.name || ''),
+        avatar: String(bot.avatar || '').trim(), description: String(bot.description || ''),
+      }));
+      this.botsError = '';
+      return this.publicBots();
+    } catch {
+      const message = this.session ? '获取 Bot 列表失败，请刷新重试。' : '登录已过期，请重新登录';
+      if (session === this.session) this.botsError = message;
+      throw new Error(message);
+    }
+  }
+  setBotToken(id, value) {
+    if (!this.session) throw new Error('请先登录冒泡账号');
+    if (!id || !this.bots.some(bot => bot.id === id)) throw new Error('请选择当前账号下的 Bot');
+    const token = String(value || '').trim();
+    if (!token || token.length > 4096) throw new Error('请输入有效的 Bot token');
+    this.botTokens.set(id, token);
+  }
+  getBotToken(id) {
+    if (!this.session) throw new Error('请先登录冒泡账号');
+    if (!id || !this.bots.some(bot => bot.id === id)) throw new Error('请选择当前账号下的 Bot');
+    const token = this.botTokens.get(id);
+    if (!token) throw new Error('请先在“我的冒泡”中设置此 Bot 的 token');
+    return token;
   }
   async botSlots(botToken) {
     const session = this.session;
@@ -105,6 +146,7 @@ export class CreatorClient {
   async logout() {
     const session = this.session;
     this.session = null; this.devices = []; this.updatedAt = null;
+    this.bots = []; this.botTokens.clear(); this.botsError = '';
     if (session) await this.request('/creator/auth/logout', {}, session.token);
   }
 }
