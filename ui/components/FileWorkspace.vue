@@ -1,4 +1,5 @@
 <script setup>
+import { t, serviceMessage } from '../i18n.js';
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import { EditorView, minimalSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
@@ -19,7 +20,7 @@ const cache=new Map();
 const visible=computed(()=>{entries.value;const rows=[];const walk=(path,depth)=>{for(const item of cache.get(path)||[]){rows.push({...item,depth});if(item.directory&&expanded.value.has(item.path))walk(item.path,depth+1);}};if(expanded.value.has(''))walk('',0);return rows;});
 const request=(action,body={})=>props.api('files/'+action,{...body,project:props.project});
 async function operation(fn){if(busy.value)return;busy.value=true;error.value='';try{await fn();}catch(e){error.value=e.message;}finally{busy.value=false;}}
-function canLeave(){if(busy.value)return false;return !dirty.value||window.confirm('当前文件尚未保存，是否放弃修改？');}
+function canLeave(){if(busy.value)return false;return !dirty.value||window.confirm(t('当前文件尚未保存，是否放弃修改？'));}
 defineExpose({canLeave});
 async function loadFolder(path){cache.set(path,await request('list',{path}));entries.value=[...cache.values()];}
 async function toggle(item){if(!item.directory)return openFile(item.path);await operation(async()=>{const next=new Set(expanded.value);if(next.has(item.path))next.delete(item.path);else{await loadFolder(item.path);next.add(item.path);}expanded.value=next;});}
@@ -40,14 +41,14 @@ onBeforeUnmount(()=>{view?.destroy();window.removeEventListener('beforeunload',u
 <template>
 <div class="file-tree">
 <button class="file-root" :aria-expanded="expanded.has('')" :disabled="busy" @click="toggle({path:'',directory:true})"><span>{{ expanded.has('')?'▾':'▸' }}</span>{{ projectName }}<span v-if="dirty"> ●</span></button>
-<div v-if="expanded.has('')" class="tree-entries"><button v-for="entry in visible" :key="entry.path" class="tree-entry" :class="{selected:file?.path===entry.path&&active}" :style="{paddingLeft:(28+entry.depth*20)+'px'}" :aria-expanded="entry.directory ? expanded.has(entry.path) : undefined" :title="entry.path" :disabled="busy" @click="toggle(entry)"><span>{{ entry.directory?(expanded.has(entry.path)?'▾':'▸'):'·' }}</span>{{ entry.name }}</button><p v-if="!visible.length">暂无文件</p></div>
-<p v-if="error" class="tree-error" role="alert">{{ error }}</p>
+<div v-if="expanded.has('')" class="tree-entries"><button v-for="entry in visible" :key="entry.path" class="tree-entry" :class="{selected:file?.path===entry.path&&active}" :style="{paddingLeft:(28+entry.depth*20)+'px'}" :aria-expanded="entry.directory ? expanded.has(entry.path) : undefined" :title="entry.path" :disabled="busy" @click="toggle(entry)"><span>{{ entry.directory?(expanded.has(entry.path)?'▾':'▸'):'·' }}</span>{{ entry.name }}</button><p v-if="!visible.length">{{ t('暂无文件') }}</p></div>
+<p v-if="error" class="tree-error" role="alert">{{ serviceMessage(error) }}</p>
 </div>
 <Teleport to="#file-editor-host">
 <section v-show="active" class="card file-workspace">
-<div class="editor-heading"><div><span class="eyebrow">APPLICATION FILES</span><h2>{{ file?.path || projectName }}<small v-if="dirty"> · 未保存</small></h2></div><button class="primary" :disabled="busy||!dirty" @click="save">保存 Ctrl / ⌘ S</button></div>
-<p class="subtle">保存到本机应用目录。修改运行中的代码后，重启智能体以加载更改。</p><p v-if="error" class="file-error" role="alert">{{ error }}</p>
-<p v-if="!file" class="empty">从左侧目录打开文件。支持 JS、TS、Python、HTML、CSS、JSON、Markdown 语法高亮。</p><div ref="editor" class="code-editor" v-show="file"></div>
+<div class="editor-heading"><div><span class="eyebrow">APPLICATION FILES</span><h2>{{ file?.path || projectName }}<small v-if="dirty">{{ t(' · 未保存') }}</small></h2></div><button class="primary" :disabled="busy||!dirty" @click="save">{{ t('保存 Ctrl / ⌘ S') }}</button></div>
+<p class="subtle">{{ t('保存到本机应用目录。修改运行中的代码后，重启智能体以加载更改。') }}</p><p v-if="error" class="file-error" role="alert">{{ serviceMessage(error) }}</p>
+<p v-if="!file" class="empty">{{ t('从左侧目录打开文件。支持 JS、TS、Python、HTML、CSS、JSON、Markdown 语法高亮。') }}</p><div ref="editor" class="code-editor" v-show="file"></div>
 </section>
 </Teleport>
 </template>

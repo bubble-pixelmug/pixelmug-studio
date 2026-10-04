@@ -1,4 +1,5 @@
 <script setup>
+import { t, serviceMessage } from '../i18n.js';
 import { reactive } from 'vue';
 import { deviceIconFor } from '../deviceIcon.js';
 import bubbleIcon from '../assets/bubble-transparent.png';
@@ -15,28 +16,28 @@ function save(bot){
 </script>
 <template>
   <section class="card bot-panel">
-    <div class="section-heading"><div><span class="eyebrow">MY BOTS</span><h2>我的 Bot <span class="count">{{ bots.length }}</span></h2></div><button :disabled="busy" @click="$emit('refresh')">刷新</button></div>
-    <p class="subtle">如果你还没有冒泡 bot，请到冒泡 App 搜索 BubbleBot，并执行 /newbot 命令创建一个你的 bot。如果忘记了你曾经申请的 bot token，请在 BubbleBot 中执行 /mybots 命令查询。你在设置处填写的 bot token 仅保留在本次 Studio 运行进程中，不会保存到本地。退出账号或关闭 Studio 后需重新填写。</p>
-    <p v-if="error" role="alert">{{ error }}</p>
+    <div class="section-heading"><div><span class="eyebrow">MY BOTS</span><h2>{{ t('我的 Bot ') }}<span class="count">{{ bots.length }}</span></h2></div><button :disabled="busy" @click="$emit('refresh')">{{ t('刷新') }}</button></div>
+    <p class="subtle">{{ t('如果你还没有冒泡 bot，请到冒泡 App 搜索 BubbleBot，并执行 /newbot 命令创建一个你的 bot。如果忘记了你曾经申请的 bot token，请在 BubbleBot 中执行 /mybots 命令查询。你在设置处填写的 bot token 仅保留在本次 Studio 运行进程中，不会保存到本地。退出账号或关闭 Studio 后需重新填写。') }}</p>
+    <p v-if="error" role="alert">{{ serviceMessage(error) }}</p>
     <div class="bot-grid">
       <article v-for="bot in bots" :key="bot.key" class="account-bot-card">
         <div class="bot-avatar-column">
           <img class="bot-avatar" :src="!failedImages[bot.avatar] && deviceIconFor(bot).src || bubbleIcon" alt="" @error="failedImages[bot.avatar]=true">
-          <span v-if="bot.id && runningBotId===bot.id" class="bot-in-use" role="status">当前正在使用</span>
+          <span v-if="bot.id && runningBotId===bot.id" class="bot-in-use" role="status">{{ t('当前正在使用') }}</span>
         </div>
         <div class="bot-card-content">
-          <h3>{{ bot.name||'未命名 Bot' }}</h3>
-          <p class="subtle">Bot ID：{{ bot.id||'未提供' }}</p>
-          <p class="bot-description">{{ bot.description||'暂无介绍' }}</p>
+          <h3>{{ bot.name||t('未命名 Bot') }}</h3>
+          <p class="subtle">Bot ID：{{ bot.id||t('未提供') }}</p>
+          <p class="bot-description">{{ bot.description||t('暂无介绍') }}</p>
           <form @submit.prevent="save(bot)">
-            <label :for="'token-'+bot.key">Bot token <span class="subtle">{{ bot.hasToken?'已设置':'未设置' }}</span></label>
-            <div class="inline"><input :id="'token-'+bot.key" v-model="drafts[bot.key]" type="password" autocomplete="off" :disabled="busy||!bot.id||runningBotId===bot.id" :placeholder="bot.hasToken?'已设置，填写可替换':'输入 Bot token'"><button type="submit" :disabled="busy||!bot.id||runningBotId===bot.id||!drafts[bot.key]?.trim()">设置</button></div>
-            <small v-if="!bot.id">此 Bot 缺少 ID，暂时无法选择。</small><small v-else-if="runningBotId===bot.id">停止智能体后可修改 token。</small>
+            <label :for="'token-'+bot.key">Bot token <span class="subtle">{{ bot.hasToken?t('已设置'):t('未设置') }}</span></label>
+            <div class="inline"><input :id="'token-'+bot.key" v-model="drafts[bot.key]" type="password" autocomplete="off" :disabled="busy||!bot.id||runningBotId===bot.id" :placeholder="bot.hasToken?t('已设置，填写可替换'):t('输入 Bot token')"><button type="submit" :disabled="busy||!bot.id||runningBotId===bot.id||!drafts[bot.key]?.trim()">{{ t('设置') }}</button></div>
+            <small v-if="!bot.id">{{ t('此 Bot 缺少 ID，暂时无法选择。') }}</small><small v-else-if="runningBotId===bot.id">{{ t('停止智能体后可修改 token。') }}</small>
           </form>
         </div>
       </article>
     </div>
-    <p v-if="!bots.length&&!error" class="empty">暂无 Bot，请在冒泡 App 中申请后刷新。</p>
+    <p v-if="!bots.length&&!error" class="empty">{{ t('暂无 Bot，请在冒泡 App 中申请后刷新。') }}</p>
   </section>
 </template>
 <style scoped>

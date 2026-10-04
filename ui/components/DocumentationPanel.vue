@@ -1,13 +1,14 @@
 <script setup>
+import { t } from '../i18n.js';
 import { ref } from 'vue';
 defineProps({ url: { type: String, required: true } });
 const revision = ref(0);
 </script>
 <template>
 <section class="section-page documentation-page">
-  <div class="section-intro"><div><span class="eyebrow">DOCUMENTATION</span><h2>开发文档</h2><p>开发指南、接口说明与应用示例</p></div><div class="actions"><button @click="revision++">重新加载</button><a class="docs-open" :href="url" target="_blank" rel="noopener noreferrer">在浏览器中打开 ↗</a></div></div>
-  <div class="docs-container"><iframe :key="revision" :src="url" title="PixelMug 开发文档" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allow="clipboard-write"></iframe></div>
-  <p class="subtle docs-help">如果文档未显示，请确认文档服务已启动，再点击“重新加载”。</p>
+  <div class="section-intro"><div><span class="eyebrow">DOCUMENTATION</span><h2>{{ t('开发文档') }}</h2><p>{{ t('开发指南、接口说明与应用示例') }}</p></div><div class="actions"><button @click="revision++">{{ t('重新加载') }}</button><a class="docs-open" :href="url" target="_blank" rel="noopener noreferrer">{{ t('在浏览器中打开 ↗') }}</a></div></div>
+  <div class="docs-container"><iframe :key="revision" :src="url" :title="t('PixelMug 开发文档')" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allow="clipboard-write"></iframe></div>
+  <p class="subtle docs-help">{{ t('如果文档未显示，请确认文档服务已启动，再点击“重新加载”。') }}</p>
 </section>
 </template>
 <style scoped>

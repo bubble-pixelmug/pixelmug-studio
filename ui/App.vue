@@ -1,6 +1,8 @@
 <script setup>
+import { t, serviceMessage } from './i18n.js';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import StageNavigation from './components/StageNavigation.vue';
+import LanguageSwitcher from './components/LanguageSwitcher.vue';
 import DocumentationPanel from './components/DocumentationPanel.vue';
 const FileWorkspace = defineAsyncComponent(() => import('./components/FileWorkspace.vue'));
 import DevicePanel from './components/DevicePanel.vue';
@@ -44,7 +46,7 @@ async function api(path,body){
     ...(body===undefined?{}:{body:JSON.stringify(body)}),
   });
   const result = await response.json();
-  if(!response.ok) throw new Error(result.error?.message || result.error || '请求失败');
+  if(!response.ok) throw new Error(result.error?.message || result.error || t('请求失败'));
   return result;
 }
 async function perform(fn){
@@ -56,15 +58,15 @@ async function perform(fn){
 }
 const fieldValue = id => document.getElementById(id)?.value ?? '';
 const account = () => ({baseUrl:fieldValue('creator-url').trim(),accountType:fieldValue('account-type'),account:fieldValue('account').trim()});
-async function sendCode(){ await perform(async()=>{ await api('auth/code',account()); cooldown.value=60; notify('验证码已发送，请查看手机或邮箱。'); }); }
-async function login(){ await perform(async()=>{ await api('auth/login',{...account(),code:fieldValue('code').trim()}); loginCode.value=''; notify('登录成功，正在更新我的冒泡。'); await refreshDevices(); }); }
-async function logout(){ if(fileWorkspace.value && !fileWorkspace.value.canLeave()) return; await perform(async()=>{ await api('auth/logout',{}); launchRequested.value=false; loginPanelOpen.value=false; items.value=[]; after.value=0;  notify('已退出登录，本地调试环境已停止。'); }); }
+async function sendCode(){ await perform(async()=>{ await api('auth/code',account()); cooldown.value=60; notify(t('验证码已发送，请查看手机或邮箱。')); }); }
+async function login(){ await perform(async()=>{ await api('auth/login',{...account(),code:fieldValue('code').trim()}); loginCode.value=''; notify(t('登录成功，正在更新我的冒泡。')); await refreshDevices(); }); }
+async function logout(){ if(fileWorkspace.value && !fileWorkspace.value.canLeave()) return; await perform(async()=>{ await api('auth/logout',{}); launchRequested.value=false; loginPanelOpen.value=false; items.value=[]; after.value=0;  notify(t('已退出登录，本地调试环境已停止。')); }); }
 async function refreshDevices(){ await api('devices/refresh',{}); lastRefresh=Date.now(); }
-async function refresh(){ await perform(async()=>{ await refreshDevices(); notify('设备状态已更新。'); }); }
+async function refresh(){ await perform(async()=>{ await refreshDevices(); notify(t('设备状态已更新。')); }); }
 
 async function refreshBots(){ await perform(()=>api('bots/refresh',{})); }
 async function saveBotToken({botId,token}){
-  await perform(async()=>{ await api('bots/token',{botId,token}); notify('Bot token 已设置，本次 Studio 运行期间有效。'); });
+  await perform(async()=>{ await api('bots/token',{botId,token}); notify(t('Bot token 已设置，本次 Studio 运行期间有效。')); });
 }
 async function selectBot(event){
   await perform(()=>api('bots/select',{botId:event.target.value}));
@@ -74,7 +76,7 @@ async function refreshSlots(){ await perform(()=>api('run/slots/refresh',{runId:
 async function bindSlot(selection){
   await perform(async()=>{
     const result=await api('run/slots/bind',{...selection,runId:state.value?.run?.runId});
-    notify(result.error ? '设备已关联，但状态刷新失败，请刷新槽位。' : '设备已关联。',Boolean(result.error));
+    notify(result.error ? t('设备已关联，但状态刷新失败，请刷新槽位。') : t('设备已关联。'),Boolean(result.error));
   });
 }
 async function startRun(){
@@ -82,10 +84,10 @@ async function startRun(){
   await perform(async()=>{
     try{
       const automatic=autoRunMpy.value;
-      if(state.value?.run) notify(automatic?'正在重启：先让设备进入 Python Dev，再自动上传并运行设备代码。':'正在重启：先让设备进入 Python Dev，再重新加载本地服务；设备代码等待冒泡 App 发起启动。');
+      if(state.value?.run) notify(automatic?t('正在重启：先让设备进入 Python Dev，再自动上传并运行设备代码。'):t('正在重启：先让设备进入 Python Dev，再重新加载本地服务；设备代码等待冒泡 App 发起启动。'));
       await api('run/start',{bot:botEntry.value.trim(),autoRunMpy:automatic,botId:state.value?.runtimeConfig?.botId,botApiBaseUrl:botApi.value.trim()});
 
-      notify(automatic?'智能体本地服务已启动；识别到已绑定设备后将自动上传并运行 MPY。':state.value?.project?.webRoot?'智能体本地服务已启动，请在冒泡 App 中打开本轮新链接。':'智能体本地服务已启动，请在冒泡 App 中与 Bot 交互。');
+      notify(automatic?t('智能体本地服务已启动；识别到已绑定设备后将自动上传并运行 MPY。'):state.value?.project?.webRoot?t('智能体本地服务已启动，请在冒泡 App 中打开本轮新链接。'):t('智能体本地服务已启动，请在冒泡 App 中与 Bot 交互。'));
     }catch(error){
       launchRequested.value=false;
       throw error;
@@ -94,34 +96,34 @@ async function startRun(){
 }
 async function stopRun(){
   await perform(async()=>{
-    notify('正在停止：等待设备重启应答，然后关闭本地服务。');
+    notify(t('正在停止：等待设备重启应答，然后关闭本地服务。'));
     const result=await api('run/stop',{});
     launchRequested.value=false;
     const missing=(result.devices||[]).filter(device=>device.status!=='rebootAccepted');
     notify(missing.length
-      ?'本地已停止；设备停止未确认：'+missing.map(device=>device.deviceId+'：'+device.message+'。').join('；')
-      :result.devices?.length?'智能体已停止：设备已应答重启请求，本地服务已关闭，日志已保留。':'智能体本地服务已停止，本轮没有需要重启的设备。',missing.length>0);
+      ?t('本地已停止；设备停止未确认：')+missing.map(device=>device.deviceId+t('：')+serviceMessage(device.message)+t('。')).join(t('；'))
+      :result.devices?.length?t('智能体已停止：设备已应答重启请求，本地服务已关闭，日志已保留。'):t('智能体本地服务已停止，本轮没有需要重启的设备。'),missing.length>0);
   });
 }
 async function changeWebAppAddress(event){
   const host=event.target.value;
   await perform(async()=>{
     await api('webapp/address',{host});
-    notify('访问地址已保存，启动智能体后请让 Bot 发送新卡片。');
+    notify(t('访问地址已保存，启动智能体后请让 Bot 发送新卡片。'));
   });
   event.target.value=state.value?.webAppHostname||'pixelmug-studio.local';
 }
-async function copyUrl(){ await perform(async()=>{ await navigator.clipboard.writeText(state.value?.run?.webAppUrl||''); notify('已复制 WebApp 链接，请在冒泡 App 中打开。'); }); }
+async function copyUrl(){ await perform(async()=>{ await navigator.clipboard.writeText(state.value?.run?.webAppUrl||''); notify(t('已复制 WebApp 链接，请在冒泡 App 中打开。')); }); }
 async function runDevice(row){
   await perform(async()=>{
     await api(row.binding?'run/device':'run/rerun',row.binding?{bindingId:row.binding.bindingId}:{launchId:row.job.launchId});
-    notify('正在更新设备代码，请查看设备进度和日志。');
+    notify(t('正在更新设备代码，请查看设备进度和日志。'));
   });
 }
 async function runMpyAgain(device){
   await perform(async()=>{
     await api('run/mpy/again',{launchId:device.job.launchId});
-    notify('正在从 __main__.py 再次运行 MPY；不会重启 Bot 或重新上传文件。');
+    notify(t('正在从 __main__.py 再次运行 MPY；不会重启 Bot 或重新上传文件。'));
   });
 }
 
@@ -148,13 +150,13 @@ const launchRows = computed(()=>{
 });
 const labels={accepted:'准备代码',rebooting:'重启设备',connecting:'连接设备',uploading:'上传文件',uploaded:'上传完成',rerunning:'正在再次运行 MPY',running:'设备应用已启动',failed:'失败',completed:'执行结束',stopped:'已中止',unknown:'状态未知',superseded:'已被新任务替代'};
 const deviceProcessStatus=job=>{
-  if(!project.value?.mpy) return '可以运行，无需加载代码';
-  if(!job) return '已绑定，等待运行';
-  if(['accepted','rebooting'].includes(job.state)) return '进入开发模式';
-  if(job.state==='connecting') return '连接设备';
-  if(['uploading','uploaded'].includes(job.state)) return '上传设备代码';
-  if(job.state==='running') return '应用开始运行';
-  return labels[job.state]||job.state;
+  if(!project.value?.mpy) return t('可以运行，无需加载代码');
+  if(!job) return t('已绑定，等待运行');
+  if(['accepted','rebooting'].includes(job.state)) return t('进入开发模式');
+  if(job.state==='connecting') return t('连接设备');
+  if(['uploading','uploaded'].includes(job.state)) return t('上传设备代码');
+  if(job.state==='running') return t('应用开始运行');
+  return t(labels[job.state]||job.state);
 };
 const debugDevices=computed(()=>{
   const seen=new Set(), result=[];
@@ -183,14 +185,14 @@ watch([active,debugDevices],([running,devices])=>{
   if(activeSection.value.startsWith('device:')&&(!running||!devices.some(device=>device.id===selectedDeviceId.value))) activeSection.value='debug';
 });
 function networkText(network){
-  if(!network) return 'Wi-Fi / IP：待获取（运行设备时查询）';
-  return `Wi-Fi：${network.ssid||'名称未获取'} · IP：${network.ip||'未获取'}`+
-    (network.wifiConnected===false?' · Wi-Fi 未连接':'')+
-    ` · 最近获取 ${new Date(network.updatedAt).toLocaleTimeString()}`;
+  if(!network) return t('Wi-Fi / IP：待获取（运行设备时查询）');
+  return t('Wi-Fi：{0} · IP：{1}', [network.ssid||t('名称未获取'), network.ip||t('未获取')])+
+    (network.wifiConnected===false?t(' · Wi-Fi 未连接'):'')+
+    t(' · 最近获取 {0}', [new Date(network.updatedAt).toLocaleTimeString()]);
 }
 function rowDevice(row){ return row.binding?.device || row.job?.device; }
 function rowState(row){ return row.plan?.state || row.job?.state || 'bound'; }
-function rowTitle(row){ return row.plan ? (row.plan.state==='failed'?'智能体重启未完成':'等待恢复设备运行') : row.job ? labels[row.job.state]||row.job.state : '已绑定，尚未运行'; }
+function rowTitle(row){ return row.plan ? (row.plan.state==='failed'?t('智能体重启未完成'):t('等待恢复设备运行')) : row.job ? labels[row.job.state]||row.job.state : t('已绑定，尚未运行'); }
 function rowDisabled(row){
   if(row.plan) return true;
   return working.value || !project.value?.mpy || !botAlive.value ||
@@ -200,49 +202,49 @@ function rowDisabled(row){
 const configurationErrors = computed(()=>{
   if(!project.value) return [];
   const errors=[];
-  if(!botEntry.value.trim()) errors.push('尚未指定冒泡 Bot 入口文件。');
+  if(!botEntry.value.trim()) errors.push(t('尚未指定冒泡 Bot 入口文件。'));
   const selectedBot = state.value?.bots?.find(bot=>bot.id===state.value?.runtimeConfig?.botId);
-  if(!selectedBot) errors.push('请在运行配置中选择 Bot。');
-  else if(!selectedBot.hasToken) errors.push('请先在“我的冒泡”中设置所选 Bot 的 token。');
+  if(!selectedBot) errors.push(t('请在运行配置中选择 Bot。'));
+  else if(!selectedBot.hasToken) errors.push(t('请先在“我的冒泡”中设置所选 Bot 的 token。'));
   return errors;
 });
 const readyDescription = computed(()=>{
-  const messages=['Studio 将启动运行 bot'];
-  if(project.value?.webRoot) messages.push('为 webapp 提供访问地址');
-  if(project.value?.mpy) messages.push(autoRunMpy.value?'Studio 将自动为设备加载代码并运行':'Studio 不会自动为设备加载代码，请使用智能体本身加载和运行设备代码');
-  return messages.join('，')+'。';
+  const messages=[t('Studio 将启动运行 bot')];
+  if(project.value?.webRoot) messages.push(t('为 webapp 提供访问地址'));
+  if(project.value?.mpy) messages.push(autoRunMpy.value?t('Studio 将自动为设备加载代码并运行'):t('Studio 不会自动为设备加载代码，请使用智能体本身加载和运行设备代码'));
+  return messages.join(t('，'))+t('。');
 });
 const runStatusDescription=computed(()=>{
-  const messages=[botAlive.value?'bot已经启动运行':'bot正在启动'];
-  if(project.value?.webRoot) messages.push(state.value?.run?.webAppUrl?'Webapp服务已经启动':'Webapp服务正在启动');
+  const messages=[botAlive.value?t('bot已经启动运行'):t('bot正在启动')];
+  if(project.value?.webRoot) messages.push(state.value?.run?.webAppUrl?t('Webapp服务已经启动'):t('Webapp服务正在启动'));
   if(project.value?.mpy){
     const running=jobs.value.some(job=>job.state==='running');
     const loading=jobs.value.some(job=>['accepted','rebooting','connecting','uploading','uploaded'].includes(job.state));
     const failed=jobs.value.some(job=>job.state==='failed');
-    if(running) messages.push('设备代码已经运行');
-    else if(loading) messages.push('设备代码正在加载');
-    else if(failed) messages.push('设备代码运行失败，请查看对应设备日志');
-    else if((launchRequested.value?autoRunMpy.value:state.value?.runtimeConfig?.autoRunMpy===true)) messages.push(bindings.value.length?'Studio正在为设备加载代码':'正在等待获取已绑定设备');
+    if(running) messages.push(t('设备代码已经运行'));
+    else if(loading) messages.push(t('设备代码正在加载'));
+    else if(failed) messages.push(t('设备代码运行失败，请查看对应设备日志'));
+    else if((launchRequested.value?autoRunMpy.value:state.value?.runtimeConfig?.autoRunMpy===true)) messages.push(bindings.value.length?t('Studio正在为设备加载代码'):t('正在等待获取已绑定设备'));
   }
-  return messages.join('，')+'。';
+  return messages.join(t('，'))+t('。');
 });
 const runStarted=computed(()=>active.value||launchRequested.value);
 const guideLinksToProject = computed(()=>!project.value||(!runStarted.value&&configurationErrors.value.length>0));
 const guide = computed(()=>{
   const errors=[];
-  if(!project.value) return {stage:0,title:'请选择加载运行的应用',body:'选择本机保存的项目目录，加载运行',errors};
+  if(!project.value) return {stage:0,title:t('请选择加载运行的应用'),body:t('选择本机保存的项目目录，加载运行'),errors};
   if(!runStarted.value){
-    if(configurationErrors.value.length) return {stage:1,title:'请重新检查智能体应用',body:'以下配置不符合运行条件：',errors:configurationErrors.value};
-    return {stage:1,title:'可以启动智能体',body:readyDescription.value,errors};
+    if(configurationErrors.value.length) return {stage:1,title:t('请重新检查智能体应用'),body:t('以下配置不符合运行条件：'),errors:configurationErrors.value};
+    return {stage:1,title:t('可以启动智能体'),body:readyDescription.value,errors};
   }
-  return {stage:3,title:'智能体已启动，开始使用和测试吧',body:runStatusDescription.value,errors};
+  return {stage:3,title:t('智能体已启动，开始使用和测试吧'),body:runStatusDescription.value,errors};
 });
 const operationHint = computed(()=>active.value
-  ? state.value?.runtimeConfig?.autoRunMpy?'重启会让本轮设备进入 Python Dev，并自动上传、运行 MPY。停止会请求设备普通重启。':'重启会让本轮设备进入 Python Dev 并重新加载本地服务；MPY 等待冒泡 App 发起启动后上传。停止会请求设备普通重启。'
-  : project.value?'启动本地 Bot 与可选 WebApp 服务，再到冒泡 App 中体验。':'先打开本地项目，再启动智能体。');
+  ? state.value?.runtimeConfig?.autoRunMpy?t('重启会让本轮设备进入 Python Dev，并自动上传、运行 MPY。停止会请求设备普通重启。'):t('重启会让本轮设备进入 Python Dev 并重新加载本地服务；MPY 等待冒泡 App 发起启动后上传。停止会请求设备普通重启。')
+  : project.value?t('启动本地 Bot 与可选 WebApp 服务，再到冒泡 App 中体验。'):t('先打开本地项目，再启动智能体。'));
 const startDisabled=computed(()=>working.value||!project.value||!state.value?.user||configurationErrors.value.length>0||active.value);
 const restartDisabled=computed(()=>working.value||!active.value);
-const projectComposition=computed(()=>project.value?'应用组成：'+['bot',...(project.value.webRoot?['WebApp']:[]),...(project.value.mpy?['MPY']:[])].join(' + '):'');
+const projectComposition=computed(()=>project.value?t('应用组成：')+['bot',...(project.value.webRoot?['WebApp']:[]),...(project.value.mpy?['MPY']:[])].join(' + '):'');
 
 async function browse(path){
   const data=await api('directories'+(path?'?path='+encodeURIComponent(path):''));
@@ -250,7 +252,7 @@ async function browse(path){
 }
 async function openDirectory(){ await perform(async()=>{ await browse(project.value?.path); directoryDialog.value.showModal(); }); }
 async function browseAction(path){ await perform(()=>browse(path)); }
-async function chooseDirectory(){ if(fileWorkspace.value && !fileWorkspace.value.canLeave()) return; await perform(async()=>{ await api('project/open',{path:directory.value.path}); activeSection.value='debug'; directoryDialog.value.close(); notify('项目已打开，请检查运行入口与 bot 配置。'); }); }
+async function chooseDirectory(){ if(fileWorkspace.value && !fileWorkspace.value.canLeave()) return; await perform(async()=>{ await api('project/open',{path:directory.value.path}); activeSection.value='debug'; directoryDialog.value.close(); notify(t('项目已打开，请检查运行入口与 bot 配置。')); }); }
 
 function applyState(data){
   const previousPath=state.value?.project?.path;
@@ -268,7 +270,7 @@ function applyState(data){
     if(runId.value!==data.events.runId){ runId.value=data.events.runId; items.value=[]; after.value=0; }
     items.value=items.value.concat(data.events.records).slice(-1000);
     after.value=data.events.cursor;
-    if(data.events.truncated) notify('部分较早日志已超出显示窗口，完整记录仍在 debug/ 目录中。');
+    if(data.events.truncated) notify(t('部分较早日志已超出显示窗口，完整记录仍在 debug/ 目录中。'));
   }
   initialized=true;
 }
@@ -280,7 +282,7 @@ async function pollOnce(){
   finally{ polling.value=false; }
 }
 onMounted(async()=>{
-  if(!credential) notify('请使用启动终端提供的完整 Studio 地址打开页面。',true);
+  if(!credential) notify(t('请使用启动终端提供的完整 Studio 地址打开页面。'),true);
   await pollOnce();
   pollTimer=setInterval(async()=>{ await pollOnce(); if(state.value?.user&&!working.value&&Date.now()-lastRefresh>15000){ lastRefresh=Date.now(); try{ await refreshDevices(); }catch(error){ notify(error.message,true); } } },1000);
   cooldownTimer=setInterval(()=>{ if(cooldown.value>0) cooldown.value--; },1000);
@@ -292,25 +294,26 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
   <div :class="{'studio-shell': state?.user}">
   <header class="app-header" :hidden="!state?.user">
     <div class="brand"><span class="mark"><img :src="deviceIcon" alt="PixelMug"></span><div>PixelMug <b>Studio</b><small>DEVELOPER WORKSPACE</small></div></div>
-    <div class="header-right"><span id="user-name">{{ state?.user?.name || '' }}</span><button id="logout" :hidden="!state?.user" :disabled="working" @click="logout">退出登录</button></div>
+    <div class="header-right"><LanguageSwitcher /><span id="user-name">{{ state?.user?.name || '' }}</span><button id="logout" :hidden="!state?.user" :disabled="working" @click="logout">{{ t('退出登录') }}</button></div>
   </header>
-  <div id="notice" role="status" aria-live="polite" :hidden="!notice.visible" :class="{error:notice.error}">{{ notice.message }}</div>
+  <div id="notice" role="status" aria-live="polite" :hidden="!notice.visible" :class="{error:notice.error}">{{ serviceMessage(notice.message) }}</div>
 
   <section id="login-view" class="login-shell" :hidden="Boolean(state?.user)" :style="{backgroundImage:`url(${indexBackground})`}">
+    <LanguageSwitcher id="login-language" class="login-language" />
     <div v-if="!loginPanelOpen" class="login-hero">
       <p class="login-slogan">Bring your ideas to life on PixelMug</p>
-      <h1>让每一个灵感<br>在 PixelMug 上运行</h1>
-      <button type="button" class="bubble-login-button" @click="loginPanelOpen=true">用冒泡账号登录</button>
+      <h1>{{ t('让每一个灵感') }}<br>{{ t('在 PixelMug 上运行') }}</h1>
+      <button type="button" class="bubble-login-button" @click="loginPanelOpen=true">{{ t('用冒泡账号登录') }}</button>
     </div>
     <form v-else id="login-form" class="login-panel" @submit.prevent="login">
-      <span class="eyebrow">冒泡账号</span>
-      <h2>登录 PixelMug Studio</h2>
-      <p class="login-description">登录后自动获取你的设备和 Bot。</p>
-      <label>账号类型<select id="account-type" v-model="accountType"><option value="PHONE">手机号</option><option value="EMAIL">邮箱</option></select></label>
-      <label>手机号 / 邮箱<input id="account" v-model="accountValue" autocomplete="username" required placeholder="输入冒泡账号"></label>
-      <label>登录验证码<div class="inline"><input id="code" v-model="loginCode" autocomplete="one-time-code" required placeholder="输入验证码"><button id="send-code" type="button" :disabled="working||cooldown>0" @click="sendCode">{{ cooldown>0 ? cooldown+'s 后重试' : '获取验证码' }}</button></div></label>
+      <span class="eyebrow">{{ t('冒泡账号') }}</span>
+      <h2>{{ t('登录 PixelMug Studio') }}</h2>
+      <p class="login-description">{{ t('登录后自动获取你的设备和 Bot。') }}</p>
+      <label>{{ t('账号类型') }}<select id="account-type" v-model="accountType"><option value="PHONE">{{ t('手机号') }}</option><option value="EMAIL">{{ t('邮箱') }}</option></select></label>
+      <label>{{ t('手机号 / 邮箱') }}<input id="account" v-model="accountValue" autocomplete="username" required :placeholder="t('输入冒泡账号')"></label>
+      <label>{{ t('登录验证码') }}<div class="inline"><input id="code" v-model="loginCode" autocomplete="one-time-code" required :placeholder="t('输入验证码')"><button id="send-code" type="button" :disabled="working||cooldown>0" @click="sendCode">{{ cooldown>0 ? cooldown+t('s 后重试') : t('获取验证码') }}</button></div></label>
       <input id="creator-url" v-model="creatorUrl" type="hidden">
-      <button class="primary wide" id="login" type="submit" :disabled="working">登录 Studio →</button>
+      <button class="primary wide" id="login" type="submit" :disabled="working">{{ t('登录 Studio →') }}</button>
     </form>
   </section>
 
@@ -318,51 +321,51 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
     <StageNavigation :active-tab="activeSection" :active="active" :busy="working||state?.busy" :device-count="state?.devices?.length||0" :bot-count="state?.bots?.length||0" :debug-devices="debugDevices" :service-status="serviceStatus" @change="activeSection=$event" @rerun-mpy="runMpyAgain"><template #files><FileWorkspace v-if="project && state?.user" ref="fileWorkspace" :key="project.path" :project="project.path" :style-nonce="credential" :active="activeSection==='files'" :api="api" @activate="activeSection='files'" /></template></StageNavigation>
     <section class="workspace-content">
       <div class="workspace-heading">
-        <div><span class="eyebrow">冒泡智能体 · 开发工作台</span><h1 v-if="projectName" id="project-name">{{ projectName }}</h1></div>
-        <span id="run-status" class="badge">{{ active ? '本地服务已启动' : '尚未启动' }}</span>
+        <div><span class="eyebrow">{{ t('冒泡智能体 · 开发工作台') }}</span><h1 v-if="projectName" id="project-name">{{ projectName }}</h1></div>
+        <span id="run-status" class="badge">{{ active ? t('本地服务已启动') : t('尚未启动') }}</span>
       </div>
 
       <DocumentationPanel v-if="activeSection==='docs' && state?.docsUrl" :url="state.docsUrl" />
       <div id="file-editor-host"></div>
       <section v-show="activeSection==='devices'" class="section-page devices-page">
-        <div class="section-intro"><div><span class="eyebrow">MY DEVICES</span><h2>我的设备</h2><p>查看当前冒泡账号绑定的全部 PixelMug 及在线状态。</p></div><button id="refresh-devices" :disabled="working" @click="refresh">刷新设备</button></div>
+        <div class="section-intro"><div><span class="eyebrow">MY DEVICES</span><h2>{{ t('我的设备') }}</h2><p>{{ t('查看当前冒泡账号绑定的全部 PixelMug 及在线状态。') }}</p></div><button id="refresh-devices" :disabled="working" @click="refresh">{{ t('刷新设备') }}</button></div>
         <DevicePanel class="devices-full" :devices="state?.devices||[]" :latest-jobs="latestJobs" :bindings="bindings" :active="active">
-          <template #updated><p id="device-updated" class="subtle">{{ state?.devicesUpdatedAt ? '状态更新时间： '+new Date(state.devicesUpdatedAt).toLocaleTimeString() : '状态更新时间：尚未获取' }}</p></template>
+          <template #updated><p id="device-updated" class="subtle">{{ state?.devicesUpdatedAt ? t('状态更新时间： ')+new Date(state.devicesUpdatedAt).toLocaleTimeString() : t('状态更新时间：尚未获取') }}</p></template>
         </DevicePanel>
         <BotPanel v-if="state?.user" :key="state.user.id" :bots="state?.bots||[]" :error="state?.botsError" :busy="working||state?.busy" :running-bot-id="active ? state?.runtimeConfig?.botId : ''" @refresh="refreshBots" @save="saveBotToken" />
       </section>
 
       <section v-show="activeSection==='project'" class="section-page project-page">
-        <div class="section-intro"><div><span class="eyebrow">PROJECT</span><h2>智能体应用</h2><p>打开本地应用目录，确认冒泡Bot入口，配置运行参数</p></div><button id="browse" class="primary" :disabled="working||active" @click="openDirectory">打开应用目录</button></div>
+        <div class="section-intro"><div><span class="eyebrow">PROJECT</span><h2>{{ t('智能体应用') }}</h2><p>{{ t('打开本地应用目录，确认冒泡Bot入口，配置运行参数') }}</p></div><button id="browse" class="primary" :disabled="working||active" @click="openDirectory">{{ t('打开应用目录') }}</button></div>
         <section class="card project-editor">
           <div class="project-summary">
             <div class="project-folder-icon"></div>
-            <div><span class="eyebrow">当前应用</span><h2 v-if="projectName">{{ projectName }}</h2><p id="project-path" class="path muted">{{ project?.path || '尚未打开应用' }}</p><p id="project-check" class="subtle">{{ projectComposition }}</p></div>
+            <div><span class="eyebrow">{{ t('当前应用') }}</span><h2 v-if="projectName">{{ projectName }}</h2><p id="project-path" class="path muted">{{ project?.path || t('尚未打开应用') }}</p><p id="project-check" class="subtle">{{ projectComposition }}</p></div>
           </div>
           <div v-if="project" class="project-divider"></div>
           <details v-if="project" id="project-settings" open>
-            <summary>运行配置</summary>
+            <summary>{{ t('运行配置') }}</summary>
             <div class="settings-grid">
-              <label>Bot 入口<input id="bot-entry" v-model="botEntry" placeholder="bot/index.js"><small>必须是 bot/ 目录中的 .js、.mjs 或 .cjs 文件。</small></label>
-              <label>Bot<select id="bot-select" :value="state?.runtimeConfig?.botId||''" :disabled="working||state?.busy||active" @change="selectBot"><option value="" disabled>请选择 Bot</option><option v-for="bot in state?.bots||[]" :key="bot.key" :value="bot.id" :disabled="!bot.id">{{ bot.name||'未命名 Bot' }}{{ bot.id ? ' · '+bot.id : '（缺少 ID）' }}{{ bot.hasToken ? '' : '（未设置 token）' }}</option></select><small>在“我的冒泡”中设置 Bot token，本次 Studio 运行期间可重复使用。</small><button type="button" class="bot-manage-link" @click="activeSection='devices'">管理我的 Bot</button></label>
-              <label>Bot API 地址（可选）<input id="bot-api" v-model="botApi" placeholder="使用 SDK 默认地址"><small>仅在连接自定义 Bot 服务时填写。</small></label>
-              <label v-if="project?.webRoot">WebApp 访问地址<select id="webapp-host" :value="state?.webAppHostname" :disabled="working||state?.busy||active" @change="changeWebAppAddress"><option v-if="!state?.webAppAddresses?.some(item=>item.host===state?.webAppHostname)" :value="state?.webAppHostname" disabled>{{ state?.webAppHostname }}（已不可用）</option><option v-for="item in state?.webAppAddresses||[]" :key="item.host" :value="item.host">{{ item.label }}</option></select><small>默认使用 .local 解析；也可选择与手机同一局域网的 IP。运行中需先停止智能体才能修改，本次 Studio 会话内保留。</small></label>
-              <label v-if="project?.mpy" class="check-option auto-run-option"><input id="auto-run-mpy" v-model="autoRunMpy" type="checkbox" :disabled="working||active"><span><strong>启动后自动运行设备代码</strong><small>开启后，运行智能体时，Studio 会自动加载并运行 PixelMug 端代码。</small></span></label>
+              <label>{{ t('Bot 入口') }}<input id="bot-entry" v-model="botEntry" placeholder="bot/index.js"><small>{{ t('必须是 bot/ 目录中的 .js、.mjs 或 .cjs 文件。') }}</small></label>
+              <label>Bot<select id="bot-select" :value="state?.runtimeConfig?.botId||''" :disabled="working||state?.busy||active" @change="selectBot"><option value="" disabled>{{ t('请选择 Bot') }}</option><option v-for="bot in state?.bots||[]" :key="bot.key" :value="bot.id" :disabled="!bot.id">{{ bot.name||t('未命名 Bot') }}{{ bot.id ? ' · '+bot.id : t('（缺少 ID）') }}{{ bot.hasToken ? '' : t('（未设置 token）') }}</option></select><small>{{ t('在“我的冒泡”中设置 Bot token，本次 Studio 运行期间可重复使用。') }}</small><button type="button" class="bot-manage-link" @click="activeSection='devices'">{{ t('管理我的 Bot') }}</button></label>
+              <label>{{ t('Bot API 地址（可选）') }}<input id="bot-api" v-model="botApi" :placeholder="t('使用 SDK 默认地址')"><small>{{ t('仅在连接自定义 Bot 服务时填写。') }}</small></label>
+              <label v-if="project?.webRoot">{{ t('WebApp 访问地址') }}<select id="webapp-host" :value="state?.webAppHostname" :disabled="working||state?.busy||active" @change="changeWebAppAddress"><option v-if="!state?.webAppAddresses?.some(item=>item.host===state?.webAppHostname)" :value="state?.webAppHostname" disabled>{{ state?.webAppHostname }}{{ t('（已不可用）') }}</option><option v-for="item in state?.webAppAddresses||[]" :key="item.host" :value="item.host">{{ item.label }}</option></select><small>{{ t('默认使用 .local 解析；也可选择与手机同一局域网的 IP。运行中需先停止智能体才能修改，本次 Studio 会话内保留。') }}</small></label>
+              <label v-if="project?.mpy" class="check-option auto-run-option"><input id="auto-run-mpy" v-model="autoRunMpy" type="checkbox" :disabled="working||active"><span><strong>{{ t('启动后自动运行设备代码') }}</strong><small>{{ t('开启后，运行智能体时，Studio 会自动加载并运行 PixelMug 端代码。') }}</small></span></label>
             </div>
           </details>
-          <p class="project-requirements">冒泡智能体应用至少应包含 bot/ 目录及智能体启动入口；还可包含 webapp/ 目录和 mpy/ 设备代码目录。包含设备代码时，请在 mpy/ 目录中使用 <code>__main__.py</code> 作为执行入口。</p>
+          <p class="project-requirements">{{ t('冒泡智能体应用至少应包含 bot/ 目录及智能体启动入口；还可包含 webapp/ 目录和 mpy/ 设备代码目录。包含设备代码时，请在 mpy/ 目录中使用 ') }}<code>__main__.py</code>{{ t(' 作为执行入口。') }}</p>
         </section>
       </section>
 
       <section v-if="activeSection==='debug'" class="section-page debug-page">
-        <div class="section-intro debug-intro"><div><span class="eyebrow">DEBUG</span><h2>调试运行</h2><p>启动智能体，在真实硬件上部署运行，观察运行日志</p></div><div class="actions"><button id="start" class="primary" :disabled="startDisabled" @click="startRun">{{ working&&!active?'请稍候…':'启动智能体' }}</button><button id="restart" :disabled="restartDisabled" @click="startRun">重启智能体</button><button id="stop" :disabled="restartDisabled" @click="stopRun">停止智能体</button></div></div>
+        <div class="section-intro debug-intro"><div><span class="eyebrow">DEBUG</span><h2>{{ t('调试运行') }}</h2><p>{{ t('启动智能体，在真实硬件上部署运行，观察运行日志') }}</p></div><div class="actions"><button id="start" class="primary" :disabled="startDisabled" @click="startRun">{{ working&&!active?t('请稍候…'):t('启动智能体') }}</button><button id="restart" :disabled="restartDisabled" @click="startRun">{{ t('重启智能体') }}</button><button id="stop" :disabled="restartDisabled" @click="stopRun">{{ t('停止智能体') }}</button></div></div>
 
-        <section class="next-step" :class="{invalid:guide.errors?.length}" aria-live="polite"><span class="guide-icon"></span><div><span class="eyebrow">当前状态</span><h2 id="guide-title"><a v-if="guideLinksToProject" class="guide-title-link" href="#" @click.prevent="activeSection='project'">{{ guide.title }}</a><template v-else>{{ guide.title }}</template></h2><p id="guide-body">{{ guide.body }}</p><ul v-if="guide.errors?.length" class="configuration-errors"><li v-for="error in guide.errors" :key="error">{{ error }}</li></ul></div><p v-if="!runStarted&&!guide.errors?.length" id="operation-hint" class="operation-hint">{{ operationHint }}</p></section>
+        <section class="next-step" :class="{invalid:guide.errors?.length}" aria-live="polite"><span class="guide-icon"></span><div><span class="eyebrow">{{ t('当前状态') }}</span><h2 id="guide-title"><a v-if="guideLinksToProject" class="guide-title-link" href="#" @click.prevent="activeSection='project'">{{ guide.title }}</a><template v-else>{{ guide.title }}</template></h2><p id="guide-body">{{ guide.body }}</p><ul v-if="guide.errors?.length" class="configuration-errors"><li v-for="error in guide.errors" :key="error">{{ error }}</li></ul></div><p v-if="!runStarted&&!guide.errors?.length" id="operation-hint" class="operation-hint">{{ operationHint }}</p></section>
 
         <BotSlots v-if="active" :slots="state?.botSlots" :devices="state?.devices || []" :busy="working || state?.busy" @refresh="refreshSlots" @choose="perform(refreshDevices)" @bind="bindSlot" />
 
         <section v-if="project" class="card runtime-card">
-          <div class="section-heading"><div><span class="eyebrow">RUNTIME</span><h2>运行状态</h2></div><span class="topology-status">{{ active?'智能体运行中':'等待启动' }}</span></div>
+          <div class="section-heading"><div><span class="eyebrow">RUNTIME</span><h2>{{ t('运行状态') }}</h2></div><span class="topology-status">{{ active?t('智能体运行中'):t('等待启动') }}</span></div>
           <div class="runtime-topology" :class="{active}">
             <svg class="topology-lines" viewBox="0 0 1000 430" preserveAspectRatio="none" aria-hidden="true">
               <defs>
@@ -384,13 +387,13 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
             <div class="lan-boundary"><span>LAN</span></div>
             <div class="topology-node pc-node"><span class="topology-symbol pc-symbol"><i></i></span><strong>PixelMug Studio</strong><div class="service-badges"><span v-if="botAlive" class="service-badge">BOT</span><span v-if="webAppReady" class="service-badge">WebApp</span></div></div>
             <div class="topology-node phone-node"><span class="topology-symbol phone-symbol"><i></i><img class="bubble-app-icon" :src="bubbleIcon" alt=""></span><strong>Bubble App</strong></div>
-            <div class="topology-node mug-node"><span class="topology-symbol mug-symbol"><img :src="deviceIcon" alt=""></span><strong>PixelMug</strong><div v-if="deviceCodeRunning" class="service-badges"><span class="service-badge">MPY</span><small>代码安装成功</small></div></div>
+            <div class="topology-node mug-node"><span class="topology-symbol mug-symbol"><img :src="deviceIcon" alt=""></span><strong>PixelMug</strong><div v-if="deviceCodeRunning" class="service-badges"><span class="service-badge">MPY</span><small>{{ t('代码安装成功') }}</small></div></div>
           </div>
 
-          <details class="diagnostics"><summary>连接与运行详情</summary><div id="web-link-panel" :hidden="!state?.run?.webAppUrl"><label>Studio为Webapp提供的局域网访问地址：<div class="inline"><input id="web-url" :value="state?.run?.webAppUrl||''" readonly><button id="copy-url" @click="copyUrl">复制链接</button></div></label></div><p id="network-info" class="subtle">请确保运行Studio的电脑、运行冒泡App的手机和PixelMug在同一个局域网</p><p>本轮运行 <span id="run-id" class="mono muted">{{ state?.run?.runId||'—' }}</span></p><p id="debug-dir" class="path subtle">{{ active?'日志目录：'+state.run.debugDir:'' }}</p></details>
+          <details class="diagnostics"><summary>{{ t('连接与运行详情') }}</summary><div id="web-link-panel" :hidden="!state?.run?.webAppUrl"><label>{{ t('Studio为Webapp提供的局域网访问地址：') }}<div class="inline"><input id="web-url" :value="state?.run?.webAppUrl||''" readonly><button id="copy-url" @click="copyUrl">{{ t('复制链接') }}</button></div></label></div><p id="network-info" class="subtle">{{ t('请确保运行Studio的电脑、运行冒泡App的手机和PixelMug在同一个局域网') }}</p><p>{{ t('本轮运行 ') }}<span id="run-id" class="mono muted">{{ state?.run?.runId||'—' }}</span></p><p id="debug-dir" class="path subtle">{{ active?t('日志目录：')+state.run.debugDir:'' }}</p></details>
         </section>
 
-        <LogWorkspace v-if="project" :items="items" :paused="paused" :source-ids="applicationLogSources" title="应用运行日志" description="Bot 和 WebApp 输出持续保存到应用 debug/ 目录。" @toggle-pause="paused=!paused" @clear="items=[]"/>
+        <LogWorkspace v-if="project" :items="items" :paused="paused" :source-ids="applicationLogSources" :title="t('应用运行日志')" :description="t('Bot 和 WebApp 输出持续保存到应用 debug/ 目录。')" @toggle-pause="paused=!paused" @clear="items=[]"/>
       </section>
 
       <section v-if="active&&selectedDevice" class="section-page device-debug-page">
@@ -400,29 +403,29 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
             <span class="eyebrow">DEVICE</span>
             <h2>{{ selectedDevice.name }}</h2>
             <div class="device-facts">
-              <div><span>Wi-Fi</span><strong>{{ selectedDeviceNetwork?.ssid||'待获取' }}</strong></div>
-              <div><span>IP 地址</span><strong>{{ selectedDeviceNetwork?.ip||'待获取' }}</strong></div>
-              <div><span>最近获取时间</span><strong>{{ selectedDeviceNetwork?.updatedAt?new Date(selectedDeviceNetwork.updatedAt).toLocaleTimeString():'待获取' }}</strong></div>
-              <div><span>Bot 绑定位置</span><strong>槽位 {{ rowDevice(selectedDeviceRow).slot }}</strong></div>
+              <div><span>Wi-Fi</span><strong>{{ selectedDeviceNetwork?.ssid||t('待获取') }}</strong></div>
+              <div><span>{{ t('IP 地址') }}</span><strong>{{ selectedDeviceNetwork?.ip||t('待获取') }}</strong></div>
+              <div><span>{{ t('最近获取时间') }}</span><strong>{{ selectedDeviceNetwork?.updatedAt?new Date(selectedDeviceNetwork.updatedAt).toLocaleTimeString():t('待获取') }}</strong></div>
+              <div><span>{{ t('Bot 绑定位置') }}</span><strong>{{ t('槽位 ') }}{{ rowDevice(selectedDeviceRow).slot }}</strong></div>
             </div>
           </div>
-          <details v-if="project?.mpy" class="device-actions"><summary>设备高级操作</summary><p class="subtle">单独部署 MPY，不重启本地服务。设备将重启，旧应用及数据会被清除，保留引导配置。</p><button :disabled="rowDisabled(selectedDeviceRow)" @click="runDevice(selectedDeviceRow)">{{ selectedDeviceRow.job?'更新并运行设备代码':'上传并运行设备代码' }}</button></details>
+          <details v-if="project?.mpy" class="device-actions"><summary>{{ t('设备高级操作') }}</summary><p class="subtle">{{ t('单独部署 MPY，不重启本地服务。设备将重启，旧应用及数据会被清除，保留引导配置。') }}</p><button :disabled="rowDisabled(selectedDeviceRow)" @click="runDevice(selectedDeviceRow)">{{ selectedDeviceRow.job?t('更新并运行设备代码'):t('上传并运行设备代码') }}</button></details>
         </section>
 
         <section v-if="project?.mpy" class="card process-card">
-          <div class="section-heading"><div><span class="eyebrow">DEVICE PROCESS</span><h2>设备运行过程</h2></div><span class="process-state">{{ selectedDevice.status }}</span></div>
+          <div class="section-heading"><div><span class="eyebrow">DEVICE PROCESS</span><h2>{{ t('设备运行过程') }}</h2></div><span class="process-state">{{ selectedDevice.status }}</span></div>
           <div class="deployment-track">
             <div v-for="(step,index) in deploymentSteps" :key="step" :class="['deployment-step',{done:selectedDeploymentIndex>index,current:selectedDeploymentIndex===index}]">
-              <span>{{ selectedDeploymentIndex>index?'✓':index+1 }}</span><strong>{{ step }}</strong><small>{{ selectedDeploymentIndex>index?'已完成':selectedDeploymentIndex===index?'进行中':'等待' }}</small>
+              <span>{{ selectedDeploymentIndex>index?'✓':index+1 }}</span><strong>{{ t(step) }}</strong><small>{{ selectedDeploymentIndex>index?t('已完成'):selectedDeploymentIndex===index?t('进行中'):t('等待') }}</small>
             </div>
           </div>
         </section>
 
-        <LogWorkspace v-if="project?.mpy" :items="items" :paused="paused" :source-ids="['mpy']" :device-id="selectedDevice.id" title="设备运行日志" :description="selectedDevice.name+' 的 MPY 输出持续保存到应用 debug/ 目录。'" @toggle-pause="paused=!paused" @clear="items=[]"/>
+        <LogWorkspace v-if="project?.mpy" :items="items" :paused="paused" :source-ids="['mpy']" :device-id="selectedDevice.id" :title="t('设备运行日志')" :description="selectedDevice.name+t(' 的 MPY 输出持续保存到应用 debug/ 目录。')" @toggle-pause="paused=!paused" @clear="items=[]"/>
       </section>
     </section>
   </main>
-  <dialog id="directory-dialog" ref="directoryDialog"><div class="section-heading"><h2>打开本地项目</h2><button id="close-directory" aria-label="关闭目录浏览器" @click="directoryDialog.close()">×</button></div><div class="inline"><input id="directory-path" :value="directory?.path||''" @input="directory={...directory,path:$event.target.value}" @keydown.enter.prevent="browseAction(directory?.path)"><button id="directory-go" @click="browseAction(directory?.path)">转到</button><button id="directory-up" @click="browseAction(directory?.parent)">上一级</button></div><div id="drives" class="actions"><button v-for="drive in directory?.drives||[]" :key="drive" @click="browseAction(drive)">{{ drive }}</button></div><div id="directories"><button v-for="item in directory?.directories||[]" :key="item.path" @click="browseAction(item.path)">▸　{{ item.name }}</button><p v-if="directory&&!directory.directories.length" class="empty">此目录没有可浏览的子目录。</p></div><div class="dialog-footer"><button id="choose-directory" class="primary" @click="chooseDirectory">使用当前目录</button></div></dialog>
+  <dialog id="directory-dialog" ref="directoryDialog"><div class="section-heading"><h2>{{ t('打开本地项目') }}</h2><button id="close-directory" :aria-label="t('关闭目录浏览器')" @click="directoryDialog.close()">×</button></div><div class="inline"><input id="directory-path" :value="directory?.path||''" @input="directory={...directory,path:$event.target.value}" @keydown.enter.prevent="browseAction(directory?.path)"><button id="directory-go" @click="browseAction(directory?.path)">{{ t('转到') }}</button><button id="directory-up" @click="browseAction(directory?.parent)">{{ t('上一级') }}</button></div><div id="drives" class="actions"><button v-for="drive in directory?.drives||[]" :key="drive" @click="browseAction(drive)">{{ drive }}</button></div><div id="directories"><button v-for="item in directory?.directories||[]" :key="item.path" @click="browseAction(item.path)">▸　{{ item.name }}</button><p v-if="directory&&!directory.directories.length" class="empty">{{ t('此目录没有可浏览的子目录。') }}</p></div><div class="dialog-footer"><button id="choose-directory" class="primary" @click="chooseDirectory">{{ t('使用当前目录') }}</button></div></dialog>
   </div>
 </template>
 

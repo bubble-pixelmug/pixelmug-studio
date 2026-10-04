@@ -1,4 +1,5 @@
 <script setup>
+import { t } from '../i18n.js';
 import { deviceIconFor } from '../deviceIcon.js';
 
 defineProps({
@@ -17,17 +18,17 @@ const tabs=[
   {id:'project',label:'选择应用',description:'目录、入口与凭据',icon:'folder'},
   {id:'debug',label:'调试运行',description:'运行状态与应用日志',icon:'terminal'},
 ];
-const statusText=status=>status==='ok'?'Studio 服务正常':status==='error'?'Studio 服务异常':'Studio 未连接';
+const statusText=status=>status==='ok'?t('Studio 服务正常'):status==='error'?t('Studio 服务异常'):t('Studio 未连接');
 
 </script>
 <template>
   <aside class="flow-sidebar">
-    <span class="sidebar-label">工作台</span>
-    <nav class="section-tabs" aria-label="工作台导航">
+    <span class="sidebar-label">{{ t('工作台') }}</span>
+    <nav class="section-tabs" :aria-label="t('工作台导航')">
       <template v-for="tab in tabs" :key="tab.id">
         <button type="button" :class="{active:activeTab===tab.id||(tab.id==='debug'&&activeTab.startsWith('device:'))}" @click="$emit('change',tab.id)">
           <span :class="['nav-icon',tab.icon]"><i></i></span>
-          <span><strong>{{ tab.label }}</strong><small>{{ tab.id==='devices' ? deviceCount+' 台设备 · '+botCount+' 个 Bot' : tab.description }}</small></span>
+          <span><strong>{{ t(tab.label) }}</strong><small>{{ tab.id==='devices' ? deviceCount+t(' 台设备 · ')+botCount+t(' 个 Bot') : t(tab.description) }}</small></span>
         </button>
         <slot v-if="tab.id==='project'" name="files"></slot>
         <div v-if="tab.id==='debug'&&active&&debugDevices.length" class="debug-device-tabs">
@@ -36,7 +37,7 @@ const statusText=status=>status==='ok'?'Studio 服务正常':status==='error'?'S
               <span class="debug-device-image"><img v-if="deviceIconFor(device).src" :class="deviceIconFor(device).kind" :src="deviceIconFor(device).src" alt=""></span>
               <span><strong>{{ device.name||device.sn||'PixelMug' }}</strong><small>{{ device.status }}</small></span>
             </button>
-            <button v-if="device.canRunMpyAgain" type="button" class="rerun-mpy-button" :disabled="busy" @click.stop="$emit('rerun-mpy',device)">再次运行 MPY</button>
+            <button v-if="device.canRunMpyAgain" type="button" class="rerun-mpy-button" :disabled="busy" @click.stop="$emit('rerun-mpy',device)">{{ t('再次运行 MPY') }}</button>
           </div>
         </div>
       </template>
