@@ -57,7 +57,7 @@ test('real browser: language switching preserves login, drafts, running agent an
     assert.equal(await evaluate('document.querySelector("#login-language").getBoundingClientRect().width>0'),true);
     await switchLanguage('login-language','en');
     assert.equal(await evaluate('document.querySelector(".bubble-login-button").textContent'),'Sign in with Bubble');
-    assert.equal(await evaluate('document.querySelector(".login-hero h1").innerText'),'Build. Run.\nMake it real.');
+    assert.equal(await evaluate('document.querySelector(".login-hero h1").innerText'),'What if your next computer\nwere a mug?');
     await evaluate('document.querySelector(".bubble-login-button").click()');
     await input('account','dev@example.test');
     await input('code','123456');
