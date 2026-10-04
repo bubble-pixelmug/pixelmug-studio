@@ -301,8 +301,8 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
   <section id="login-view" class="login-shell" :hidden="Boolean(state?.user)" :style="{backgroundImage:`url(${indexBackground})`}">
     <LanguageSwitcher id="login-language" class="login-language" />
     <div v-if="!loginPanelOpen" class="login-hero">
-      <p class="login-slogan">Bring your ideas to life on PixelMug</p>
-      <h1>{{ t('让每一个灵感') }}<br>{{ t('在 PixelMug 上运行') }}</h1>
+      <p class="login-slogan">{{ t('让每一个灵感 在 PixelMug 上运行') }}</p>
+      <h1>{{ t('如果你的下一台电脑，') }}<br>{{ t('是一个杯子呢？') }}</h1>
       <button type="button" class="bubble-login-button" @click="loginPanelOpen=true">{{ t('用冒泡账号登录') }}</button>
     </div>
     <form v-else id="login-form" class="login-panel" @submit.prevent="login">

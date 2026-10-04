@@ -53,9 +53,12 @@ test('real browser: language switching preserves login, drafts, running agent an
     await send('Page.navigate',{url:app.studioUrl});
     await waitFor('document.querySelector("#login-language")');
     assert.equal(await evaluate('document.documentElement.lang'),'zh-CN');
+    assert.equal(await evaluate('document.querySelector(".login-slogan").textContent'),'让每一个灵感 在 PixelMug 上运行');
+    assert.equal(await evaluate('document.querySelector(".login-hero h1").innerText'),'如果你的下一台电脑，\n是一个杯子呢？');
     assert.equal(await evaluate('document.querySelector(".bubble-login-button").textContent'),'用冒泡账号登录');
     assert.equal(await evaluate('document.querySelector("#login-language").getBoundingClientRect().width>0'),true);
     await switchLanguage('login-language','en');
+    assert.equal(await evaluate('document.querySelector(".login-slogan").textContent'),'Bring your ideas to life on PixelMug');
     assert.equal(await evaluate('document.querySelector(".bubble-login-button").textContent'),'Sign in with Bubble');
     assert.equal(await evaluate('document.querySelector(".login-hero h1").innerText'),'What if your next computer\nwere a mug?');
     await evaluate('document.querySelector(".bubble-login-button").click()');
