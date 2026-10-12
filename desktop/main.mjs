@@ -1,9 +1,20 @@
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog, nativeImage, shell } from 'electron';
+import path from 'node:path';
 import { startWorkbench } from '../src/workbench.mjs';
 
 let mainWindow;
 let workbench;
 let quitting = false;
+
+function setMacDockIcon() {
+  if (process.platform !== 'darwin' || !app.dock) return;
+
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.icns')
+    : path.join(app.getAppPath(), 'desktop', 'icon.icns');
+  const icon = nativeImage.createFromPath(iconPath);
+  if (!icon.isEmpty()) app.dock.setIcon(icon);
+}
 
 async function closeWorkbench() {
   const active = workbench;
@@ -48,7 +59,10 @@ async function createWindow() {
   await mainWindow.loadURL(studioUrl.href);
 }
 
-app.whenReady().then(createWindow).catch(error => {
+app.whenReady().then(() => {
+  setMacDockIcon();
+  return createWindow();
+}).catch(error => {
   dialog.showErrorBox('PixelMug Studio could not start', error.stack || error.message);
   app.exit(1);
 });
