@@ -67,6 +67,16 @@ examples/          Focused runnable examples
 test/              Automated tests
 ```
 
+
+## Windows package
+
+Build an unsigned Windows x64 NSIS installer with:
+
+```sh
+npm run package:win
+```
+
+The installer is written to `release/`. To test the unpacked application without creating an installer, run `npm run package:win:dir`.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidelines.

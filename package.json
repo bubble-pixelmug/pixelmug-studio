@@ -1,7 +1,10 @@
 {
   "name": "pixelmug-studio",
   "description": "Local development, debugging, and deployment tool for PixelMug applications.",
+  "author": "Bubble PixelMug",
+  "version": "0.1.0",
   "private": true,
+  "main": "desktop/main.mjs",
   "type": "module",
   "scripts": {
     "start": "node src/server.mjs",
@@ -11,7 +14,10 @@
     "test": "node --test test/*.test.mjs",
     "example:mps": "node src/server.mjs --project examples/minimal-mps --bot bot/index.js",
     "example:studio": "node src/server.mjs --project examples/studio-debug --bot bot/smoke-bot.js",
-    "example:studio:bot": "node src/server.mjs --project examples/studio-debug --bot bot/index.js"
+    "example:studio:bot": "node src/server.mjs --project examples/studio-debug --bot bot/index.js",
+    "desktop:dev": "npm run build && electron .",
+    "package:win:dir": "npm run build && electron-builder --win --x64 --dir",
+    "package:win": "npm run build && electron-builder --win nsis --x64"
   },
   "engines": {
     "node": ">=20.6"
@@ -28,13 +34,56 @@
     "@codemirror/view": "^6.43.11",
     "@jeejio-bubble/bot": "0.1.7",
     "codemirror": "^6.0.2",
+    "debug": "^4.4.3",
     "es-module-lexer": "3.0.2",
-    "vue": "^3.5.42",
     "vite": "^6.4.3",
+    "vue": "^3.5.42",
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.4"
+    "@vitejs/plugin-vue": "^5.2.4",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.bubblepixelmug.studio",
+    "productName": "PixelMug Studio",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "icon": "desktop/icon.ico",
+    "files": [
+      "desktop/**/*",
+      "src/**/*",
+      "ui-dist/**/*",
+      "package.json",
+      "LICENSE",
+      "node_modules/debug/**/*",
+      "node_modules/ms/**/*",
+      "!test{,/**}",
+      "!examples{,/**}",
+      "!getting-started{,/**}"
+    ],
+    "win": {
+      "icon": "desktop/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "installerIcon": "desktop/icon.ico",
+      "uninstallerIcon": "desktop/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PixelMug Studio"
+    }
   },
   "license": "MIT",
   "repository": {

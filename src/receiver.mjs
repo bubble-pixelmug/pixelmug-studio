@@ -4,7 +4,7 @@ import { buildWebApp } from "./webapp-build.mjs";
 import { createServer } from "node:http";
 import { randomUUID, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, appendFileSync, writeFileSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { resolve, relative, extname, isAbsolute, join } from "node:path";
+import { resolve, relative, extname, isAbsolute, join, delimiter } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fork } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
@@ -12,6 +12,7 @@ import { StringDecoder } from "node:string_decoder";
 const sdkRoot = fileURLToPath(new URL("./", import.meta.resolve("@jeejio-bubble/bot/sdk/WebApp.js")));
 const browserSDK = browserSdkFiles;
 const runtimeRoot = fileURLToPath(new URL("./runtime/", import.meta.url));
+const studioNodeModules = fileURLToPath(new URL("../node_modules/", import.meta.url));
 const browserRuntime = new Set(["StudioDebug.js", "StudioDebugWeb.js", "StudioLaunch.js", "WebAppAdapter.js"]);
 const MAX_BODY = 256 * 1024;
 const levels = new Set(["log", "info", "warn", "error", "debug"]);
@@ -238,7 +239,7 @@ export async function startStudio(options = {}) {
       child = fork(resolve(project, options.bot), options.botArgs || [], {
         cwd: project, silent: true,
         execArgv: ["--import", new URL("./runtime/studio-preload.js", import.meta.url).href],
-        env: { ...process.env, ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_WEBAPP_URL: webAppUrl || "",
+        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_WEBAPP_URL: webAppUrl || "",
           PIXELMUG_STUDIO_DEBUG: JSON.stringify({ enabled: true, runId, buildId: options.buildId || null, transport: "ipc", token }) },
       });
       captureStream(child.stdout, "stdout");
