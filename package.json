@@ -1,5 +1,6 @@
 {
-  "name": "pixelmug-studio-local",
+  "name": "pixelmug-studio",
+  "description": "Local development, debugging, and deployment tool for PixelMug applications.",
   "private": true,
   "type": "module",
   "scripts": {
@@ -34,5 +35,14 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.4"
-  }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bubble-pixelmug/pixelmug-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bubble-pixelmug/pixelmug-studio/issues"
+  },
+  "homepage": "https://github.com/bubble-pixelmug/pixelmug-studio#readme"
 }

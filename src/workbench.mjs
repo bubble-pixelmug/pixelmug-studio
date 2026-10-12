@@ -12,7 +12,7 @@ import { startWebAppGateway } from './gateway.mjs';
 
 export async function startWorkbench(options = {}) {
   const creator = new CreatorClient({ baseUrl: options.creatorUrl || 'https://connector.devjeejio.com:5443', fetchImpl: options.fetchImpl });
-  const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'http://127.0.0.1:5174/');
+  const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'https://bubble-pixelmug.github.io/pixelmug-docs/en/');
   if (!['http:', 'https:'].includes(docsUrl.protocol) || docsUrl.username || docsUrl.password) throw new Error('Invalid documentation URL');
   const credential = randomBytes(24).toString('hex');
   const defaultWebAppHostname = options.webAppHostname || 'pixelmug-studio.local';

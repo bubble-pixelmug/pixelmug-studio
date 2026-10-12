@@ -428,7 +428,7 @@ test('background device refresh does not block files or project operations; conc
 });
 
 
-test('real browser: documentation navigation embeds local VitePress', {skip:!process.env.STUDIO_TEST_DOCS,timeout:40000},async t=>{
+test('real browser: documentation navigation embeds the configured documentation site', {skip:!process.env.STUDIO_TEST_DOCS,timeout:40000},async t=>{
   const f = await fixture(t), profile = join(f.root, 'chrome-profile');
   const child = spawn(process.env.STUDIO_TEST_BROWSER, ['--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'--window-size=1440,1050','about:blank'], { windowsHide:true, stdio:'ignore' });
   f.cleanup.browser = async () => { child.kill(); await sleep(500); };
@@ -446,9 +446,9 @@ test('real browser: documentation navigation embeds local VitePress', {skip:!pro
 
  await f.api('auth/login',login); await f.api('bots/token', {botId:'bot-one',token:'private-bot-token'}); await f.api('bots/select',{botId:'bot-one'});
  const state=(await f.api('state')).data;
- assert.equal(state.docsUrl,'http://127.0.0.1:5174/');
+ assert.equal(state.docsUrl,'https://bubble-pixelmug.github.io/pixelmug-docs/en/');
  const response=await fetch(f.origin);
- assert.ok(response.headers.get('content-security-policy').includes('frame-src http://127.0.0.1:5174'));
+ assert.ok(response.headers.get('content-security-policy').includes('frame-src https://bubble-pixelmug.github.io'));
  await send('Page.navigate',{url:f.app.studioUrl});
  await waitFor('document.querySelectorAll(".section-tabs > button").length === 4');
  await evaluate('document.querySelectorAll(".section-tabs > button")[2].click()');
