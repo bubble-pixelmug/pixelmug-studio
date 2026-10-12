@@ -77,6 +77,16 @@ npm run package:win
 ```
 
 The installer is written to `release/`. To test the unpacked application without creating an installer, run `npm run package:win:dir`.
+
+## macOS packages
+
+Build unsigned DMG installers for Apple silicon and Intel Macs with:
+
+```sh
+npm run package:mac
+```
+
+To build just one architecture, run `npm run package:mac:arm64` (Apple silicon) or `npm run package:mac:x64` (Intel). The DMG files are written separately to `release/mac/arm64/` and `release/mac/x64/`.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidelines.

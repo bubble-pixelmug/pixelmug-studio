@@ -17,7 +17,10 @@
     "example:studio:bot": "node src/server.mjs --project examples/studio-debug --bot bot/index.js",
     "desktop:dev": "npm run build && electron .",
     "package:win:dir": "npm run build && electron-builder --win --x64 --dir",
-    "package:win": "npm run build && electron-builder --win nsis --x64"
+    "package:win": "npm run build && electron-builder --win nsis --x64",
+    "package:mac:x64": "npm run build && electron-builder --mac dmg --x64 --config.directories.output=release/mac/x64",
+    "package:mac:arm64": "npm run build && electron-builder --mac dmg --arm64 --config.directories.output=release/mac/arm64",
+    "package:mac": "npm run package:mac:x64 && npm run package:mac:arm64"
   },
   "engines": {
     "node": ">=20.6"
@@ -53,7 +56,7 @@
       "output": "release"
     },
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
-    "icon": "desktop/icon.ico",
+    "icon": "desktop/icon.icns",
     "files": [
       "desktop/**/*",
       "src/**/*",
@@ -72,6 +75,15 @@
         {
           "target": "nsis",
           "arch": ["x64"]
+        }
+      ]
+    },
+    "mac": {
+      "icon": "desktop/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
         }
       ]
     },

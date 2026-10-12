@@ -9,11 +9,13 @@ export function initialize({ studioPackageUrl }) {
 }
 
 export async function resolve(specifier, context, nextResolve) {
-  try {
-    return await nextResolve(specifier, context);
-  } catch (error) {
-    const isStudioSdk = specifier === sdkPrefix || specifier.startsWith(`${sdkPrefix}/`);
-    if (!isStudioSdk || error?.code !== "ERR_MODULE_NOT_FOUND") throw error;
+  const isStudioSdk = specifier === sdkPrefix || specifier.startsWith(`${sdkPrefix}/`);
+  // The Studio adapter patches BubbleBot before the project entry point loads. If
+  // an external project resolves its own copy of the SDK, it creates a different
+  // BubbleBot class and bypasses those patches. Always use Studio's copy so the
+  // project Bot and the adapter share the same runtime class.
+  if (isStudioSdk) {
     return { url: pathToFileURL(studioRequire.resolve(specifier)).href, shortCircuit: true };
   }
+  return nextResolve(specifier, context);
 }
