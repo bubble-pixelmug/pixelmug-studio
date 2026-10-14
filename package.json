@@ -2,7 +2,7 @@
   "name": "pixelmug-studio",
   "description": "Local development, debugging, and deployment tool for PixelMug applications.",
   "author": "Bubble PixelMug",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "main": "desktop/main.mjs",
   "type": "module",
