@@ -21,7 +21,7 @@ Open the Studio URL printed in the terminal. The management service listens only
 ## Typical application layout
 
 ```text
-my-application/
+example-app/
 ├── bot/                 # Required
 │   └── index.js         # Select this as the Bot entry in Studio
 ├── webapp/              # Optional; contains index.html

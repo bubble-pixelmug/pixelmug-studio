@@ -10,8 +10,11 @@ import { startStudio } from './receiver.mjs';
 import { inspectProject, validateProjectRun } from './project.mjs';
 import { startWebAppGateway } from './gateway.mjs';
 
+const DEFAULT_CREATOR_API_URL = 'https://us-connector.jeejio.com';
+const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
+
 export async function startWorkbench(options = {}) {
-  const creator = new CreatorClient({ baseUrl: options.creatorUrl || 'https://connector.devjeejio.com:5443', fetchImpl: options.fetchImpl });
+  const creator = new CreatorClient({ baseUrl: options.creatorUrl || DEFAULT_CREATOR_API_URL, fetchImpl: options.fetchImpl });
   const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'https://bubble-pixelmug.github.io/pixelmug-docs/en/');
   if (!['http:', 'https:'].includes(docsUrl.protocol) || docsUrl.username || docsUrl.password) throw new Error('Invalid documentation URL');
   const credential = randomBytes(24).toString('hex');
@@ -88,7 +91,8 @@ export async function startWorkbench(options = {}) {
     await creator.refresh();
     const botId = String(body.botId ?? runtimeConfig.botId ?? '');
     const botToken = creator.getBotToken(botId);
-    const botApiBaseUrl = body.botApiBaseUrl === undefined ? runtimeConfig.botApiBaseUrl : String(body.botApiBaseUrl || '').trim();
+    const configuredBotApiBaseUrl = body.botApiBaseUrl === undefined ? runtimeConfig.botApiBaseUrl : String(body.botApiBaseUrl || '').trim();
+    const botApiBaseUrl = configuredBotApiBaseUrl || DEFAULT_BOT_API_URL;
     const autoRunMpy = selectedProject.mpy && (body.autoRunMpy === undefined ? runtimeConfig.autoRunMpy === true : body.autoRunMpy === true);
     if (webRoot) validateWebAppHostname(webAppHostname);
     const prepared = run ? await run.launches.stopDevices({ enterRepl: true }) : { devices: [] };

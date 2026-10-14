@@ -99,6 +99,7 @@ test('project validation requires bot/ and complete optional MPY files', async t
 });
 test('project run lifecycle, separate WebApp credentials, logs, restart cursor and logout', async t => {
   const f = await fixture(t);
+  assert.equal((await f.api('state')).data.creatorUrl, 'https://us-connector.jeejio.com');
   await f.api('auth/login', login); await f.api('bots/token', {botId:'bot-one',token:'private-bot-token'}); await f.api('bots/select',{botId:'bot-one'}); await f.api('devices/refresh', {});
   const before = (await f.api('state')).data;
   assert.equal(before.devices[0].id, 'cup-one'); assert.ok(!JSON.stringify(before).includes('private-creator-token'));
@@ -106,6 +107,7 @@ test('project run lifecycle, separate WebApp credentials, logs, restart cursor a
   const args = { bot: 'bot/index.js', webRoot: 'webapp', botId: 'bot-one' };
   assert.equal((await f.api('run/start', { ...args, bot: 'webapp/index.html' })).status, 400);
   const first = await f.api('run/start', args); assert.equal(first.status, 200);
+  assert.equal((await f.api('state')).data.runtimeConfig.botApiBaseUrl, 'https://us.jeejio.com/im');
   assert.equal((await f.api('project/open', { path: f.root })).status, 400);
   let snapshot;
   for (let i=0;i<50;i++) { snapshot = (await f.api('state')).data; if(snapshot.events.records.some(r=>r.message.includes('workbench bot ready'))) break; await sleep(100); }

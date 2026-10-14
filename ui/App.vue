@@ -29,7 +29,7 @@ const activeSection = ref('project');
 const fileWorkspace = ref(null);
 const serviceStatus = ref('disconnected');
 const notice = ref({visible:false,error:false,message:''});
-const accountType = ref('PHONE'), accountValue = ref(''), loginCode = ref(''), creatorUrl = ref('https://connector.devjeejio.com:5443');
+const accountType = ref('PHONE'), accountValue = ref(''), loginCode = ref(''), creatorUrl = ref('https://us-connector.jeejio.com');
 const botEntry = ref(''), autoRunMpy = ref(false), botApi = ref('');
 const directory = ref(null), directoryDialog = ref(null);
 let lastRefresh = 0, initialized = false, pollTimer, cooldownTimer, noticeTimer;
