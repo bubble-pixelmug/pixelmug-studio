@@ -87,6 +87,18 @@ npm run package:mac
 ```
 
 To build just one architecture, run `npm run package:mac:arm64` (Apple silicon) or `npm run package:mac:x64` (Intel). The DMG files are written separately to `release/mac/arm64/` and `release/mac/x64/`.
+
+## GitHub release workflow
+
+The repository includes a GitHub Actions workflow at `.github/workflows/release.yml`. Push a version tag such as `v0.1.1` to build and publish installers automatically:
+
+```sh
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+The workflow builds a Windows x64 NSIS installer, a macOS Intel DMG, and a macOS Apple silicon DMG on native GitHub-hosted runners. After all builds succeed, the installers are attached to a GitHub Release for the tag. The packages are currently unsigned; production distribution should add Windows code signing and Apple Developer signing and notarization credentials.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidelines.
