@@ -2,7 +2,7 @@
   "name": "pixelmug-studio",
   "description": "Local development, debugging, and deployment tool for PixelMug applications.",
   "author": "Bubble PixelMug",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "main": "desktop/main.mjs",
   "type": "module",
@@ -16,10 +16,10 @@
     "example:studio": "node src/server.mjs --project examples/studio-debug --bot bot/smoke-bot.js",
     "example:studio:bot": "node src/server.mjs --project examples/studio-debug --bot bot/index.js",
     "desktop:dev": "npm run build && electron .",
-    "package:win:dir": "npm run build && electron-builder --win --x64 --dir",
-    "package:win": "npm run build && electron-builder --win nsis --x64",
-    "package:mac:x64": "npm run build && electron-builder --mac dmg --x64 --config.directories.output=release/mac/x64",
-    "package:mac:arm64": "npm run build && electron-builder --mac dmg --arm64 --config.directories.output=release/mac/arm64",
+    "package:win:dir": "npm run build && electron-builder --win --x64 --dir --publish never",
+    "package:win": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "package:mac:x64": "npm run build && electron-builder --mac dmg --x64 --config.directories.output=release/mac/x64 --publish never",
+    "package:mac:arm64": "npm run build && electron-builder --mac dmg --arm64 --config.directories.output=release/mac/arm64 --publish never",
     "package:mac": "npm run package:mac:x64 && npm run package:mac:arm64"
   },
   "engines": {
@@ -74,7 +74,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -83,7 +85,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
