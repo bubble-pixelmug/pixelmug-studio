@@ -69,6 +69,11 @@ export class CreatorClient {
   publicMps() {
     return this.mps.map(mps => ({ appName: mps.appName, appId: mps.appId }));
   }
+  getMpsToken(appId) {
+    const mps = this.mps.find(item => String(item.appId) === String(appId));
+    if (!mps?.token) throw new Error('MPS token is not available; refresh MPS and try again');
+    return mps.token;
+  }
   async refreshMps() {
     const session = this.session;
     if (!session) throw new Error('请先登录冒泡账号');

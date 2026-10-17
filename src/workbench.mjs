@@ -11,6 +11,8 @@ import { startStudio } from './receiver.mjs';
 import { inspectProject, validateProjectRun } from './project.mjs';
 import { startWebAppGateway } from './gateway.mjs';
 import { createProjectArchive, readMpsMetadata } from './cloud-deployment.mjs';
+import { createMpsArchive } from './mps-package.mjs';
+import { uploadMpsPackage } from './mps-upload.mjs';
 
 const DEFAULT_CREATOR_API_URL = 'https://us-connector.jeejio.com';
 const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
@@ -167,6 +169,18 @@ export async function startWorkbench(options = {}) {
           if (!project) throw new Error('Please open a project first');
           const mps = await readMpsMetadata(project.path).catch(() => null);
           return reply(res, 200, { project_id: project.path.split(/[\\/]/).filter(Boolean).pop(), bot: project.bot, has_webapp: Boolean(project.webRoot), mps });
+        }
+        if (req.method === 'POST' && url.pathname === '/api/mps/upload') {
+          if (!project) throw new Error('Please open a project first');
+          const body = await bodyOf(req);
+          const mpsId = String(body.mpsId || '').trim();
+          if (!mpsId) throw new Error('MPS ID is required');
+          const token = creator.getMpsToken(mpsId);
+          const archive = await createMpsArchive(project.path);
+          try {
+            const result = await uploadMpsPackage({ archivePath: archive.path, fileName: archive.fileName, appId: mpsId, token });
+            return reply(res, 200, { ...result, name: archive.name, version: archive.version, fileName: archive.fileName, size: archive.size });
+          } finally { await archive.cleanup(); }
         }
         if (req.method === 'POST' && url.pathname === '/api/deploy/apply') {
           const body = await bodyOf(req);

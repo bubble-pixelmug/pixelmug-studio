@@ -48,6 +48,7 @@ const deploymentTextMap = {
   mps: ['MPS', 'MPS'], selectMps: ['\u9009\u62e9 MPS ID', 'Select MPS ID'], version: ['\u7248\u672c', 'Version'],
   botDeployed: ['\u5df2\u90e8\u7f72', 'Deployed'], botInUse: ['\u8c03\u8bd5\u4e2d', 'In use'], botConflict: ['Bot \u5df2\u88ab\u90e8\u7f72\u6216\u6b63\u5728\u8c03\u8bd5', 'This Bot is already deployed or being used for debugging.'],
   deploy: ['\u90e8\u7f72', 'Deploy application'], retry: ['\u91cd\u8bd5\u90e8\u7f72', 'Retry deployment'],
+  mpsPackage: ['\u6b63\u5728\u6253\u5305 MPS', 'Packaging MPS'], mpsUpload: ['\u6b63\u5728\u4e0a\u4f20 MPS', 'Uploading MPS'], mpsUploaded: ['MPS \u5305\u5df2\u4e0a\u4f20', 'MPS package uploaded'],
   cancel: ['\u53d6\u6d88\u90e8\u7f72', 'Cancel deployment'], stop: ['\u505c\u6b62\u90e8\u7f72', 'Stop deployment'], status: ['\u5237\u65b0\u72b6\u6001', 'Refresh status'],
   idle: ['\u7a7a\u95f2', 'Idle'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
   authCode: ['\u6388\u6743\u7801', 'Authorization code'], serverAccepted: ['\u670d\u52a1\u5668\u7533\u8bf7\u5df2\u901a\u8fc7\u3002', 'Server application accepted.']
@@ -212,6 +213,10 @@ async function createCloudDeployment(){
     return;
   }
   await perform(async()=>{
+    deploymentLog.value.push(deployText('mpsPackage'));
+    deploymentLog.value.push(deployText('mpsUpload'));
+    const mpsUpload=await api('mps/upload',{mpsId:deploymentMpsId.value.trim()});
+    deploymentLog.value.push(`${deployText('mpsUploaded')}: ${mpsUpload.fileName || deploymentMpsId.value.trim()}`);
     await api('bots/select',{botId:deploymentBotId.value});
     const created=await api('deploy/create',{nodeId:server.id,mpsId:deploymentMpsId.value.trim(),botId:deploymentBotId.value});
     sessionStorage.setItem(`pixelmug-deploy-bot:${created.deployment_id}`,deploymentBotId.value);
