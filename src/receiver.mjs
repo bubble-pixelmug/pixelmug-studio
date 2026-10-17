@@ -1,6 +1,7 @@
 import { browserDeviceFiles, browserSdkFiles } from "./sdk-assets.mjs";
 import { LaunchManager } from "./launch.mjs";
 import { buildWebApp } from "./webapp-build.mjs";
+import { prepareProjectDependencies } from "./project-dependencies.mjs";
 import { createServer } from "node:http";
 import { randomUUID, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, appendFileSync, writeFileSync, readFileSync, realpathSync, statSync } from "node:fs";
@@ -30,6 +31,7 @@ export async function startStudio(options = {}) {
   const secrets = [token, studioToken, options.botToken, process.env.BOT_TOKEN].filter(Boolean);
   const debugDir = join(project, "debug", runId);
   mkdirSync(debugDir, { recursive: true });
+  await prepareProjectDependencies(project, webRoot);
   if (webRoot) webRoot = await buildWebApp(webRoot, join(debugDir, 'webapp'));
   const recordsFile = join(debugDir, "events.jsonl");
   const textFile = join(debugDir, "events.log");
