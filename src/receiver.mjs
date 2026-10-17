@@ -159,6 +159,9 @@ export async function startStudio(options = {}) {
           "globalThis.__PIXELMUG_STUDIO_DEBUG__ = token ? { ..." + JSON.stringify(config) + ", token } : { enabled: false };\n";
         return reply(res, 200, script, mime[".js"]);
       }
+      if (url.pathname === "/@studio-bootstrap") {
+        return reply(res, 200, 'import { enableStudioDebugFromPage } from "/studio-runtime/StudioDebugWeb.js"; enableStudioDebugFromPage();', mime[".js"]);
+      }
       let path;
       if (url.pathname === "/studio-runtime/sdk-web.js") {
         // Resolve to the exact module instance used by the hosted application.
