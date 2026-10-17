@@ -8,6 +8,6 @@
                     "start":  "node bot/index.js"
                 },
     "dependencies":  {
-                         "@jeejio-bubble/bot":  "0.1.8"
+                         "@jeejio-bubble/bot":  "0.1.9"
                      }
 }
