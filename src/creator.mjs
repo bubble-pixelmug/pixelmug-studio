@@ -69,9 +69,13 @@ export class CreatorClient {
   publicMps() {
     return this.mps.map(mps => ({ appName: mps.appName, appId: mps.appId }));
   }
-  getMpsToken(appId) {
-    const mps = this.mps.find(item => String(item.appId) === String(appId));
-    if (!mps?.token) throw new Error('MPS token is not available; refresh MPS and try again');
+  async getMpsToken(appId) {
+    let mps = this.mps.find(item => String(item.appId) === String(appId));
+    if (!mps?.token) {
+      await this.refreshMps();
+      mps = this.mps.find(item => String(item.appId) === String(appId));
+    }
+    if (!mps?.token) throw new Error('MPS token is missing from the Creator MPS response; refresh MPS and try again');
     return mps.token;
   }
   async refreshMps() {

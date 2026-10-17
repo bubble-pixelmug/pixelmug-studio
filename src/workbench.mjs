@@ -175,7 +175,7 @@ export async function startWorkbench(options = {}) {
           const body = await bodyOf(req);
           const mpsId = String(body.mpsId || '').trim();
           if (!mpsId) throw new Error('MPS ID is required');
-          const token = creator.getMpsToken(mpsId);
+          const token = await creator.getMpsToken(mpsId);
           const archive = await createMpsArchive(project.path);
           try {
             const result = await uploadMpsPackage({ archivePath: archive.path, fileName: archive.fileName, appId: mpsId, token });
