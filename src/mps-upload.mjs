@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
-const PUBLIC_MPS_UPLOAD_URL = 'https://gateway.jeejio.com/im/openApi/mps/file';
+const PUBLIC_MPS_UPLOAD_URL = 'https://us.jeejio.com/im/openApi/mps/file';
 
 export async function uploadMpsPackage({ archivePath, fileName, appId, token, onProgress = () => {} }) {
   if (!token) throw new Error('MPS token is not available');
