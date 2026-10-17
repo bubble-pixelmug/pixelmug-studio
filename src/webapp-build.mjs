@@ -34,7 +34,15 @@ async function injectDebugBootstrap(folder) {
       const html = await readFile(path, 'utf8');
       if (!/<script[^>]+studio-debug-config\.js/i.test(html)) {
         const scripts = '<script src="/studio-debug-config.js"></script><script type="module" src="/@studio-bootstrap"></script>';
-        await writeFile(path, html.includes('</head>') ? html.replace('</head>', scripts + '</head>') : scripts + html);
+        // The bootstrap must execute before the application's first module.
+        // Otherwise auto-start code can call talMpyExecOneScript before the
+        // Studio SDK hook has been installed.
+        const firstModule = html.search(/<script\b[^>]*\btype=["']module["'][^>]*>/i);
+        if (firstModule >= 0) {
+          await writeFile(path, html.slice(0, firstModule) + scripts + html.slice(firstModule));
+        } else {
+          await writeFile(path, html.includes('</head>') ? html.replace('</head>', scripts + '</head>') : scripts + html);
+        }
       }
     }
   }
