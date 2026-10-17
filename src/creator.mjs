@@ -86,7 +86,7 @@ export class CreatorClient {
       if (session !== this.session) throw new Error('登录状态已变化，请刷新');
       if (!Array.isArray(result)) throw new Error('MPS 接口返回格式错误');
       this.mps = result.filter(item => item && typeof item === 'object' && item.appId).map(item => ({
-        appName: String(item.name || '').trim(), appId: String(item.appId), token: String(item.token || ''),
+        appName: String(item.name || '').trim(), appId: String(item.appId), token: String(item.secretKey || ''),
       }));
       this.mpsError = '';
       return this.publicMps();
