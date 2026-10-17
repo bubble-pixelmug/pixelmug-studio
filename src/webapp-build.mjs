@@ -51,9 +51,9 @@ async function injectDebugBootstrap(folder) {
 async function exists(path) { try { await access(path); return true; } catch { return false; } }
 
 function runNpm(cwd, args, label) {
-  const command = 'npm';
+  const command = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(command, args, { cwd, shell: process.platform === 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command, args, { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
     child.stdout.on('data', chunk => { output += chunk; });
     child.stderr.on('data', chunk => { output += chunk; });
