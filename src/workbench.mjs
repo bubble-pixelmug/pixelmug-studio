@@ -96,12 +96,13 @@ export async function startWorkbench(options = {}) {
     const botToken = creator.getBotToken(botId);
     const configuredBotApiBaseUrl = body.botApiBaseUrl === undefined ? runtimeConfig.botApiBaseUrl : String(body.botApiBaseUrl || '').trim();
     const botApiBaseUrl = configuredBotApiBaseUrl || DEFAULT_BOT_API_URL;
+    const mps = selectedProject.mpy ? await readMpsMetadata(root) : null;
     const autoRunMpy = selectedProject.mpy && (body.autoRunMpy === undefined ? runtimeConfig.autoRunMpy === true : body.autoRunMpy === true);
     if (webRoot) validateWebAppHostname(webAppHostname);
     const prepared = run ? await run.launches.stopDevices({ enterRepl: true }) : { devices: [] };
     await stopRun();
     const publicWebAppUrl = webRoot ? gateway.webAppUrl(root, webAppHostname) : null;
-    run = await startStudio({ project: root, bot, webRoot, host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl,
+    run = await startStudio({ project: root, bot, webRoot, mpsId: 'local-debug', mpsVersion: mps?.version || 'local', host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl,
       captureProcessLogs: true,
       botToken, botApiBaseUrl: botApiBaseUrl || process.env.BOT_API_BASE_URL,
       launchOptions: { authorizeDevice: (ref, options) => creator.authorize(ref, options), restartDevices: prepared.devices,

@@ -40,6 +40,7 @@ export async function startStudio(options = {}) {
   writeFileSync(join(debugDir, "run.json"), JSON.stringify({
     schemaVersion: 1, runId, startedAt: new Date().toISOString(), project,
     bot: options.bot || null, webRoot, buildId: options.buildId || null,
+    mpsId: options.mpsId || 'local-debug', mpsVersion: options.mpsVersion || 'local',
   }, null, 2));
   const recent = [], seen = new Set();
   let cursor = 0, child, closing, childClosed = false;
@@ -244,7 +245,7 @@ export async function startStudio(options = {}) {
       child = fork(resolve(project, options.bot), options.botArgs || [], {
         cwd: project, silent: true,
         execArgv: ["--import", new URL("./runtime/studio-preload.js", import.meta.url).href],
-        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_WEBAPP_URL: webAppUrl || "",
+        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_MPS_ID: options.mpsId || 'local-debug', STUDIO_MPS_VERSION: options.mpsVersion || 'local', STUDIO_WEBAPP_URL: webAppUrl || "",
           PIXELMUG_STUDIO_DEBUG: JSON.stringify({ enabled: true, runId, buildId: options.buildId || null, transport: "ipc", token }) },
       });
       captureStream(child.stdout, "stdout");
