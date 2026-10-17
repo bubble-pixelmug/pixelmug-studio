@@ -199,11 +199,17 @@ async function uploadDeployment(deployment){
    } finally { clearInterval(timer); }
 }
 async function createCloudDeployment(){
+  try {
   if(botOccupied(deploymentBotId.value,'')) throw new Error(deployText('botConflict'));
   const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server) throw new Error(t('请先选择服务器'));
   if(!deploymentProjectInfo.value) throw new Error(t('请先加载项目'));
   if(!deploymentMpsId.value.trim()) throw new Error(t('请输入 MPS ID'));
   if(!deploymentBotId.value) throw new Error(t('部署前请选择 Bot'));
+  } catch(error) {
+    deploymentLog.value.push(error.message || String(error));
+    notify(error.message || String(error), true);
+    return;
+  }
   await perform(async()=>{
     await api('bots/select',{botId:deploymentBotId.value});
     const created=await api('deploy/create',{nodeId:server.id,mpsId:deploymentMpsId.value.trim(),botId:deploymentBotId.value});
