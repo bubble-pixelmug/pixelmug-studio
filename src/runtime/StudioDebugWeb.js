@@ -11,11 +11,18 @@ export function enableStudioDebug(options = {}) {
   if (globalThis[INSTALL]) return globalThis[INSTALL];
   installWebAppAdapter(BubbleWebApp);
   const previousHook = globalThis.__PIXELMUG_STUDIO_DEBUG_HOOK__;
+  const debug = createStudioDebug({ ...options, source: "webapp" });
+  const webAppHook = createWebAppDeviceHook();
   globalThis.__PIXELMUG_STUDIO_DEBUG_HOOK__ = {
     ...(previousHook || {}),
-    callWebAppDevice: createWebAppDeviceHook(),
+    callWebAppDevice: request => {
+      debug.capture("info", ["Studio intercepted talMpyExecOneScript"], "studio", {
+        device: request.device?.deviceId || request.device?.slotId || null,
+      });
+      return webAppHook(request);
+    },
   };
-  const debug = createStudioDebug({ ...options, source: "webapp" });
+  debug.capture("info", ["Studio WebApp debug bootstrap initialized"], "studio");
   const disposeLaunch = installStudioLaunch({ ...options, clientId: debug.clientId }, httpStudioControl(options));
   const onError = event => debug.capture("error", [event.error || event.message || "Resource loading error"], "uncaughtException", {
     filename: event.filename, line: event.lineno, column: event.colno,
