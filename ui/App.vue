@@ -199,9 +199,10 @@ async function uploadDeployment(deployment){
    } finally { clearInterval(timer); }
 }
 async function createCloudDeployment(){
+  let server;
   try {
   if(botOccupied(deploymentBotId.value,'')) throw new Error(deployText('botConflict'));
-  const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server) throw new Error(t('请先选择服务器'));
+  server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server) throw new Error(t('请先选择服务器'));
   if(!deploymentProjectInfo.value) throw new Error(t('请先加载项目'));
   if(!deploymentMpsId.value.trim()) throw new Error(t('请输入 MPS ID'));
   if(!deploymentBotId.value) throw new Error(t('部署前请选择 Bot'));
