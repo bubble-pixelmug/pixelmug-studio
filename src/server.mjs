@@ -36,6 +36,7 @@ if (options.project) {
   } catch (error) { await gateway.close(); throw error; }
 } else studio = await startWorkbench(options);
 console.log("Studio (PC browser): " + studio.studioUrl);
+if (studio.deploymentServiceUrl) console.log("Deployment service: " + studio.deploymentServiceUrl);
 if (studio.webAppUrl) console.log("WebApp (Maopao App): " + studio.webAppUrl);
 if (studio.debugDir) console.log("Logs: " + studio.debugDir);
 let stopping = false;

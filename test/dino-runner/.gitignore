@@ -1,0 +1,40 @@
+bot/config.dev.js
+bot/config.pub.js
+prompt.txt
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+webapp/dist/
+mpy/dist/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Vite and local caches
+.vite/
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment
+.env
+.env.*
+!.env.example
+bot/config.dev.js
+bot/config.pub.js
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.temp

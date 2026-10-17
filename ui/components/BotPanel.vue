@@ -1,9 +1,9 @@
 <script setup>
-import { t, serviceMessage } from '../i18n.js';
+import { t, serviceMessage, language } from '../i18n.js';
 import { reactive } from 'vue';
 import { deviceIconFor } from '../deviceIcon.js';
 import bubbleIcon from '../assets/bubble-transparent.png';
-defineProps({ bots:{type:Array,default:()=>[]}, error:String, busy:Boolean, runningBotId:String });
+const props=defineProps({ bots:{type:Array,default:()=>[]}, error:String, busy:Boolean, runningBotId:String, deployedBotIds:{type:Array,default:()=>[]} });
 const emit=defineEmits(['refresh','save']);
 const drafts=reactive({});
 const failedImages=reactive({});
@@ -25,6 +25,7 @@ function save(bot){
           <img class="bot-avatar" :src="!failedImages[bot.avatar] && deviceIconFor(bot).src || bubbleIcon" alt="" @error="failedImages[bot.avatar]=true">
           <span v-if="bot.id && runningBotId===bot.id" class="bot-in-use" role="status">{{ t('当前正在使用') }}</span>
         </div>
+        <span v-if="bot.id && deployedBotIds.includes(bot.id)" class="bot-deployed" role="status">{{ language==='en' ? 'Deployed' : '已部署' }}</span>
         <div class="bot-card-content">
           <h3>{{ bot.name||t('未命名 Bot') }}</h3>
           <p class="subtle">Bot ID：{{ bot.id||t('未提供') }}</p>
@@ -42,4 +43,5 @@ function save(bot){
 </template>
 <style scoped>
 .bot-panel{margin-top:24px}.bot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr));gap:18px;margin-top:20px}.account-bot-card{display:flex;align-items:flex-start;gap:20px;padding:24px;border:1px solid #d5e3f6;border-radius:22px;background:#f7faff;min-width:0}.bot-avatar-column{display:flex;flex-direction:column;align-items:center;gap:10px;width:96px;flex-shrink:0}.bot-in-use{padding:4px 7px;border-radius:999px;background:#e7f7ed;color:#16834a;font-size:12px;font-weight:600;line-height:1.5;text-align:center}.bot-avatar{width:96px;height:96px;object-fit:cover;border-radius:20px;background:#eaf5ff;flex-shrink:0}.bot-card-content{flex:1;min-width:0}.bot-card-content h3{margin:0 0 8px;font-size:20px}.bot-card-content p{margin:6px 0;overflow-wrap:anywhere}.bot-description{color:#526b89;white-space:pre-wrap}.bot-card-content form{margin-top:16px}.bot-card-content label{font-size:15px}.bot-card-content .inline{margin-top:8px}.bot-card-content input{min-width:0;width:100%}.bot-card-content button{flex-shrink:0}.bot-card-content small{display:block;margin-top:8px;color:#7389a5}@media(max-width:600px){.account-bot-card{padding:16px;gap:12px}.bot-avatar-column{width:64px}.bot-in-use{font-size:11px;padding:4px}.bot-avatar{width:64px;height:64px}}
+.bot-deployed{display:block;padding:4px 7px;border-radius:999px;background:#fff0e5;color:#b85c00;font-size:12px;font-weight:600;line-height:1.5;text-align:center}
 </style>

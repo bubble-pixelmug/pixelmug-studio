@@ -1,7 +1,7 @@
 export class CreatorClient {
   constructor({ baseUrl = '', fetchImpl = fetch } = {}) {
     this.baseUrl = baseUrl; this.fetch = fetchImpl; this.session = null; this.devices = []; this.updatedAt = null;
-    this.bots = []; this.botTokens = new Map(); this.botsError = "";
+    this.bots = []; this.botTokens = new Map(); this.botsError = ""; this.mps = []; this.mpsError = "";
   }
   configure(value) {
     const url = new URL(value);
@@ -19,10 +19,10 @@ export class CreatorClient {
     const data = await response.json();
     if (response.status === 401 || data.code === 401) {
       this.session = null; this.devices = []; this.updatedAt = null;
-      this.bots = []; this.botTokens.clear(); this.botsError = "";
+      this.bots = []; this.botTokens.clear(); this.botsError = ""; this.mps = []; this.mpsError = "";
       throw new Error('登录已过期，请重新登录');
     }
-    if (!response.ok || data.code !== 200) {
+    if (!response.ok || ![0, 200].includes(data.code)) {
       // Do not forward an upstream body that might echo credentials.
       throw new Error('冒泡接口请求失败（' + (data.code || response.status) + '），请检查账号、验证码或服务配置');
     }
@@ -47,8 +47,9 @@ export class CreatorClient {
     if (!result?.token || !result?.id) throw new Error('登录接口未返回用户 ID 或 token');
     this.session = { id: String(result.id), name: String(result.name || result.id), token: result.token };
     this.devices = []; this.updatedAt = null;
-    this.bots = []; this.botTokens.clear(); this.botsError = '';
+    this.bots = []; this.botTokens.clear(); this.botsError = ''; this.mps = []; this.mpsError = '';
     try { await this.refreshBots(); } catch (error) { if (!this.session) throw error; }
+    try { await this.refreshMps(); } catch (error) { if (!this.session) throw error; }
     return this.publicSession();
   }
   publicSession() { return this.session ? { id: this.session.id, name: this.session.name } : null; }
@@ -64,6 +65,27 @@ export class CreatorClient {
   }
   publicBots() {
     return this.bots.map(bot => ({ ...bot, hasToken: Boolean(this.botTokens.get(bot.id)) }));
+  }
+  publicMps() {
+    return this.mps.map(mps => ({ appName: mps.appName, appId: mps.appId }));
+  }
+  async refreshMps() {
+    const session = this.session;
+    if (!session) throw new Error('请先登录冒泡账号');
+    try {
+      const result = await this.request('/creator/bots/mps', undefined, session.token);
+      if (session !== this.session) throw new Error('登录状态已变化，请刷新');
+      if (!Array.isArray(result)) throw new Error('MPS 接口返回格式错误');
+      this.mps = result.filter(item => item && typeof item === 'object' && item.appId).map(item => ({
+        appName: String(item.name || '').trim(), appId: String(item.appId), token: String(item.token || ''),
+      }));
+      this.mpsError = '';
+      return this.publicMps();
+    } catch (error) {
+      const message = this.session ? '获取 MPS 列表失败，请刷新重试。' : '登录已过期，请重新登录';
+      if (session === this.session) this.mpsError = message;
+      throw new Error(message);
+    }
   }
   async refreshBots() {
     const session = this.session;
@@ -146,7 +168,7 @@ export class CreatorClient {
   async logout() {
     const session = this.session;
     this.session = null; this.devices = []; this.updatedAt = null;
-    this.bots = []; this.botTokens.clear(); this.botsError = '';
+    this.bots = []; this.botTokens.clear(); this.botsError = ''; this.mps = []; this.mpsError = '';
     if (session) await this.request('/creator/auth/logout', {}, session.token);
   }
 }

@@ -1,4 +1,5 @@
 import { build, normalizePath } from 'vite';
+import vue from '@vitejs/plugin-vue';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { readdir } from 'node:fs/promises';
@@ -24,7 +25,7 @@ export async function buildWebApp(source, output) {
       base: './',
       publicDir: 'public',
       logLevel: 'error',
-      plugins: [{
+      plugins: [vue(), {
         name: 'studio-webapp-dependencies',
         enforce: 'pre',
         transformIndexHtml: {

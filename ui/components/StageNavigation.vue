@@ -9,6 +9,7 @@ defineProps({
   deviceCount:{type:Number,default:0},
   botCount:{type:Number,default:0},
   debugDevices:{type:Array,default:()=>[]},
+  deploymentServers:{type:Array,default:()=>[]},
   serviceStatus:{type:String,default:'disconnected'},
 });
 defineEmits(['change','rerun-mpy']);
@@ -17,6 +18,7 @@ const tabs=[
   {id:'devices',label:'我的冒泡',description:'查看设备与 Bot',icon:'nav-device'},
   {id:'project',label:'选择应用',description:'目录、入口与凭据',icon:'folder'},
   {id:'debug',label:'调试运行',description:'运行状态与应用日志',icon:'terminal'},
+  {id:'deploy',label:'\u90e8\u7f72\u5e94\u7528',description:'\u90e8\u7f72\u5230\u4e91\u7aef',icon:'cloud'},
 ];
 const statusText=status=>status==='ok'?t('Studio 服务正常'):status==='error'?t('Studio 服务异常'):t('Studio 未连接');
 

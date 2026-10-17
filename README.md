@@ -1,4 +1,4 @@
-# PixelMug Studio
+﻿# PixelMug Studio
 
 PixelMug Studio is a local development, run, and debugging environment for Bubble applications that work with PixelMug devices. An application contains a Bot and can optionally include a WebApp and on-device MicroPython code.
 
@@ -22,12 +22,12 @@ Open the Studio URL printed in the terminal. The management service listens only
 
 ```text
 example-app/
-├── bot/                 # Required
-│   └── index.js         # Select this as the Bot entry in Studio
-├── webapp/              # Optional; contains index.html
-└── mpy/                 # Optional on-device MicroPython application
-    ├── __main__.py
-    └── mps.json
+鈹溾攢鈹€ bot/                 # Required
+鈹?  鈹斺攢鈹€ index.js         # Select this as the Bot entry in Studio
+鈹溾攢鈹€ webapp/              # Optional; contains index.html
+鈹斺攢鈹€ mpy/                 # Optional on-device MicroPython application
+    鈹溾攢鈹€ __main__.py
+    鈹斺攢鈹€ mps.json
 ```
 
 Studio supports Bot-only applications as well as applications that combine a Bot with a WebApp, MicroPython code, or both.
@@ -43,6 +43,24 @@ Studio supports Bot-only applications as well as applications that combine a Bot
 
 Runtime logs are written to `debug/<runId>/` in the selected application directory. These generated directories are ignored by Git.
 
+## Cloud deployment (MVP)
+
+Start the local deployment control service separately from Studio. Studio listens on `8787`; the deployment service should listen on `8788`:
+
+```powershell
+cd ..\auto-deploy
+$env:PORT = "8788"
+node src/server.mjs
+```
+
+Then start Studio in another terminal:
+
+```powershell
+cd ..\studio
+npm start
+```
+
+Open **Deploy application**, click **Apply server**, select an idle server, click **Load current project**, enter the MPS ID, then use **Create deployment** and **Upload release**. The current project is packaged by Studio; `mpy/` is excluded from the Docker archive because MPY is uploaded separately.
 ## Documentation
 
 Read the developer documentation at [PixelMug Docs](https://bubble-pixelmug.github.io/pixelmug-docs/en/).
@@ -110,3 +128,4 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+

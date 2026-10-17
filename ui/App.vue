@@ -1,6 +1,6 @@
 <script setup>
-import { t, serviceMessage } from './i18n.js';
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { t, serviceMessage, language } from './i18n.js';
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import StageNavigation from './components/StageNavigation.vue';
 import LanguageSwitcher from './components/LanguageSwitcher.vue';
 import DocumentationPanel from './components/DocumentationPanel.vue';
@@ -13,6 +13,7 @@ import deviceIcon from './assets/device-icon.png';
 import { deviceIconFor } from './deviceIcon.js';
 import bubbleIcon from './assets/bubble-transparent.png';
 import indexBackground from './assets/index-bg.png';
+import cloudServerIcon from './assets/cloud-server.png';
 
 const params = new URLSearchParams(location.hash.slice(1));
 const credential = params.get('studioToken') || sessionStorage.getItem('studio-workbench-token');
@@ -32,6 +33,26 @@ const notice = ref({visible:false,error:false,message:''});
 const accountType = ref('PHONE'), accountValue = ref(''), loginCode = ref(''), creatorUrl = ref('https://us-connector.jeejio.com');
 const botEntry = ref(''), autoRunMpy = ref(false), botApi = ref('');
 const directory = ref(null), directoryDialog = ref(null);
+const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
+const deploymentRemoteLogKeys = new Set();
+const deploymentLogElement = ref(null);
+const deploymentTextMap = {
+  deployApplication: ['\u90e8\u7f72\u5e94\u7528', 'Deploy application'],
+  cloudServers: ['\u6211\u7684\u4e91\u670d\u52a1\u5668', 'My cloud servers'],
+  description: ['\u5c06\u5f53\u524d\u5728 Studio \u4e2d\u6253\u5f00\u7684\u9879\u76ee\u90e8\u7f72\u5230\u4e91\u670d\u52a1\u5668\u3002', 'Deploy the project currently open in Studio to an cloud server.'],
+  refresh: ['\u5237\u65b0', 'Refresh'], applyServer: ['\u7533\u8bf7\u670d\u52a1\u5668', 'Apply server'],
+  management: ['\u90e8\u7f72\u7ba1\u7406', 'Deployment management'], currentProject: ['\u5f53\u524d\u9879\u76ee', 'Current project'],
+  loadProject: ['\u52a0\u8f7d\u9879\u76ee\u4fe1\u606f', 'Load project information'], project: ['\u9879\u76ee', 'Project'],
+  deploymentId: ['\u90e8\u7f72 ID', 'Deployment ID'], notCreated: ['\u672a\u521b\u5efa', 'Not created'], notLoaded: ['\u672a\u52a0\u8f7d', 'Not loaded'],
+  bot: ['Bot', 'Bot'], selectBot: ['\u9009\u62e9 Bot', 'Select a Bot'], name: ['\u540d\u79f0', 'Name'], id: ['ID', 'ID'],
+  mps: ['MPS', 'MPS'], selectMps: ['\u9009\u62e9 MPS ID', 'Select MPS ID'], version: ['\u7248\u672c', 'Version'],
+  botDeployed: ['\u5df2\u90e8\u7f72', 'Deployed'], botInUse: ['\u8c03\u8bd5\u4e2d', 'In use'], botConflict: ['Bot \u5df2\u88ab\u90e8\u7f72\u6216\u6b63\u5728\u8c03\u8bd5', 'This Bot is already deployed or being used for debugging.'],
+  deploy: ['\u90e8\u7f72', 'Deploy application'], retry: ['\u91cd\u8bd5\u90e8\u7f72', 'Retry deployment'],
+  cancel: ['\u53d6\u6d88\u90e8\u7f72', 'Cancel deployment'], stop: ['\u505c\u6b62\u90e8\u7f72', 'Stop deployment'], status: ['\u5237\u65b0\u72b6\u6001', 'Refresh status'],
+  idle: ['\u7a7a\u95f2', 'Idle'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
+  authCode: ['\u6388\u6743\u7801', 'Authorization code'], serverAccepted: ['\u670d\u52a1\u5668\u7533\u8bf7\u5df2\u901a\u8fc7\u3002', 'Server application accepted.']
+};
+function deployText(key){ const value=deploymentTextMap[key]; return value ? value[language.value==='en'?1:0] : key; }
 let lastRefresh = 0, initialized = false, pollTimer, cooldownTimer, noticeTimer;
 
 function notify(message,error=false){
@@ -69,6 +90,7 @@ async function saveBotToken({botId,token}){
   await perform(async()=>{ await api('bots/token',{botId,token}); notify(t('Bot token 已设置，本次 Studio 运行期间有效。')); });
 }
 async function selectBot(event){
+  if(botOccupied(event.target.value,'')) { event.target.value=state.value?.runtimeConfig?.botId||''; notify(deployText('botConflict'),true); return; }
   await perform(()=>api('bots/select',{botId:event.target.value}));
   event.target.value=state.value?.runtimeConfig?.botId||'';
 }
@@ -84,6 +106,8 @@ async function startRun(){
   await perform(async()=>{
     try{
       const automatic=autoRunMpy.value;
+      const selectedBotId=state.value?.runtimeConfig?.botId||'';
+      if(botOccupied(selectedBotId,'')) throw new Error(deployText('botConflict'));
       if(state.value?.run) notify(automatic?t('正在重启：先让设备进入 Python Dev，再自动上传并运行设备代码。'):t('正在重启：先让设备进入 Python Dev，再重新加载本地服务；设备代码等待冒泡 App 发起启动。'));
       await api('run/start',{bot:botEntry.value.trim(),autoRunMpy:automatic,botId:state.value?.runtimeConfig?.botId,botApiBaseUrl:botApi.value.trim()});
 
@@ -126,9 +150,110 @@ async function runMpyAgain(device){
     notify(t('正在从 __main__.py 再次运行 MPY；不会重启 Bot 或重新上传文件。'));
   });
 }
+async function refreshDeploymentServers(){
+  deploymentBusy.value=true;
+  try { const result=await api('deploy/servers'); deploymentServers.value=result.nodes||[]; if(selectedServerId.value&&!deploymentServers.value.some(server=>server.id===selectedServerId.value)) selectedServerId.value=null; }
+  catch(error){ notify(error.message,true); }
+  finally { deploymentBusy.value=false; }
+}
+async function applyDeploymentServer(){
+  const authCode=window.prompt(deployText('authCode')); if(authCode===null) return;
+  await perform(async()=>{ await api('deploy/apply',{auth_code:authCode}); await refreshDeploymentServers(); notify(deployText('serverAccepted')); });
+}
+function selectDeploymentServer(server){ selectedServerId.value=server.id; deploymentMpsId.value=server.deployment?.mps_id||''; const savedBotId=server.deployment?.deployment_id ? sessionStorage.getItem(`pixelmug-deploy-bot:${server.deployment.deployment_id}`) : ''; deploymentBotId.value=server.deployment?.bot_id||savedBotId||state.value?.runtimeConfig?.botId||''; deploymentProjectInfo.value=server.deployment ? { project_id:server.deployment.project_id, mps:{name:server.deployment.mps_name,version:server.deployment.mps_version} } : null; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); void syncDeploymentMetadata(server).catch(error=>deploymentLog.value.push(`Metadata update failed: ${error.message}`)); }
+async function syncDeploymentMetadata(server){
+  if(!server.deployment?.deployment_id || server.deployment.bot_id || server.deployment.mps_name) return;
+  const info=await api('deploy/project-info').catch(()=>null);
+  if(!info || info.project_id!==server.deployment.project_id) return;
+  const botId=deploymentBotId.value, bot=(state.value?.bots||[]).find(item=>item.id===botId);
+  const updated=await api('deploy/metadata/'+server.deployment.deployment_id,{bot_id:botId,bot_name:bot?.name||'',mps_id:server.deployment.mps_id||deploymentMpsId.value,mps_name:info.mps?.name||'',mps_version:server.deployment.mps_version||info.mps?.version||''});
+  updateDeploymentSnapshot(updated);
+  deploymentProjectInfo.value=info;
+}
+function backToDeploymentServers(){ selectedServerId.value=null; deploymentProjectInfo.value=null; deploymentMpsId.value=''; deploymentBotId.value=''; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); }
+function deploymentStatusLabel(status){ return deployText(status==='deployed'?'deployed':status==='deploying'?'deploying':status==='reserved'?'reserved':'idle'); }
+function appendDeploymentLogs(deployment){
+  for(const entry of deployment?.logs||[]){
+    const key=`${entry.at}|${entry.message}`;
+    if(deploymentRemoteLogKeys.has(key)) continue;
+    deploymentRemoteLogKeys.add(key);
+    deploymentLog.value.push(`[deploy] ${entry.message}`);
+  }
+}
+function updateDeploymentSnapshot(deployment){
+  if(!deployment?.deployment_id) return;
+  deploymentServers.value=deploymentServers.value.map(server=>server.deployment?.deployment_id===deployment.deployment_id
+    ? {...server, status:deployment.status, deployment:{...server.deployment,...deployment}}
+    : server);
+}
+async function loadCurrentProjectForDeployment(){ if(!project.value) return notify(t('请先打开一个项目，再加载到服务器。'),true); await perform(async()=>{ deploymentProjectInfo.value=await api('deploy/project-info'); deploymentBotId.value=state.value?.runtimeConfig?.botId||''; deploymentMpsId.value=''; deploymentLog.value.push(`${t('当前项目')}: ${deploymentProjectInfo.value.project_id}`); notify(t('当前项目已加载，请检查 Bot 和 MPS 信息后再部署。')); }); }
+async function uploadDeployment(deployment){
+   deploymentLog.value.push(t('正在打包并上传发布版本'));
+   const pollLogs=async()=>{ try{ const latest=await api('deploy/status/'+deployment.deployment_id); updateDeploymentSnapshot(latest); appendDeploymentLogs(latest); }catch{} };
+   const timer=setInterval(pollLogs,1500);
+   try{
+     const response=await fetch('/api/deploy/upload',{method:'POST',headers:{Authorization:'Bearer '+credential,'X-Deployment-Id':deployment.deployment_id,'X-Release-Id':'1.0.0','X-Mps-Id':deploymentMpsId.value.trim(),'X-Bot-Id':deploymentBotId.value}});
+     const result=await response.json(); updateDeploymentSnapshot(result); appendDeploymentLogs(result);
+     if(!response.ok) throw new Error(`Studio ${response.status} /api/deploy/upload: ${result.error||t('发布版本上传失败')}`);
+     deploymentLog.value.push(t('发布版本已上传，容器正在运行'));
+   } finally { clearInterval(timer); }
+}
+async function createCloudDeployment(){
+  if(botOccupied(deploymentBotId.value,'')) throw new Error(deployText('botConflict'));
+  const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server) throw new Error(t('请先选择服务器'));
+  if(!deploymentProjectInfo.value) throw new Error(t('请先加载项目'));
+  if(!deploymentMpsId.value.trim()) throw new Error(t('请输入 MPS ID'));
+  if(!deploymentBotId.value) throw new Error(t('部署前请选择 Bot'));
+  await perform(async()=>{
+    await api('bots/select',{botId:deploymentBotId.value});
+    const created=await api('deploy/create',{nodeId:server.id,mpsId:deploymentMpsId.value.trim(),botId:deploymentBotId.value});
+    sessionStorage.setItem(`pixelmug-deploy-bot:${created.deployment_id}`,deploymentBotId.value);
+    deploymentLog.value.push(t('部署已预留：{0}',[created.deployment_id]));
+    await refreshDeploymentServers();
+    try {
+      await uploadDeployment(created);
+      await refreshDeploymentServers();
+      notify(t('部署正在运行。'));
+    } catch(error) {
+      deploymentLog.value.push(t('部署失败，正在释放服务器'));
+      try { await api('deploy/stop/'+created.deployment_id,{}); deploymentLog.value.push(t('部署预留已释放')); } catch(cleanupError) { deploymentLog.value.push(t('无法释放部署：{0}',[cleanupError.message])); }
+      await refreshDeploymentServers();
+      throw error;
+    }
+  });
+}
+async function uploadCloudRelease(){
+  const server=deploymentServers.value.find(item=>item.id===selectedServerId.value), deployment=server?.deployment; if(!deployment) throw new Error(t('请先创建部署'));
+ await perform(async()=>{
+   deploymentLog.value.push(t('正在打包并上传发布版本'));
+   const pollLogs=async()=>{ try{ const latest=await api('deploy/status/'+deployment.deployment_id); appendDeploymentLogs(latest); }catch{} };
+   const timer=setInterval(pollLogs,1500);
+   try{
+     const response=await fetch('/api/deploy/upload',{method:'POST',headers:{Authorization:'Bearer '+credential,'X-Deployment-Id':deployment.deployment_id,'X-Release-Id':'1.0.0','X-Mps-Id':deploymentMpsId.value.trim()}});
+     const result=await response.json(); appendDeploymentLogs(result);
+     if(!response.ok) throw new Error(`Studio ${response.status} /api/deploy/upload: ${result.error||t('发布版本上传失败')}`);
+     deploymentLog.value.push(t('发布版本已上传，容器正在运行')); await refreshDeploymentServers(); notify(t('部署正在运行。'));
+   } finally { clearInterval(timer); }
+ });
+}
+async function queryCloudDeployment(){ const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server?.deployment) return; await perform(async()=>{ const result=await api('deploy/status/'+server.deployment.deployment_id); appendDeploymentLogs(result); deploymentLog.value.push(t('状态已查询：{0}',[result.status])); await refreshDeploymentServers(); }); }
+async function stopCloudDeployment(){ const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server?.deployment) return; await perform(async()=>{ await api('deploy/stop/'+server.deployment.deployment_id,{}); deploymentLog.value.push(t('部署已停止')); await refreshDeploymentServers(); }); }
+async function retryCloudDeployment(){ const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server?.deployment || server.deployment.status!=='unhealthy') return; await perform(async()=>{ const reset=await api('deploy/retry/'+server.deployment.deployment_id,{}); updateDeploymentSnapshot(reset); deploymentLog.value.push(t('正在重试部署')); await uploadDeployment(reset); }); }
 
 const project = computed(()=>state.value?.project);
+const selectedDeploymentServer = computed(()=>deploymentServers.value.find(server=>server.id===selectedServerId.value)||null);
 const active = computed(()=>Boolean(state.value?.run));
+function deploymentForBot(botId){
+  return deploymentServers.value.map(server=>server.deployment).find(deployment =>
+    deployment?.bot_id===botId && ['reserved','deploying','deployed','cleaning','unhealthy'].includes(deployment.status));
+}
+function botOccupied(botId, allowDeploymentId=''){
+  if(!botId) return false;
+  if(active.value && state.value?.runtimeConfig?.botId===botId) return true;
+  const deployment=deploymentForBot(botId);
+  return Boolean(deployment && deployment.deployment_id!==allowDeploymentId);
+}
+const deployedBotIds = computed(()=>deploymentServers.value.map(server=>server.deployment).filter(deployment=>deployment && ['reserved','deploying','deployed','cleaning','unhealthy'].includes(deployment.status) && deployment.bot_id).map(deployment=>deployment.bot_id));
 const projectName = computed(()=>project.value?.path?.split(/[\\/]/).filter(Boolean).pop() || '');
 const latestJobs = computed(()=>[...(state.value?.events?.launches||[])].reverse());
 const deploymentSteps=['进入开发模式','连接设备','上传设备代码','应用开始运行'];
@@ -184,6 +309,9 @@ const topologyWebAddress=computed(()=>state.value?.run?.webAppUrl?new URL(state.
 watch([active,debugDevices],([running,devices])=>{
   if(activeSection.value.startsWith('device:')&&(!running||!devices.some(device=>device.id===selectedDeviceId.value))) activeSection.value='debug';
 });
+watch(activeSection, value=>{ if(value==='deploy') void refreshDeploymentServers(); });
+watch(()=>state.value?.user, value=>{ if(value) void refreshDeploymentServers(); });
+watch(deploymentLog, async()=>{ await nextTick(); if(deploymentLogElement.value) deploymentLogElement.value.scrollTop=deploymentLogElement.value.scrollHeight; }, { deep:true });
 function networkText(network){
   if(!network) return t('Wi-Fi / IP：待获取（运行设备时查询）');
   return t('Wi-Fi：{0} · IP：{1}', [network.ssid||t('名称未获取'), network.ip||t('未获取')])+
@@ -318,7 +446,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
   </section>
 
   <main id="workspace" :hidden="!state?.user">
-    <StageNavigation :active-tab="activeSection" :active="active" :busy="working||state?.busy" :device-count="state?.devices?.length||0" :bot-count="state?.bots?.length||0" :debug-devices="debugDevices" :service-status="serviceStatus" @change="activeSection=$event" @rerun-mpy="runMpyAgain"><template #files><FileWorkspace v-if="project && state?.user" ref="fileWorkspace" :key="project.path" :project="project.path" :style-nonce="credential" :active="activeSection==='files'" :api="api" @activate="activeSection='files'" /></template></StageNavigation>
+    <StageNavigation :active-tab="activeSection" :active="active" :busy="working||state?.busy" :device-count="state?.devices?.length||0" :bot-count="state?.bots?.length||0" :debug-devices="debugDevices" :deployment-servers="deploymentServers" :service-status="serviceStatus" @change="activeSection=$event" @rerun-mpy="runMpyAgain"><template #files><FileWorkspace v-if="project && state?.user" ref="fileWorkspace" :key="project.path" :project="project.path" :style-nonce="credential" :active="activeSection==='files'" :api="api" @activate="activeSection='files'" /></template></StageNavigation>
     <section class="workspace-content">
       <div class="workspace-heading">
         <div><span class="eyebrow">{{ t('冒泡智能体 · 开发工作台') }}</span><h1 v-if="projectName" id="project-name">{{ projectName }}</h1></div>
@@ -332,7 +460,38 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
         <DevicePanel class="devices-full" :devices="state?.devices||[]" :latest-jobs="latestJobs" :bindings="bindings" :active="active">
           <template #updated><p id="device-updated" class="subtle">{{ state?.devicesUpdatedAt ? t('状态更新时间： ')+new Date(state.devicesUpdatedAt).toLocaleTimeString() : t('状态更新时间：尚未获取') }}</p></template>
         </DevicePanel>
-        <BotPanel v-if="state?.user" :key="state.user.id" :bots="state?.bots||[]" :error="state?.botsError" :busy="working||state?.busy" :running-bot-id="active ? state?.runtimeConfig?.botId : ''" @refresh="refreshBots" @save="saveBotToken" />
+        <BotPanel v-if="state?.user" :key="state.user.id" :bots="state?.bots||[]" :error="state?.botsError" :busy="working||state?.busy" :running-bot-id="active ? state?.runtimeConfig?.botId : ''" :deployed-bot-ids="deployedBotIds" @refresh="refreshBots" @save="saveBotToken" />
+      </section>
+
+       <section v-show="activeSection==='deploy'" class="section-page deploy-page">
+         <div class="section-intro deployment-section-intro-v2"><div><span class="eyebrow">{{ deployText('deployApplication') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ deployText('cloudServers') }}</h2><p>{{ deployText('description') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="refreshDeploymentServers">{{ deployText('refresh') }}</button><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ deployText('applyServer') }}</button></div></div>
+         <div class="section-intro"><div><span class="eyebrow">{{ t('部署应用') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ t('云服务器') }}</h2><p>{{ t('将当前在 Studio 中打开的项目部署到云服务器。') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="refreshDeploymentServers">{{ t('刷新') }}</button><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ t('申请服务器') }}</button></div></div>
+         <div class="deployment-redesign">
+           <div v-if="selectedDeploymentServer?.deployment" class="deployment-id-strip"><span>Deployment ID</span>: <strong>{{ selectedDeploymentServer.deployment.deployment_id }}</strong></div>
+           <div v-if="!selectedDeploymentServer" class="server-card-grid"><button v-for="server in deploymentServers" :key="server.id" type="button" class="server-card" :class="{selected:selectedServerId===server.id}" @click="selectDeploymentServer(server)"><span class="server-cloud-art"><img :src="cloudServerIcon" alt=""></span><span class="server-card-main"><strong>{{ server.id }}</strong><span class="server-state"><i :class="server.deployment?.status || server.status"></i>{{ deploymentStatusLabel(server.deployment?.status || server.status) }}</span><span v-if="server.deployment" class="server-card-summary"><small>Project: {{ server.deployment.project_id }}</small><small>Deploy ID: {{ server.deployment.deployment_id }}</small><small>Bot: {{ server.deployment.bot_name || '—' }}</small><small>MPS: {{ server.deployment.mps_name || '—' }} · {{ server.deployment.mps_version || '—' }} · {{ server.deployment.mps_id || '—' }}</small></span></span><span class="server-validity">Validity remaining: —</span></button><p v-if="!deploymentServers.length" class="empty">No server is connected.</p></div>
+           <section v-else class="card deployment-management"><div class="section-heading"><div><span class="eyebrow">DEPLOYMENT MANAGEMENT</span><h2>{{ selectedDeploymentServer.id }}</h2></div><span class="badge">{{ deploymentStatusLabel(selectedDeploymentServer.deployment?.status || selectedDeploymentServer.status) }}</span></div><div class="deployment-info-grid"><div><h3>Current project</h3><p><span>Project</span><strong>{{ deploymentProjectInfo?.project_id || selectedDeploymentServer.deployment?.project_id || 'Not loaded' }}</strong></p><p><span>Bot</span><strong>{{ deploymentProjectInfo ? ((state?.bots||[]).find(bot=>bot.id===deploymentBotId)?.name || 'Not selected') : (selectedDeploymentServer.deployment?.bot_name || 'Not loaded') }}</strong></p></div><div><h3>MPS</h3><p><span>Name</span><strong>{{ deploymentProjectInfo?.mps?.name || selectedDeploymentServer.deployment?.mps_name || 'Not loaded' }}</strong></p><p><span>Version</span><strong>{{ deploymentProjectInfo?.mps?.version || selectedDeploymentServer.deployment?.mps_version || '—' }}</strong></p><p><span>ID</span><strong>{{ selectedDeploymentServer.deployment?.mps_id || deploymentMpsId || 'Select MPS ID' }}</strong></p></div></div><div class="deployment-form-row"><label>Bot<select v-model="deploymentBotId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">Select a Bot</option><option v-for="bot in state?.bots||[]" :key="bot.key||bot.id" :value="bot.id">{{ bot.name||'Unnamed Bot' }}</option></select></label><label>MPS<select v-model="deploymentMpsId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">Select MPS ID</option><option v-for="mps in state?.mps||[]" :key="mps.appId" :value="mps.appId">{{ mps.appName || 'Unnamed MPS' }} · {{ mps.appId }}</option></select></label></div><div class="actions"><button :disabled="deploymentBusy||working||Boolean(selectedDeploymentServer.deployment)" @click="loadCurrentProjectForDeployment">Load current project information</button><button class="primary" :disabled="deploymentBusy||working||!deploymentProjectInfo||!deploymentMpsId.trim()||Boolean(selectedDeploymentServer.deployment)" @click="createCloudDeployment">Deploy application</button><button v-if="selectedDeploymentServer.deployment?.status==='deployed'" class="danger" :disabled="deploymentBusy||working" @click="stopCloudDeployment">Stop deployment</button><button v-if="['deployed','unhealthy'].includes(selectedDeploymentServer.deployment?.status)" :disabled="deploymentBusy||working" @click="queryCloudDeployment">Refresh status</button></div><pre v-if="deploymentLog.length" ref="deploymentLogElement" class="deployment-log">{{ deploymentLog.join('\n') }}</pre></section>
+           <section v-if="selectedDeploymentServer" class="card deployment-management-v2">
+             <div class="section-heading"><div><span class="eyebrow">{{ t('部署管理') }}</span><h2>{{ selectedDeploymentServer.id }}</h2></div><span class="badge">{{ deploymentStatusLabel(selectedDeploymentServer.deployment?.status || selectedDeploymentServer.status) }}</span></div>
+             <div class="deployment-columns">
+               <div class="deployment-column"><h3>{{ t('当前项目') }}</h3><button class="load-project-button" :disabled="deploymentBusy||working||Boolean(selectedDeploymentServer.deployment)" @click="loadCurrentProjectForDeployment">{{ t('加载项目信息') }}</button><p><span>{{ t('项目') }}</span><strong>{{ deploymentProjectInfo?.project_id || selectedDeploymentServer.deployment?.project_id || t('未加载') }}</strong></p><p><span>{{ t('部署 ID') }}</span><strong>{{ selectedDeploymentServer.deployment?.deployment_id || t('未创建') }}</strong></p></div>
+               <div class="deployment-column"><h3>{{ t('Bot') }}</h3><select v-model="deploymentBotId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">{{ t('选择 Bot') }}</option><option v-for="bot in state?.bots||[]" :key="bot.key||bot.id" :value="bot.id">{{ bot.name||t('未加载') }}</option></select><p><span>{{ t('名称') }}</span><strong>{{ (state?.bots||[]).find(bot=>bot.id===deploymentBotId)?.name || selectedDeploymentServer.deployment?.bot_name || t('未加载') }}</strong></p><p><span>{{ t('ID') }}</span><strong>{{ deploymentBotId || selectedDeploymentServer.deployment?.bot_id || t('未加载') }}</strong></p></div>
+               <div class="deployment-column"><h3>{{ t('MPS') }}</h3><select v-model="deploymentMpsId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">{{ t('选择 MPS ID') }}</option><option v-for="mps in state?.mps||[]" :key="mps.appId" :value="mps.appId">{{ mps.appName || t('未加载') }} · {{ mps.appId }}</option></select><p><span>{{ t('名称') }}</span><strong>{{ deploymentProjectInfo?.mps?.name || selectedDeploymentServer.deployment?.mps_name || t('未加载') }}</strong></p><p><span>{{ t('版本') }}</span><strong>{{ deploymentProjectInfo?.mps?.version || selectedDeploymentServer.deployment?.mps_version || '—' }}</strong></p></div>
+             </div>
+             <div class="actions"><button class="primary" :disabled="deploymentBusy||working||!deploymentProjectInfo||!deploymentMpsId.trim()||Boolean(selectedDeploymentServer.deployment)" @click="createCloudDeployment">{{ t('部署') }}</button><button v-if="selectedDeploymentServer.deployment?.status==='unhealthy'" class="primary" :disabled="deploymentBusy||working" @click="retryCloudDeployment">{{ t('重试部署') }}</button><button v-if="selectedDeploymentServer.deployment?.status==='unhealthy'" class="danger" :disabled="deploymentBusy||working" @click="stopCloudDeployment">{{ t('取消部署') }}</button><button v-if="selectedDeploymentServer.deployment?.status==='deployed'" class="danger" :disabled="deploymentBusy||working" @click="stopCloudDeployment">{{ t('停止部署') }}</button><button v-if="['deployed','unhealthy'].includes(selectedDeploymentServer.deployment?.status)" :disabled="deploymentBusy||working" @click="queryCloudDeployment">{{ t('刷新状态') }}</button></div>
+           </section>
+           <section v-if="selectedDeploymentServer" class="card deployment-management-v3">
+             <div class="section-heading"><div><span class="eyebrow">{{ deployText('management') }}</span><h2>{{ selectedDeploymentServer.id }}</h2></div><span class="badge">{{ deploymentStatusLabel(selectedDeploymentServer.deployment?.status || selectedDeploymentServer.status) }}</span></div>
+             <div class="deployment-columns">
+               <div class="deployment-column"><h3>{{ deployText('currentProject') }}</h3><button class="load-project-button" :disabled="deploymentBusy||working||Boolean(selectedDeploymentServer.deployment)" @click="loadCurrentProjectForDeployment">{{ deployText('loadProject') }}</button><p><span>{{ deployText('project') }}</span><strong>{{ deploymentProjectInfo?.project_id || selectedDeploymentServer.deployment?.project_id || deployText('notLoaded') }}</strong></p><p><span>{{ deployText('deploymentId') }}</span><strong>{{ selectedDeploymentServer.deployment?.deployment_id || deployText('notCreated') }}</strong></p></div>
+               <div class="deployment-column"><h3>{{ deployText('bot') }}</h3><select v-model="deploymentBotId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">{{ deployText('selectBot') }}</option><option v-for="bot in state?.bots||[]" :key="bot.key||bot.id" :value="bot.id" :disabled="botOccupied(bot.id, selectedDeploymentServer.deployment?.deployment_id || '')">{{ bot.name||deployText('notLoaded') }}{{ botOccupied(bot.id, selectedDeploymentServer.deployment?.deployment_id || '') ? ' · '+deployText('botDeployed') : '' }}</option></select><p><span>{{ deployText('name') }}</span><strong>{{ (state?.bots||[]).find(bot=>bot.id===deploymentBotId)?.name || selectedDeploymentServer.deployment?.bot_name || deployText('notLoaded') }}</strong></p><p><span>{{ deployText('id') }}</span><strong>{{ deploymentBotId || selectedDeploymentServer.deployment?.bot_id || deployText('notLoaded') }}</strong></p></div>
+               <div class="deployment-column"><h3>{{ deployText('mps') }}</h3><select v-model="deploymentMpsId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">{{ deployText('selectMps') }}</option><option v-for="mps in state?.mps||[]" :key="mps.appId" :value="mps.appId">{{ mps.appName || deployText('notLoaded') }} · {{ mps.appId }}</option></select><p><span>{{ deployText('name') }}</span><strong>{{ deploymentProjectInfo?.mps?.name || selectedDeploymentServer.deployment?.mps_name || deployText('notLoaded') }}</strong></p><p><span>{{ deployText('version') }}</span><strong>{{ deploymentProjectInfo?.mps?.version || selectedDeploymentServer.deployment?.mps_version || '—' }}</strong></p></div>
+             </div>
+             <div class="actions"><button class="primary" :disabled="deploymentBusy||working||!deploymentProjectInfo||!deploymentMpsId.trim()||Boolean(selectedDeploymentServer.deployment)" @click="createCloudDeployment">{{ deployText('deploy') }}</button><button v-if="selectedDeploymentServer.deployment?.status==='unhealthy'" class="primary" :disabled="deploymentBusy||working" @click="retryCloudDeployment">{{ deployText('retry') }}</button><button v-if="selectedDeploymentServer.deployment?.status==='unhealthy'" class="danger" :disabled="deploymentBusy||working" @click="stopCloudDeployment">{{ deployText('cancel') }}</button><button v-if="selectedDeploymentServer.deployment?.status==='deployed'" class="danger" :disabled="deploymentBusy||working" @click="stopCloudDeployment">{{ deployText('stop') }}</button><button v-if="['deployed','unhealthy'].includes(selectedDeploymentServer.deployment?.status)" :disabled="deploymentBusy||working" @click="queryCloudDeployment">{{ deployText('status') }}</button></div>
+           </section>
+           <pre class="deployment-console">{{ deploymentLog.join('\n') }}</pre>
+         </div>
+        <div class="deployment-server-grid"><button v-for="server in deploymentServers" :key="server.id" type="button" class="deployment-server-card" :class="{selected:selectedServerId===server.id}" @click="selectDeploymentServer(server)"><span class="server-icon">▣</span><span><strong>{{ server.id }}</strong><small>{{ ['available','assigned'].includes(server.status)?'Idle':server.status }}</small><small v-if="server.deployment">{{ server.deployment.project_id }}</small><small v-if="server.deployment">MPY {{ server.deployment.mps_version }}</small><small v-if="server.deployment">MPS ID {{ server.deployment.mps_id }}</small><small v-else>No project deployed</small></span></button><p v-if="!deploymentServers.length" class="empty">No server is connected.</p></div>
+        <section v-if="selectedDeploymentServer" class="card deployment-details"><div class="section-heading"><div><span class="eyebrow">SERVER DETAILS</span><h2>{{ selectedDeploymentServer.id }}</h2></div><span class="badge">{{ selectedDeploymentServer.status }}</span></div><div v-if="selectedDeploymentServer.deployment" class="deployment-project-summary"><strong>{{ selectedDeploymentServer.deployment.project_id }}</strong><span>MPY version {{ selectedDeploymentServer.deployment.mps_version }}</span><span>MPS ID {{ selectedDeploymentServer.deployment.mps_id }}</span><a v-if="selectedDeploymentServer.deployment.webapp_url" :href="selectedDeploymentServer.deployment.webapp_url" target="_blank">{{ selectedDeploymentServer.deployment.webapp_url }}</a></div><label>MPS ID<input v-model="deploymentMpsId" :disabled="Boolean(selectedDeploymentServer.deployment)" placeholder="Enter MPS ID"></label><div class="actions"><button :disabled="deploymentBusy||working||Boolean(selectedDeploymentServer.deployment)" @click="loadCurrentProjectForDeployment">Load current project</button><button class="primary" :disabled="deploymentBusy||working||!deploymentMpsId.trim()||Boolean(selectedDeploymentServer.deployment)" @click="createCloudDeployment">Create deployment</button><button :disabled="deploymentBusy||working||!selectedDeploymentServer.deployment" @click="uploadCloudRelease">Upload release</button><button :disabled="deploymentBusy||working||!selectedDeploymentServer.deployment" @click="queryCloudDeployment">Query status</button><button class="danger" :disabled="deploymentBusy||working||!selectedDeploymentServer.deployment" @click="stopCloudDeployment">Stop</button></div><pre v-if="deploymentLog.length" class="deployment-log">{{ deploymentLog.join('\n') }}</pre></section>
       </section>
 
       <section v-show="activeSection==='project'" class="section-page project-page">
