@@ -220,6 +220,10 @@ async function createCloudDeployment(){
     await api('bots/select',{botId:deploymentBotId.value});
     const created=await api('deploy/create',{nodeId:server.id,mpsId:deploymentMpsId.value.trim(),botId:deploymentBotId.value});
     sessionStorage.setItem(`pixelmug-deploy-bot:${created.deployment_id}`,deploymentBotId.value);
+    const selectedBot=(state.value?.bots||[]).find(bot=>bot.id===deploymentBotId.value);
+    const withMetadata=await api('deploy/metadata/'+created.deployment_id,{bot_id:deploymentBotId.value,bot_name:selectedBot?.name||'',mps_id:deploymentMpsId.value.trim(),mps_name:mpsUpload.name||'',mps_version:mpsUpload.version||''});
+    updateDeploymentSnapshot(withMetadata);
+    deploymentProjectInfo.value={...deploymentProjectInfo.value,mps:{name:mpsUpload.name||deploymentProjectInfo.value?.mps?.name||'',version:mpsUpload.version||deploymentProjectInfo.value?.mps?.version||''}};
     deploymentLog.value.push(t('部署已预留：{0}',[created.deployment_id]));
     await refreshDeploymentServers();
     try {
