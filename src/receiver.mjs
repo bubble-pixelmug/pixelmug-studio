@@ -14,7 +14,7 @@ const sdkRoot = fileURLToPath(new URL("./", import.meta.resolve("@jeejio-bubble/
 const browserSDK = browserSdkFiles;
 const runtimeRoot = fileURLToPath(new URL("./runtime/", import.meta.url));
 const studioNodeModules = fileURLToPath(new URL("../node_modules/", import.meta.url));
-const browserRuntime = new Set(["StudioDebug.js", "StudioDebugWeb.js", "StudioLaunch.js", "WebAppAdapter.js"]);
+const browserRuntime = new Set(["StudioDebug.js", "StudioDebugWeb.js", "StudioLaunch.js", "StudioMpsAdapter.js", "WebAppAdapter.js"]);
 const MAX_BODY = 256 * 1024;
 const levels = new Set(["log", "info", "warn", "error", "debug"]);
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
