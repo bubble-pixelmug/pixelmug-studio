@@ -7,10 +7,6 @@ import {
 } from './bubbleClient';
 import type { DeviceEventItem, DeviceEventPayload } from './bubbleClient';
 
-declare global {
-  var __PIXELMUG_STUDIO_DEBUG__: { enabled?: boolean } | undefined;
-}
-
 export type MpsLaunchConfig = {
   id: string;
   version: string;
@@ -53,11 +49,6 @@ export function getMpsLaunchConfig(): MpsLaunchConfig {
 }
 
 export async function installMpsApp(device: DeviceInfo, config = getMpsLaunchConfig()) {
-  if (globalThis.__PIXELMUG_STUDIO_DEBUG__?.enabled === true) {
-    const runtimeModule = '/studio-runtime/StudioMpsAdapter.js';
-    const { studioInstallMps } = await import(/* @vite-ignore */ runtimeModule);
-    return studioInstallMps(getWebApp(), device, MPS_OPEN_TIMEOUT_MS);
-  }
   const rpc = {
     method: 'talMpyExecOneScript',
     params: {

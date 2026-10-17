@@ -1,5 +1,5 @@
 import { BubbleWebApp } from "./sdk-web.js";
-import { installWebAppAdapter } from "./WebAppAdapter.js";
+import { createWebAppDeviceHook, installWebAppAdapter } from "./WebAppAdapter.js";
 import { installStudioLaunch, httpStudioControl } from "./StudioLaunch.js";
 import { createStudioDebug } from "./StudioDebug.js";
 
@@ -10,6 +10,11 @@ export function enableStudioDebug(options = {}) {
   if (options.enabled !== true) return createStudioDebug();
   if (globalThis[INSTALL]) return globalThis[INSTALL];
   installWebAppAdapter(BubbleWebApp);
+  const previousHook = globalThis.__PIXELMUG_STUDIO_DEBUG_HOOK__;
+  globalThis.__PIXELMUG_STUDIO_DEBUG_HOOK__ = {
+    ...(previousHook || {}),
+    callWebAppDevice: createWebAppDeviceHook(),
+  };
   const debug = createStudioDebug({ ...options, source: "webapp" });
   const disposeLaunch = installStudioLaunch({ ...options, clientId: debug.clientId }, httpStudioControl(options));
   const onError = event => debug.capture("error", [event.error || event.message || "Resource loading error"], "uncaughtException", {
@@ -23,6 +28,8 @@ export function enableStudioDebug(options = {}) {
   const dispose = debug.dispose.bind(debug);
   debug.dispose = async () => {
     disposeLaunch();
+    if (previousHook) globalThis.__PIXELMUG_STUDIO_DEBUG_HOOK__ = previousHook;
+    else delete globalThis.__PIXELMUG_STUDIO_DEBUG_HOOK__;
     globalThis.removeEventListener("error", onError);
     globalThis.removeEventListener("unhandledrejection", onRejection);
     globalThis.removeEventListener("pagehide", onPageHide);
