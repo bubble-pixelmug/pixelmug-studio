@@ -9,9 +9,9 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY . .
-RUN if [ -f webapp/package.json ]; then npm --prefix webapp ci --ignore-scripts; if node -e "process.exit(require('./webapp/package.json').scripts?.build ? 0 : 1)"; then npm --prefix webapp run build; fi; fi
+RUN if [ -f webapp/package.json ]; then npm --prefix webapp ci --include=dev --ignore-scripts; if node -e "process.exit(require('./webapp/package.json').scripts?.build ? 0 : 1)"; then npm --prefix webapp run build; npm --prefix webapp prune --omit=dev --ignore-scripts; fi; fi
 EXPOSE 8799
-CMD ["node", "bot/index.js"]
+CMD ["node", "pixelmug-launcher.mjs"]
 `;
 
 export async function readMpsMetadata(projectPath) {
@@ -36,10 +36,11 @@ export async function createProjectArchive({ projectPath, projectId, releaseId }
       return !excluded.has(name) && !name.startsWith('.env.') && !name.endsWith('.log') && name !== 'webapp/dist' && !name.startsWith('webapp/dist/');
     }});
     const webappPackage = await canRead(join(staging, 'webapp', 'package.json')) ? JSON.parse(await readFile(join(staging, 'webapp', 'package.json'), 'utf8')) : null;
-    const manifest = { manifest_version: 1, node_version: '20', package_manager: 'npm', install_command: 'npm ci --ignore-scripts', build_command: packageJson.scripts?.build || (webappPackage?.scripts?.build ? 'npm --prefix webapp run build' : null), start_command: 'node bot/index.js', webapp_directory: webappPackage?.scripts?.build ? 'webapp/dist' : (webappPackage ? 'webapp' : null), requires_package_lock: true, allow_install_scripts: false, dependencies: packageJson.dependencies || {} };
+    const manifest = { manifest_version: 1, node_version: '20', package_manager: 'npm', install_command: 'npm ci --ignore-scripts', build_command: packageJson.scripts?.build || (webappPackage?.scripts?.build ? 'npm --prefix webapp run build' : null), start_command: 'node pixelmug-launcher.mjs', webapp_directory: webappPackage?.scripts?.build ? 'webapp/dist' : (webappPackage ? 'webapp' : null), requires_package_lock: true, allow_install_scripts: false, dependencies: packageJson.dependencies || {} };
     const bubbleMps = { config_version: 1, project_id: projectId, release_id: releaseId, runtime_environment: { api_base_url: 'BOT_API_BASE_URL', bot_token: 'BOT_TOKEN', webapp_url: 'STUDIO_WEBAPP_URL', mps_id: 'STUDIO_MPS_ID', mps_version: 'STUDIO_MPS_VERSION' } };
     await writeFile(join(staging, 'project-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     await writeFile(join(staging, 'bubble-mps.json'), JSON.stringify(bubbleMps, null, 2) + '\n');
+    await writeFile(join(staging, 'pixelmug-launcher.mjs'), await readFile(new URL('./runtime/project-launcher.mjs', import.meta.url), 'utf8'));
     await writeFile(join(staging, 'Dockerfile'), DOCKERFILE);
     await run('tar', ['-czf', output, '-C', staging, '.']);
     return { path: output, size: (await stat(output)).size, cleanup: async () => { await rm(output, { force: true }); await rm(staging, { recursive: true, force: true }); } };

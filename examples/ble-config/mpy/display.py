@@ -1,4 +1,4 @@
-# 显示辅助代码：每条文字滚动一遍，再显示下一条。
+# Display helper: scroll each line once, then show the next line.
 class ConfigDisplay:
     def __init__(self):
         self.lines = []

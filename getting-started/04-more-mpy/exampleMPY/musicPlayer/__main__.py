@@ -11,7 +11,7 @@ FPS = 24
 
 
 def wait_for_click(message):
-    # 文字长于 32 像素，横向滚动显示完整提示。
+    # Scroll messages that are wider than the 32-pixel display.
     mpy_button.clear()
     x = 32
     tip_y = 15
@@ -25,7 +25,7 @@ def wait_for_click(message):
         if time.ticks_diff(now, last_bounce) >= 180:
             tip_y = 14 if tip_y == 15 else 15
             last_bounce = now
-        # 三个像素组成倒三角，尖端在屏幕底部与上方 1px 之间跳动。
+        # Three pixels form an inverted triangle whose tip bounces by one pixel.
         pyxel.pset(15, tip_y - 1, 8)
         pyxel.pset(17, tip_y - 1, 8)
         pyxel.pset(16, tip_y, 8)
@@ -80,7 +80,7 @@ def play():
                     raise RuntimeError("Audio session: " + state)
                 if ending and state == "ended":
                     return
-                # 每轮最多提交 4 个包；队列满时保留当前包，下轮重试。
+                # Submit at most four packets per loop; retry the current packet if the queue is full.
                 for _ in range(4):
                     if ending:
                         break
@@ -103,7 +103,7 @@ def play():
                     spectrum.draw(analyzer)
                     pyxel.render_graphics()
                     last_frame = now
-                # 播放中的点击不排队触发下一次播放。
+                # Ignore clicks during playback instead of queueing another playback.
                 mpy_button.clear()
                 time.sleep_ms(2)
     finally:

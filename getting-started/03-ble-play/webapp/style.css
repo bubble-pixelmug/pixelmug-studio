@@ -10,6 +10,8 @@ button:disabled { opacity: .5; cursor: default; }
 .primary { width: 100%; background: #0867db; color: white; border: 0; margin: 16px 0; }
 .primary:disabled { opacity: 1; }
 .primary.connected { background: #16834a; color: white; }
+.secondary { width: 100%; margin: 16px 0 0; }
+#status { min-height: 1.6em; margin: 4px 0 16px; }
 canvas, #pad { width: 100%; aspect-ratio: 2 / 1; display: block; background: #101f34; border-radius: 12px; touch-action: none; }
 canvas { image-rendering: pixelated; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }

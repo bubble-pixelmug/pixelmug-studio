@@ -2,18 +2,58 @@ import { BubbleWebApp } from '@jeejio-bubble/bot/sdk/WebApp.js';
 import { BleAppClient } from '@jeejio-bubble/bot/sdk/BleAppClient.js';
 
 const connect = document.querySelector('#connect');
+const install = document.querySelector('#install-mpy');
 const pad = document.querySelector('#pad');
 const dot = document.querySelector('#dot');
+const status = document.querySelector('#status');
 let webapp, client, start, nextPacket;
 let sending = false;
+const launchParams = new URLSearchParams(globalThis.location.search);
+const mpsId = launchParams.get('mps_id') || import.meta.env.VITE_MPS_ID || '';
+const mpsVersion = launchParams.get('mps_version') || import.meta.env.VITE_MPS_VERSION || '';
 function showConnection(state) {
-  connect.textContent = state === 'connected' ? '已连接蓝牙，可以开始体验'
-    : state === 'connecting' ? '连接中' : '蓝牙连接 PixelMug';
+  connect.textContent = state === 'connected' ? 'Bluetooth connected — ready to play'
+    : state === 'connecting' ? 'Connecting…' : 'Connect to PixelMug';
   connect.className = state === 'connected' ? 'primary connected' : 'primary';
   connect.disabled = state !== 'disconnected';
 }
 
 showConnection('disconnected');
+
+install.onclick = async () => {
+  install.disabled = true;
+  status.textContent = 'Installing MPY on the device...';
+  try {
+    if (!mpsId || !mpsVersion) throw new Error('MPS ID and version are not configured.');
+    webapp ||= new BubbleWebApp();
+    const [device] = await webapp.getDevices();
+    if (!device) throw new Error('Bind a PixelMug S1 in Studio first.');
+    const response = await webapp.callDevice(device, {
+      method: 'talMpyExecOneScript',
+      params: { id: mpsId, version: mpsVersion },
+    });
+    const code = mpyExecReturnCode(response);
+    if (![260, 261, 262, 263, 264, 265].includes(code)) {
+      throw new Error('The device did not accept the MPY install request.');
+    }
+    status.textContent = code === 264
+      ? 'MPY is already running on the device.'
+      : 'MPY installation started. Wait for the device to finish, then connect over Bluetooth.';
+  } catch (error) {
+    status.textContent = error instanceof Error ? error.message : String(error);
+  } finally {
+    install.disabled = false;
+  }
+};
+
+function mpyExecReturnCode(response) {
+  const result = response?.result;
+  const value = result && typeof result === 'object'
+    ? result.value ?? result.result?.value ?? result.result
+    : result ?? response?.value;
+  const code = Number(value);
+  return Number.isFinite(code) ? code : Number(response?.code);
+}
 
 connect.onclick = async () => {
   client?.close();
@@ -21,7 +61,7 @@ connect.onclick = async () => {
   try {
     webapp ||= new BubbleWebApp();
     const [device] = await webapp.getDevices();
-    if (!device) throw new Error('请先在 Studio 关联一个 PixelMug S1。');
+    if (!device) throw new Error('Bind a PixelMug S1 in Studio first.');
     client = new BleAppClient(webapp.ble, { appId: 'GettingStartedLight' });
     client.on('connectionState', (event) => {
       if (event.connection === 'disconnected' || event.connection === 'failed') {
@@ -47,7 +87,7 @@ function point(event, kind) {
   const y = Math.max(0, Math.min(15, Math.floor((event.clientY - rect.top) / rect.height * 16)));
   dot.style.left = `${(x + 0.5) / 32 * 100}%`;
   dot.style.top = `${(y + 0.5) / 16 * 100}%`;
-  // 与 MPY 约定三个字节：[1 移动 / 2 轻点, x, y]。
+  // The MPY program expects three bytes: [1 move / 2 tap, x, y].
   nextPacket = new Uint8Array([kind, x, y]);
 }
 pad.onpointerdown = (event) => {
@@ -65,7 +105,7 @@ pad.onpointerup = (event) => {
 };
 pad.onpointercancel = () => { start = null; };
 
-// 每 50 毫秒发送最新位置，避免手指滑动产生大量积压消息。
+// Send the latest position every 50 ms to avoid a backlog during dragging.
 const timer = setInterval(async () => {
   if (!client?.ready || !nextPacket || sending) return;
   const packet = nextPacket;

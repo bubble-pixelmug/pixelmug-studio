@@ -1,4 +1,3 @@
-# Ogg Opus 拆包逻辑摘自 mps/audio-visualizer/mpy/net_player.py。
 SUPPORTED_FRAME_MS_X10 = (200, 400, 600)
 
 def _opus_packet_duration_ms_x10(packet):

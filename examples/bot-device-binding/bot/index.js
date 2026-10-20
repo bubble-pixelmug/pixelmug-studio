@@ -1,17 +1,12 @@
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1/ext';
 
-const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
-
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
-
-const bot = new BubbleBot(token, { apiBaseUrl });
+const bot = new BubbleBot(requiredEnv('BOT_TOKEN'), {
+  apiBaseUrl: requiredEnv('BOT_API_BASE_URL'),
+});
 const mug = new PixelMugS1();
 
-mug.name = '我的像素水杯';
+mug.name = 'PixelMug S1';
 mug.compatible = ['PixelMug'];
 bot.registerDevices([mug]);
 
@@ -24,8 +19,8 @@ bot.on('message:text', async (ctx) => {
 
   if (command === '/bind') {
     await ctx.sendBindDevice({
-      content: '为这个 Bot 选择一台 PixelMug S1 或 PixelMug P1。',
-      actionButtonTitle: '关联设备',
+      content: 'Select a PixelMug S1 or PixelMug P1 for this Bot.',
+      actionButtonTitle: 'Bind device',
     });
   } else if (command === '/status') {
     await sendStatus(ctx);
@@ -33,38 +28,44 @@ bot.on('message:text', async (ctx) => {
 });
 
 bot.on('message:bind_device', async (ctx) => {
-  await ctx.sendText('设备关联已经更新。');
+    await ctx.sendText('Device binding updated.');
   await sendStatus(ctx);
 });
 
 await bot.setCommands([
-  { command: 'bind', description: '关联像素水杯' },
-  { command: 'status', description: '查看关联状态' },
+  { command: 'bind', description: 'Bind a PixelMug' },
+  { command: 'status', description: 'Show binding status' },
 ]);
 
 await bot.start();
 
-console.log('设备关联示例已启动。');
+console.log('Bot device binding example started.');
 
 async function sendStatus(ctx) {
   const devices = await bot.getBoundDevices(ctx);
   const bound = devices.find((device) => Number(device.slot) === 1);
 
   if (!bound) {
-    await ctx.sendText('slot 1 尚未关联设备，请发送 /bind。');
+    await ctx.sendText('Slot 1 has no bound device. Send /bind to choose one.');
     return;
   }
 
   const online = bound.online === undefined
-    ? '未知'
+    ? 'Unknown'
     : bound.online
-      ? '在线'
-      : '离线';
+      ? 'Online'
+      : 'Offline';
 
   await ctx.sendText([
-    'slot：' + bound.slot,
-    '名称：' + (bound.name || bound.deviceId),
-    '实际型号：' + (bound.talId || '未知'),
-    '状态：' + online,
+    'Slot: ' + bound.slot,
+    'Name: ' + (bound.name || bound.deviceId),
+    'Actual model: ' + (bound.talId || 'Unknown'),
+    'Status: ' + online,
   ].join('\n'));
+}
+
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
 }

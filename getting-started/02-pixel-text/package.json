@@ -1,1 +1,9 @@
-{ "private": true, "type": "module" }
+{
+  "name": "pixelmug-getting-started-pixel-text",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@jeejio-bubble/bot": "0.1.9"
+  }
+}

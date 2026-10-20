@@ -1,7 +1,7 @@
 {
   "name": "getting-started-motion",
   "version": "1.0.0",
-  "description": "摇动水杯，让白色粒子柱倾倒、散开和弹跳",
+  "description": "Shake mug to watch particles scatter and collide",
   "dependencies": [
     {
       "name": "micropyxel",

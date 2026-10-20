@@ -242,10 +242,11 @@ export async function startStudio(options = {}) {
   }
   if (options.bot) {
     try {
-      child = fork(resolve(project, options.bot), options.botArgs || [], {
+      const launcher = new URL('./runtime/project-launcher.mjs', import.meta.url);
+      child = fork(fileURLToPath(launcher), [], {
         cwd: project, silent: true,
         execArgv: ["--import", new URL("./runtime/studio-preload.js", import.meta.url).href],
-        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_MPS_ID: options.mpsId || 'local-debug', STUDIO_MPS_VERSION: options.mpsVersion || 'local', STUDIO_WEBAPP_URL: webAppUrl || "",
+        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), PIXELMUG_APP_ENTRY: resolve(project, options.bot), PIXELMUG_WEBAPP_ROOT: webRoot || '', SERVE_WEBAPP: 'false', ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_MPS_ID: options.mpsId || 'local-debug', STUDIO_MPS_VERSION: options.mpsVersion || 'local', STUDIO_WEBAPP_URL: webAppUrl || "",
           PIXELMUG_STUDIO_DEBUG: JSON.stringify({ enabled: true, runId, buildId: options.buildId || null, transport: "ipc", token }) },
       });
       captureStream(child.stdout, "stdout");

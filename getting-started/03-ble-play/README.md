@@ -1,36 +1,43 @@
-# 03 · 手机控制杯中光点
+# 03 · Control a PixelMug Light
 
-滑动手机触摸板，杯子上的光点跟着移动；轻点一下，光点周围绽放火花。适用于 PixelMug S1 Pro / Lite，不支持 P1。
+Drag the phone touchpad to move a light on the cup, or tap to create sparks. This example targets PixelMug S1 Pro and Lite devices.
 
-## 运行
+## Run in Studio
 
-1. 在 Studio 打开本目录，选择 `bot/index.js`，填写 token。
-2. 在“运行配置”中勾选 **“启动后自动运行设备代码”**，然后启动智能体。
-3. 在冒泡 App 中私聊 Bot，发送 `/help` 查看介绍，使用 `/bindPixelMug` 关联一台 S1 设备（也可在 Studio 关联）。等待 Studio 完成设备代码加载并运行，确认杯子出现光点后再继续。
-4. 发送 `/webApp`，点击“打开光点触摸板”。
-5. 点击“蓝牙连接 PixelMug”，允许手机蓝牙相关权限。按钮显示绿色“已连接BLE，可以开始体验”后，滑动触摸板或轻点一下。
+1. Open this directory in Studio and select `bot/index.js` as the Bot entry point.
+2. Select a Bot with a configured token in **My Bubble**.
+3. Enable **Automatically run device code after startup** in the run configuration and start the Agent.
+4. In the Bubble App, send `/bindPixelMug` and bind a PixelMug S1 device. Wait until the light appears on the device.
+5. Send `/webApp`, open the touchpad, and tap **Install MPY to device**. Wait for the installation to finish.
+6. Tap **Connect to PixelMug**, then drag on the touchpad or tap it to control the light.
 
-设备代码由 Studio 自动加载，WebApp 只负责 BLE 连接和交互，不负责安装或启动 MPY。若忘记勾选自动运行选项，请先停止智能体，勾选后重新启动，等待杯子出现光点，再连接 BLE。
+Studio uploads and runs the local `mpy/` directory through WebREPL. The WebApp only connects to the device over BLE and sends the interaction packets.
 
-手机与电脑需在同一局域网，以便打开 WebApp；BLE 交互还需要手机靠近设备。设备固件需包含 `micropyxel` 和支持 Simple 数据的 `maopaoBleApp`，冒泡 App 也需支持相应 BLE 能力。
+## Deploy to a cloud server
 
-如果刚才运行过另一个设备程序，先停止它。重新部署或重启设备会断开 BLE，等待设备程序就绪后重新连接。
+The project contains the required root and WebApp dependency manifests, lock files, relative Vite asset paths, and `mpy/mps.json`. During deployment Studio packages and uploads the MPY release before building the Bot and WebApp container. Select an MPS ID in the deployment page before starting deployment.
 
-## 改一个地方
+The deployment runtime injects `BOT_TOKEN`, `BOT_API_BASE_URL`, `STUDIO_WEBAPP_URL`, `STUDIO_MPS_ID`, and `STUDIO_MPS_VERSION`. The Bot passes the MPS ID and version to the WebApp URL, and the WebApp requests `talMpyExecOneScript` before connecting over BLE. The Bot does not start an HTTP server itself.
 
-在 `mpy/__main__.py` 中把 `COLOR = 10` 改成 `COLOR = 11`。保存并重启智能体，等代码重新加载后重新连接 BLE，看看光点的新颜色。
+## Change the light color
 
-## 刚才发生了什么？
+Change `COLOR` in `mpy/__main__.py`, restart the Agent, wait for the device program to reload, and reconnect the WebApp over BLE.
 
-Bot 提供网页入口 → Studio 部署 MPY → WebApp 连接 BLE → 发送坐标 → MPY 更新画面。
+## How it works
 
-三个字节就足够表示一次操作：`[类型, x, y]`。类型 `1` 表示移动，类型 `2` 表示轻点；坐标范围为 `0..31` 和 `0..15`。网页与 MPY 使用相同的应用标识 `GettingStartedLight` 建立会话。
+The Bot provides the WebApp entry point. The MPY program draws the light and receives BLE packets. The WebApp uses `BleAppClient` to send three-byte packets:
 
-网页用 `BleAppClient` 管理连接，MPY 用 `BleAppService` 接收数据，用 `micropyxel` 绘图。连接、握手等机制由 SDK 和设备组件处理。
+- `1` means move and `2` means tap.
+- The X coordinate is in the range `0..31`.
+- The Y coordinate is in the range `0..15`.
+- The WebApp and MPY program share the BLE application ID `GettingStartedLight`.
 
-## 文件
+The device firmware must include `micropyxel` and a `maopaoBleApp` implementation with Simple data support.
 
-- `bot/index.js`：提供入口与设备声明。
-- `webapp/main.js`：连接、触摸坐标与发送。
-- `mpy/__main__.py`：接收坐标、移动光点、绘制火花。
-- `mpy/mps.json`：设备程序描述。
+## Files
+
+- `bot/index.js` provides the Bot commands and PixelMug S1 device declaration.
+- `webapp/main.js` connects over BLE, converts touch coordinates, and sends packets.
+- `webapp/package.json` and `webapp/vite.config.js` define the WebApp build.
+- `mpy/__main__.py` receives packets and renders the light and sparks.
+- `mpy/mps.json` describes the MPY package.

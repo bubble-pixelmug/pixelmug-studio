@@ -1,7 +1,7 @@
 {
   "name": "getting-started-rotate-image",
   "version": "1.0.0",
-  "description": "加载 PNG 并旋转 16×16 图块",
+  "description": "Load PNG and rotate the image",
   "dependencies": [
     {
       "name": "micropyxel",

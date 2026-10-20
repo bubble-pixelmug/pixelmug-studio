@@ -3,7 +3,7 @@ import micropyxel as pyxel
 
 
 class Spectrum:
-    # 摘取 audio-visualizer 的 default 效果：16 根彩色柱和白色峰值线。
+    # Adapted from the audio-visualizer default: 16 colored bars and white peak lines.
     def __init__(self):
         self.bands = bytearray(16)
         self.peaks = bytearray(16)

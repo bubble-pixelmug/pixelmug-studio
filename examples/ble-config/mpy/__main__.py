@@ -9,7 +9,7 @@ display = ConfigDisplay()
 
 
 def apply_config(path, meta):
-    # 接收完成的配置已写入临时文件，JSON 类型会还原为 Python 类型。
+    # The completed configuration is stored in a temporary file with JSON types restored.
     with open(path, "r") as source:
         settings = json.load(source)
 
@@ -25,18 +25,18 @@ def apply_config(path, meta):
     lines = []
     for key, types in expected:
         value = settings.get(key)
-        # 用 type 避免把 bool 当作 int 接受。
+        # Use type() so bool is not accepted as an int.
         if type(value) not in types:
             raise ValueError("invalid type for " + key)
         if key == "config1" and not math.isfinite(value):
             raise ValueError("config1 must be finite")
         text = json.dumps(value)
-        # 内置字体只显示 ASCII；JSON 表示保留引号、true/false、[] 和 {}。
+        # The built-in font displays ASCII only; JSON preserves quotes, true/false, [] and {}.
         if any(ord(char) < 32 or ord(char) > 126 for char in text):
             raise ValueError("use English or pinyin in " + key)
         lines.append(key + ": " + text)
 
-    # 全部字段校验成功后，才替换当前显示。
+    # Replace the current display only after every field passes validation.
     display.show(lines)
     return {"items": len(lines)}
 
@@ -46,7 +46,7 @@ ble.config("settings", apply_config)
 
 def update(rt):
     ble.poll()
-    # 注册回调不会执行它；此处才应用上传完成的配置。
+    # Registering a callback does not run it; apply completed uploads here.
     ble.process_pending_config(max_items=1)
     display.update(rt)
 

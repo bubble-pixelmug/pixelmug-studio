@@ -14,7 +14,7 @@ def show(text, color):
 
 
 def price_text(price):
-    # 每个字符占 4 像素，32 像素宽的屏幕最多显示 8 个字符。
+    # Each character uses four pixels, so the 32-pixel display fits eight characters.
     text = "%.2f" % price
     if len(text) > 8:
         text = "%.0f" % price
@@ -59,5 +59,5 @@ async def main(proxy=None):
         pyxel.destroy()
 
 
-# 需要代理时：asyncio.run(main(proxy="http://172.16.30.5:7897"))
-asyncio.run(main(proxy="http://172.16.30.5:7897"))
+# Configure a proxy with: asyncio.run(main(proxy="http://172.16.30.5:7897"))
+asyncio.run(main())

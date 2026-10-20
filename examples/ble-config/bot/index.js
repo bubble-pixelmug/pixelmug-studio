@@ -1,37 +1,49 @@
 import { BubbleBot, InlineKeyboard } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const bot = new BubbleBot(requiredEnv('BOT_TOKEN'), {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
   webAppDeviceAccess: 'any',
 });
 bot.registerDevices([new PixelMugS1()]);
+const webAppUrl = requiredEnv('STUDIO_WEBAPP_URL');
+const mpsId = requiredEnv('STUDIO_MPS_ID');
+const mpsVersion = requiredEnv('STUDIO_MPS_VERSION');
+const launchUrl = new URL(webAppUrl);
+launchUrl.searchParams.set('mps_id', mpsId);
+launchUrl.searchParams.set('mps_version', mpsVersion);
 
 bot.on('message:text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text === '/help') {
     await ctx.sendText(
-      'BLE 配置上传：五种数据类型已设置默认值，发送后在杯子上逐条显示。\n\n' +
-      '1. 在 Studio 勾选“启动后自动运行设备代码”并启动。\n' +
-      '2. /bindPixelMug：关联 PixelMug S1 Pro/Lite。\n' +
-      '3. 等杯子显示 WAIT 后，/webApp 打开页面并点击连接。\n' +
-      '4. 直接发送默认配置，或修改 config1 到 config5 后发送。'
+      'BLE configuration upload: five data types are prefilled and shown on the Mug after upload.\n\n' +
+      '1. Enable automatic device code loading in Studio and start the Agent.\n' +
+      '2. Use /bindPixelMug to bind a PixelMug S1 Pro or Lite.\n' +
+      '3. Wait for WAIT on the cup, then use /webApp and connect.\n' +
+      '4. Send the default configuration, or edit config1 through config5 first.'
     );
   } else if (text === '/bindPixelMug') {
     await ctx.sendBindDevice({
-      content: '请选择用于 BLE 配置上传示例的 PixelMug S1 Pro/Lite。',
-      actionButtonTitle: '关联 PixelMug',
+      content: 'Select the PixelMug S1 Pro or Lite for this BLE configuration example.',
+      actionButtonTitle: 'Bind PixelMug',
     });
   } else if (text === '/webApp') {
-    await ctx.sendKeyboard('发送五种数据类型的配置到杯子显示。',
-      new InlineKeyboard().url('打开配置上传示例', process.env.STUDIO_WEBAPP_URL));
+    await ctx.sendKeyboard('Send five data types of configuration to the cup display.',
+      new InlineKeyboard().url('Open configuration uploader', launchUrl.toString()));
   }
 });
 
 bot.on('error', (ctx) => console.error(ctx.error.message));
 await bot.setCommands([
-  { command: 'bindPixelMug', description: '关联 PixelMug' },
-  { command: 'help', description: '查看配置上传示例使用方法' },
-  { command: 'webApp', description: '打开配置上传页面' },
+  { command: 'bindPixelMug', description: 'Bind a PixelMug' },
+  { command: 'help', description: 'Show configuration uploader help' },
+  { command: 'webApp', description: 'Open the configuration uploader' },
 ]);
 await bot.start();
+
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}

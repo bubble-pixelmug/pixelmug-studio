@@ -1,11 +1,13 @@
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const bot = new BubbleBot(requiredEnv('BOT_TOKEN'), {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
 });
 const mug = new PixelMugS1();
 bot.registerDevices([mug]);
+const mpsId = requiredEnv('STUDIO_MPS_ID');
+const mpsVersion = requiredEnv('STUDIO_MPS_VERSION');
 const pendingInstalls = new Map();
 
 async function finishInstall(deviceId, message) {
@@ -21,11 +23,11 @@ bot.on('device_notify', async (ctx) => {
   for (const event of mug.parseNotify(ctx.tal?.notify || [])) {
     const value = event.params?.value;
     if (event.name === 'mpyVmError') {
-      await finishInstall(deviceId, `设备程序错误：${typeof value === 'string' ? value : JSON.stringify(value)}`);
+      await finishInstall(deviceId, `Device program error: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
     } else if (event.name === 'mpyVmEvent') {
-      if (value === 'MPS_IS_RUNNING') await finishInstall(deviceId, 'MPY 已在 PixelMug 上运行，可以开始体验了。');
-      if (value === 'INSTALL_FAIL') await finishInstall(deviceId, 'MPY 安装失败，请查看 Studio 的设备日志。');
-      if (value === 'RUNNING_FAIL') await finishInstall(deviceId, 'MPY 运行失败，请查看 Studio 的设备日志。');
+      if (value === 'MPS_IS_RUNNING') await finishInstall(deviceId, 'MPY is running on PixelMug and ready to use.');
+      if (value === 'INSTALL_FAIL') await finishInstall(deviceId, 'MPY installation failed. Check the Studio device log.');
+      if (value === 'RUNNING_FAIL') await finishInstall(deviceId, 'MPY failed to start. Check the Studio device log.');
     }
   }
 });
@@ -34,14 +36,14 @@ bot.on('message:text', async (ctx) => {
   const text = ctx.message.text.trim();
 
   if (text === '/help') {
-    await ctx.sendText('在 PixelMug S1 上体验不同的 MPY 应用。\n\n使用 /bindPixelMug 关联设备。将 examples/ 下所选示例文件夹的全部文件复制到项目的 mpy/，再发送 /installMPY 安装并运行。');
+    await ctx.sendText('Try different MPY applications on a PixelMug S1.\n\nUse /bindPixelMug to bind a device. Copy an example into the project mpy/ directory, then send /installMPY to install and run it. The default example displays BTC/USD prices and does not require a WebApp.');
     return;
   }
 
   if (text === '/bindPixelMug') {
     await ctx.sendBindDevice({
-      content: '请选择要关联的 PixelMug S1。',
-      actionButtonTitle: '关联 PixelMug',
+      content: 'Select the PixelMug S1 you want to bind.',
+      actionButtonTitle: 'Bind PixelMug',
     });
     return;
   }
@@ -49,47 +51,54 @@ bot.on('message:text', async (ctx) => {
   if (text === '/installMPY') {
     const [device] = await bot.getBoundDevices(ctx);
     if (!device) {
-      await ctx.sendBindDevice({ content: '请先关联一台 PixelMug S1，再安装 MPY。' });
+      await ctx.sendBindDevice({ content: 'Bind a PixelMug S1 before installing MPY.' });
       return;
     }
     const deviceId = String(device.deviceId);
     if (pendingInstalls.has(deviceId)) {
-      await ctx.sendText('设备正在安装或启动，请等待结果。');
+      await ctx.sendText('The device is already installing or starting MPY. Please wait.');
       return;
     }
-    // 先记录请求再调用 RPC，避免遗漏快速到达的运行事件。
+
     const pending = { ctx };
     pendingInstalls.set(deviceId, pending);
     pending.timer = setTimeout(() => {
-      finishInstall(deviceId, '等待设备运行上报超时，请在 Studio 查看设备状态后重试。').catch(console.error);
+      finishInstall(deviceId, 'The device did not report a result in time. Check Studio and try again.').catch(console.error);
     }, 120000);
     pending.timer.unref?.();
+
     try {
-      await ctx.sendText('正在安装并启动 MPY，请稍候 ⏳');
-      // Studio 接管此 RPC，使用当前项目的 mpy/，无需填写线上 MPS 标识。
-      const command = mug.rpc.talMpyExecOneScript({ id: '', version: '' });
+      await ctx.sendText('Installing and starting MPY. Please wait ⏳');
+      // Studio intercepts this RPC for local runs; cloud devices use the uploaded MPS.
+      const command = mug.rpc.talMpyExecOneScript({ id: mpsId, version: mpsVersion });
       const response = await bot.callDevice(ctx.chat, device, command);
       if (pendingInstalls.get(deviceId) !== pending) return;
       const result = response.tal?.result;
       const value = result?.result ?? result;
       const code = Number(value?.value ?? value?.return ?? value);
       if (code === 264) {
-        await finishInstall(deviceId, 'MPY 已经在 PixelMug 上运行，可以开始体验了 ✅');
+        await finishInstall(deviceId, 'MPY is already running on PixelMug ✅');
       } else if ([260, 261, 262, 263, 265].includes(code)) {
-        await ctx.sendText('安装请求已接受，正在等待设备运行结果 ⏳');
+        await ctx.sendText('The install request was accepted. Waiting for the device ⏳');
       } else {
-        await finishInstall(deviceId, `设备未接受启动请求，返回码：${code}。请查看 Studio 的设备日志。`);
+        await finishInstall(deviceId, `The device rejected the start request (code ${code}). Check the Studio device log.`);
       }
     } catch (error) {
-      if (pendingInstalls.get(deviceId) === pending) await finishInstall(deviceId, `安装失败：${error.message}`);
+      if (pendingInstalls.get(deviceId) === pending) await finishInstall(deviceId, `Installation failed: ${error.message}`);
     }
   }
 });
 
 bot.on('error', (ctx) => console.error(ctx.error.message));
 await bot.setCommands([
-  { command: 'help', description: '体验不同的 MPY 应用' },
-  { command: 'bindPixelMug', description: '关联你的 PixelMug' },
-  { command: 'installMPY', description: '安装并运行当前 MPY 示例' },
+  { command: 'help', description: 'MPY tutorial examples' },
+  { command: 'bindPixelMug', description: 'Bind a PixelMug' },
+  { command: 'installMPY', description: 'Install and run the current MPY example' },
 ]);
 await bot.start();
+
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}

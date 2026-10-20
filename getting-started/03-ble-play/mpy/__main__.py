@@ -1,7 +1,7 @@
 import micropyxel as pyxel
 from maopaoBleApp import BleAppService, DATA_TYPE_RAW
 
-# 与 WebApp 的 appId 一致。
+# Keep this app ID in sync with the WebApp BLE client.
 ble = BleAppService("GettingStartedLight")
 x, y = 16, 8
 spark = 0

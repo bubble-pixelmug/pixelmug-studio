@@ -47,9 +47,26 @@ async function suggestedBotEntry(root) {
   return "";
 }
 
+async function readProjectPackage(root) {
+  let packagePath;
+  try {
+    packagePath = await realpath(join(root, "package.json"));
+    if (!isInside(root, packagePath) || !(await stat(packagePath)).isFile()) throw new Error();
+  } catch {
+    throw new Error("项目必须提供 package.json");
+  }
+  let manifest;
+  try { manifest = JSON.parse(await readFile(packagePath, "utf8")); }
+  catch { throw new Error("package.json 不是合法的 JSON"); }
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw new Error("package.json 必须是 JSON 对象");
+  if (typeof manifest.name !== "string" || !manifest.name.trim()) throw new Error("package.json 必须包含非空的 name 字段");
+  return manifest;
+}
+
 export async function inspectProject(path) {
   const root = await realpath(resolve(path));
   if (!(await stat(root)).isDirectory()) throw new Error("请选择项目文件夹");
+  const packageManifest = await readProjectPackage(root);
   await directory(root, "bot", true);
   const webapp = await directory(root, "webapp", false);
   const mpy = await directory(root, "mpy", false);
@@ -61,7 +78,7 @@ export async function inspectProject(path) {
     catch { throw new Error("mpy/mps.json 不是合法的 JSON"); }
     if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw new Error("mpy/mps.json 必须是 JSON 对象");
   }
-  return { path: root, bot: await suggestedBotEntry(root), webRoot: webapp ? "webapp" : "", mpy: Boolean(mpy) };
+  return { path: root, name: packageManifest.name.trim(), bot: await suggestedBotEntry(root), webRoot: webapp ? "webapp" : "", mpy: Boolean(mpy) };
 }
 
 export async function validateProjectRun(path, options = {}) {

@@ -13,6 +13,7 @@ import { startWebAppGateway } from './gateway.mjs';
 import { createProjectArchive, readMpsMetadata } from './cloud-deployment.mjs';
 import { createMpsArchive } from './mps-package.mjs';
 import { uploadMpsPackage } from './mps-upload.mjs';
+import { prepareProjectDependencies } from './project-dependencies.mjs';
 
 const DEFAULT_CREATOR_API_URL = 'https://us-connector.jeejio.com';
 const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
@@ -155,7 +156,8 @@ export async function startWorkbench(options = {}) {
           events: await events(url.searchParams.get('runId') === run?.runId ? url.searchParams.get('after') : 0),
         });
         if (req.method === 'GET' && url.pathname === '/api/directories') {
-          const path = await realpath(resolve(url.searchParams.get('path') || project?.path || options.initialDirectory || homedir()));
+          const requestedPath = url.searchParams.has('path') ? url.searchParams.get('path') : project?.path;
+          const path = await realpath(resolve(requestedPath || options.initialDirectory || homedir()));
           const entries = await readdir(path, { withFileTypes: true });
           const directories = entries.filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules').map(d => ({ name: d.name, path: join(path, d.name) })).sort((a,b) => a.name.localeCompare(b.name));
           const drives = [];
@@ -168,7 +170,7 @@ export async function startWorkbench(options = {}) {
         if (req.method === 'GET' && url.pathname === '/api/deploy/project-info') {
           if (!project) throw new Error('Please open a project first');
           const mps = await readMpsMetadata(project.path).catch(() => null);
-          return reply(res, 200, { project_id: project.path.split(/[\\/]/).filter(Boolean).pop(), bot: project.bot, has_webapp: Boolean(project.webRoot), mps });
+          return reply(res, 200, { project_id: project.name, bot: project.bot, has_webapp: Boolean(project.webRoot), mps });
         }
         if (req.method === 'POST' && url.pathname === '/api/mps/upload') {
           if (!project) throw new Error('Please open a project first');
@@ -196,12 +198,16 @@ export async function startWorkbench(options = {}) {
           const deploymentId = String(req.headers['x-deployment-id'] || '');
           const releaseId = String(req.headers['x-release-id'] || '1.0.0');
           const mpsId = String(req.headers['x-mps-id'] || '').trim();
-          if (!deploymentId || !mpsId) throw new Error('Deployment ID and MPS ID are required');
-          const metadata = await readMpsMetadata(project.path);
+          if (!deploymentId || (project.mpy && !mpsId)) throw new Error('Deployment ID and MPS ID are required');
+          const metadata = project.mpy ? await readMpsMetadata(project.path) : null;
           const botId = String(req.headers['x-bot-id'] || runtimeConfig.botId || '');
           const botToken = creator.getBotToken(botId);
           if (!botToken) throw new Error('Set the selected Bot token before uploading');
-          const archive = await createProjectArchive({ projectPath: project.path, projectId: project.path.split(/[\\/]/).filter(Boolean).pop(), releaseId });
+          // Deployment archives must contain the same deterministic lock files
+          // used by the local Studio agent. Generate them automatically when
+          // a clean project does not have them yet.
+          await prepareProjectDependencies(project.path, project.webRoot ? join(project.path, project.webRoot) : '');
+          const archive = await createProjectArchive({ projectPath: project.path, projectId: project.name, releaseId });
           try {
             const headers = { 'content-type': 'application/gzip', 'x-release-id': releaseId, 'x-environment-json': JSON.stringify({ BOT_TOKEN: botToken, BOT_API_BASE_URL: runtimeConfig.botApiBaseUrl || DEFAULT_BOT_API_URL }) };
             const releaseUrl = deploymentServiceUrl + `/api/cloud/deployments/${encodeURIComponent(deploymentId)}/releases`;
@@ -281,12 +287,12 @@ export async function startWorkbench(options = {}) {
             }
             case '/api/deploy/create': {
               if (!project) throw new Error('Please open a project first');
-              const mpsId = String(body.mpsId || '').trim();
-              const mps = await readMpsMetadata(project.path);
+              const mpsId = String(body.mpsId || '').trim() || (project.mpy ? '' : 'no-mpy');
+              const mps = project.mpy ? await readMpsMetadata(project.path) : null;
               if (!mpsId) throw new Error('MPS ID is required');
               const botId = String(body.botId || runtimeConfig.botId || '').trim();
               const bot = creator.bots.find(item => item.id === botId);
-              result = await deploymentRequest('/api/cloud/deployments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ node_id: body.nodeId, project_id: project.path.split(/[\\/]/).filter(Boolean).pop(), bot_id: botId, bot_name: bot?.name || '', mps_id: mpsId, mps_name: mps.name, mps_version: mps.version }) });
+              result = await deploymentRequest('/api/cloud/deployments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ node_id: body.nodeId, project_id: project.name, bot_id: botId, bot_name: bot?.name || '', mps_id: mps ? mpsId : '', mps_name: mps?.name || '', mps_version: mps?.version || '' }) });
               break;
             }
             case '/api/webapp/address':

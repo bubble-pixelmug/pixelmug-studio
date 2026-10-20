@@ -267,6 +267,8 @@ dialog{width:min(720px,calc(100vw - 36px));border:1px solid var(--border);border
 .deployment-management-v3 .load-project-button{width:100%;height:38px;margin:0 0 12px;padding:6px 10px;border:1px solid #d5e1ef;border-radius:10px;background:#fff;color:#294a73;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .deployment-management-v3>.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
 .deployment-management-v3>.actions button{margin:0}
+body.deployment-no-mpy .deployment-management-v3 .deployment-columns{grid-template-columns:1fr 1fr}
+body.deployment-no-mpy .deployment-management-v3 .deployment-column:nth-child(3){display:none}
 @media(max-width:900px){
   .deployment-management-v3 .deployment-columns{grid-template-columns:1fr;gap:20px}
   .deployment-management-v3{padding:18px}

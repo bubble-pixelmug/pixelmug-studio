@@ -1,7 +1,7 @@
 {
   "name": "getting-started-music-player",
   "version": "1.0.0",
-  "description": "点击播放本地 Ogg Opus 音乐并显示默认频谱",
+  "description": "Click to play ogg music files",
   "dependencies": [
     {
       "name": "micropyxel",

@@ -108,7 +108,8 @@ async function startRun(){
     try{
       const automatic=autoRunMpy.value;
       const selectedBotId=state.value?.runtimeConfig?.botId||'';
-      if(botOccupied(selectedBotId,'')) throw new Error(deployText('botConflict'));
+      const restartingCurrentAgent = Boolean(state.value?.run && state.value?.runtimeConfig?.botId === selectedBotId);
+      if(botOccupied(selectedBotId,'') && !restartingCurrentAgent) throw new Error(deployText('botConflict'));
       if(state.value?.run) notify(automatic?t('正在重启：先让设备进入 Python Dev，再自动上传并运行设备代码。'):t('正在重启：先让设备进入 Python Dev，再重新加载本地服务；设备代码等待冒泡 App 发起启动。'));
       await api('run/start',{bot:botEntry.value.trim(),autoRunMpy:automatic,botId:state.value?.runtimeConfig?.botId,botApiBaseUrl:botApi.value.trim()});
 
@@ -161,7 +162,7 @@ async function applyDeploymentServer(){
   const authCode=window.prompt(deployText('authCode')); if(authCode===null) return;
   await perform(async()=>{ await api('deploy/apply',{auth_code:authCode}); await refreshDeploymentServers(); notify(deployText('serverAccepted')); });
 }
-function selectDeploymentServer(server){ selectedServerId.value=server.id; deploymentMpsId.value=server.deployment?.mps_id||''; const savedBotId=server.deployment?.deployment_id ? sessionStorage.getItem(`pixelmug-deploy-bot:${server.deployment.deployment_id}`) : ''; deploymentBotId.value=server.deployment?.bot_id||savedBotId||state.value?.runtimeConfig?.botId||''; deploymentProjectInfo.value=server.deployment ? { project_id:server.deployment.project_id, mps:{name:server.deployment.mps_name,version:server.deployment.mps_version} } : null; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); void syncDeploymentMetadata(server).catch(error=>deploymentLog.value.push(`Metadata update failed: ${error.message}`)); }
+function selectDeploymentServer(server){ selectedServerId.value=server.id; deploymentMpsId.value=server.deployment?.mps_id||''; const savedBotId=server.deployment?.deployment_id ? sessionStorage.getItem(`pixelmug-deploy-bot:${server.deployment.deployment_id}`) : ''; deploymentBotId.value=server.deployment?.bot_id||savedBotId||state.value?.runtimeConfig?.botId||''; deploymentProjectInfo.value=server.deployment ? { project_id:server.deployment.project_id, mps:server.deployment.mps_id ? {name:server.deployment.mps_name,version:server.deployment.mps_version} : null } : null; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); void syncDeploymentMetadata(server).catch(error=>deploymentLog.value.push(`Metadata update failed: ${error.message}`)); }
 async function syncDeploymentMetadata(server){
   if(!server.deployment?.deployment_id || server.deployment.bot_id || server.deployment.mps_name) return;
   const info=await api('deploy/project-info').catch(()=>null);
@@ -201,6 +202,8 @@ async function uploadDeployment(deployment){
 }
 async function createCloudDeployment(){
   let server;
+  const hasMpy=Boolean(deploymentProjectInfo.value?.mps);
+  if(!hasMpy) deploymentMpsId.value='__no_mpy__';
   try {
   if(botOccupied(deploymentBotId.value,'')) throw new Error(deployText('botConflict'));
   server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server) throw new Error(t('请先选择服务器'));
@@ -213,17 +216,20 @@ async function createCloudDeployment(){
     return;
   }
   await perform(async()=>{
-    deploymentLog.value.push(deployText('mpsPackage'));
-    deploymentLog.value.push(deployText('mpsUpload'));
-    const mpsUpload=await api('mps/upload',{mpsId:deploymentMpsId.value.trim()});
-    deploymentLog.value.push(`${deployText('mpsUploaded')}: ${mpsUpload.fileName || deploymentMpsId.value.trim()}`);
+    let mpsUpload=null;
+    if(hasMpy){
+      deploymentLog.value.push(deployText('mpsPackage'));
+      deploymentLog.value.push(deployText('mpsUpload'));
+      mpsUpload=await api('mps/upload',{mpsId:deploymentMpsId.value.trim()});
+      deploymentLog.value.push(`${deployText('mpsUploaded')}: ${mpsUpload.fileName || deploymentMpsId.value.trim()}`);
+    }
     await api('bots/select',{botId:deploymentBotId.value});
-    const created=await api('deploy/create',{nodeId:server.id,mpsId:deploymentMpsId.value.trim(),botId:deploymentBotId.value});
+    const created=await api('deploy/create',{nodeId:server.id,mpsId:hasMpy?deploymentMpsId.value.trim():'',botId:deploymentBotId.value});
     sessionStorage.setItem(`pixelmug-deploy-bot:${created.deployment_id}`,deploymentBotId.value);
     const selectedBot=(state.value?.bots||[]).find(bot=>bot.id===deploymentBotId.value);
-    const withMetadata=await api('deploy/metadata/'+created.deployment_id,{bot_id:deploymentBotId.value,bot_name:selectedBot?.name||'',mps_id:deploymentMpsId.value.trim(),mps_name:mpsUpload.name||'',mps_version:mpsUpload.version||''});
+    const withMetadata=await api('deploy/metadata/'+created.deployment_id,{bot_id:deploymentBotId.value,bot_name:selectedBot?.name||'',mps_id:hasMpy?deploymentMpsId.value.trim():'',mps_name:mpsUpload?.name||'',mps_version:mpsUpload?.version||''});
     updateDeploymentSnapshot(withMetadata);
-    deploymentProjectInfo.value={...deploymentProjectInfo.value,mps:{name:mpsUpload.name||deploymentProjectInfo.value?.mps?.name||'',version:mpsUpload.version||deploymentProjectInfo.value?.mps?.version||''}};
+    if(mpsUpload) deploymentProjectInfo.value={...deploymentProjectInfo.value,mps:{name:mpsUpload.name||deploymentProjectInfo.value?.mps?.name||'',version:mpsUpload.version||deploymentProjectInfo.value?.mps?.version||''}};
     deploymentLog.value.push(t('部署已预留：{0}',[created.deployment_id]));
     await refreshDeploymentServers();
     try {
@@ -258,6 +264,11 @@ async function retryCloudDeployment(){ const server=deploymentServers.value.find
 
 const project = computed(()=>state.value?.project);
 const selectedDeploymentServer = computed(()=>deploymentServers.value.find(server=>server.id===selectedServerId.value)||null);
+const deploymentHasMpy = computed(()=>Boolean(deploymentProjectInfo.value?.mps?.name || selectedDeploymentServer.value?.deployment?.mps_id));
+watch(deploymentProjectInfo, info => {
+  if(info && !info.mps && !deploymentMpsId.value) deploymentMpsId.value='__no_mpy__';
+});
+watch(deploymentHasMpy, hasMpy => document.body.classList.toggle('deployment-no-mpy', !hasMpy), { immediate: true });
 const active = computed(()=>Boolean(state.value?.run));
 function deploymentForBot(botId){
   return deploymentServers.value.map(server=>server.deployment).find(deployment =>
@@ -273,12 +284,13 @@ function botOccupation(botId, allowDeploymentId=''){
   return deployment && deployment.deployment_id!==allowDeploymentId ? 'botDeployed' : '';
 }
 const deployedBotIds = computed(()=>deploymentServers.value.map(server=>server.deployment).filter(deployment=>deployment && ['reserved','deploying','deployed','cleaning','unhealthy'].includes(deployment.status) && deployment.bot_id).map(deployment=>deployment.bot_id));
-const projectName = computed(()=>project.value?.path?.split(/[\\/]/).filter(Boolean).pop() || '');
+const projectName = computed(()=>project.value?.name || '');
 const latestJobs = computed(()=>[...(state.value?.events?.launches||[])].reverse());
 const deploymentSteps=['进入开发模式','连接设备','上传设备代码','应用开始运行'];
 function deploymentIndexFor(job){ const value=job?.state; if(!value) return -1; if(['accepted','rebooting'].includes(value)) return 0; if(value==='connecting') return 1; if(['uploading','uploaded'].includes(value)) return 2; if(['rerunning','running','completed'].includes(value)) return 3; return -1; }
 const bot = computed(()=>state.value?.events?.bot);
 const botAlive = computed(()=>Boolean(bot.value && bot.value.exitCode===null && !bot.value.signal));
+const agentReady = computed(()=>Boolean(active.value && botAlive.value && (!project.value?.webRoot || webAppReady.value)));
 const pixelMugOnline = computed(()=>{
   const online=value=>value===true||value===1||value==='1'||String(value||'').toUpperCase()==='ONLINE';
   return (state.value?.devices||[]).some(device=>online(device.online)) ||
@@ -375,7 +387,7 @@ const runStatusDescription=computed(()=>{
   }
   return messages.join(t('，'))+t('。');
 });
-const runStarted=computed(()=>active.value||launchRequested.value);
+const runStarted=computed(()=>active.value||launchRequested.value||Boolean(state.value?.busy));
 const guideLinksToProject = computed(()=>!project.value||(!runStarted.value&&configurationErrors.value.length>0));
 const guide = computed(()=>{
   const errors=[];
@@ -384,20 +396,30 @@ const guide = computed(()=>{
     if(configurationErrors.value.length) return {stage:1,title:t('请重新检查智能体应用'),body:t('以下配置不符合运行条件：'),errors:configurationErrors.value};
     return {stage:1,title:t('可以启动智能体'),body:readyDescription.value,errors};
   }
-  return {stage:3,title:t('智能体已启动，开始使用和测试吧'),body:runStatusDescription.value,errors};
+  return {stage:3,title:agentReady.value?t('智能体已启动，开始使用和测试吧'):state.value?.busy?t('智能体正在启动'):t('bot正在启动'),body:runStatusDescription.value,errors};
 });
 const operationHint = computed(()=>active.value
   ? state.value?.runtimeConfig?.autoRunMpy?t('重启会让本轮设备进入 Python Dev，并自动上传、运行 MPY。停止会请求设备普通重启。'):t('重启会让本轮设备进入 Python Dev 并重新加载本地服务；MPY 等待冒泡 App 发起启动后上传。停止会请求设备普通重启。')
   : project.value?t('启动本地 Bot 与可选 WebApp 服务，再到冒泡 App 中体验。'):t('先打开本地项目，再启动智能体。'));
-const startDisabled=computed(()=>working.value||!project.value||!state.value?.user||configurationErrors.value.length>0||active.value);
-const restartDisabled=computed(()=>working.value||!active.value);
+const startDisabled=computed(()=>working.value||state.value?.busy||!project.value||!state.value?.user||configurationErrors.value.length>0||active.value);
+const restartDisabled=computed(()=>working.value||state.value?.busy||!active.value);
 const projectComposition=computed(()=>project.value?t('应用组成：')+['bot',...(project.value.webRoot?['WebApp']:[]),...(project.value.mpy?['MPY']:[])].join(' + '):'');
 
 async function browse(path){
-  const data=await api('directories'+(path?'?path='+encodeURIComponent(path):''));
+  const query=path===undefined?'':'?path='+encodeURIComponent(path);
+  const data=await api('directories'+query);
   directory.value=data;
 }
-async function openDirectory(){ await perform(async()=>{ await browse(project.value?.path); directoryDialog.value.showModal(); }); }
+function isMissingDirectoryError(error){ return /ENOENT|no such file or directory|path does not exist/i.test(String(error?.message||error)); }
+async function openDirectory(){ await perform(async()=>{
+  try { await browse(project.value?.path); }
+  catch(error){
+    if(!isMissingDirectoryError(error)) throw error;
+    await browse('');
+    notify(t('当前应用目录不存在，请选择新的应用目录。'));
+  }
+  directoryDialog.value.showModal();
+}); }
 async function browseAction(path){ await perform(()=>browse(path)); }
 async function chooseDirectory(){ if(fileWorkspace.value && !fileWorkspace.value.canLeave()) return; await perform(async()=>{ await api('project/open',{path:directory.value.path}); activeSection.value='debug'; directoryDialog.value.close(); notify(t('项目已打开，请检查运行入口与 bot 配置。')); }); }
 
@@ -536,7 +558,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
       </section>
 
       <section v-if="activeSection==='debug'" class="section-page debug-page">
-        <div class="section-intro debug-intro"><div><span class="eyebrow">DEBUG</span><h2>{{ t('调试运行') }}</h2><p>{{ t('启动智能体，在真实硬件上部署运行，观察运行日志') }}</p></div><div class="actions"><button id="start" class="primary" :disabled="startDisabled" @click="startRun">{{ working&&!active?t('请稍候…'):t('启动智能体') }}</button><button id="restart" :disabled="restartDisabled" @click="startRun">{{ t('重启智能体') }}</button><button id="stop" :disabled="restartDisabled" @click="stopRun">{{ t('停止智能体') }}</button></div></div>
+        <div class="section-intro debug-intro"><div><span class="eyebrow">DEBUG</span><h2>{{ t('调试运行') }}</h2><p>{{ t('启动智能体，在真实硬件上部署运行，观察运行日志') }}</p></div><div class="actions"><button id="start" class="primary" :disabled="startDisabled" @click="startRun">{{ (working||state?.busy)&&!active?t('请稍候…'):t('启动智能体') }}</button><button id="restart" :disabled="restartDisabled" @click="startRun">{{ t('重启智能体') }}</button><button id="stop" :disabled="restartDisabled" @click="stopRun">{{ t('停止智能体') }}</button></div></div>
 
         <section class="next-step" :class="{invalid:guide.errors?.length}" aria-live="polite"><span class="guide-icon"></span><div><span class="eyebrow">{{ t('当前状态') }}</span><h2 id="guide-title"><a v-if="guideLinksToProject" class="guide-title-link" href="#" @click.prevent="activeSection='project'">{{ guide.title }}</a><template v-else>{{ guide.title }}</template></h2><p id="guide-body">{{ guide.body }}</p><ul v-if="guide.errors?.length" class="configuration-errors"><li v-for="error in guide.errors" :key="error">{{ error }}</li></ul></div><p v-if="!runStarted&&!guide.errors?.length" id="operation-hint" class="operation-hint">{{ operationHint }}</p></section>
 

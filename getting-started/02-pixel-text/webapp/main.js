@@ -24,42 +24,60 @@ scroll.onchange = () => {
 send.onclick = async () => {
   const value = text.value.trim();
   if (!value) {
-    status.textContent = '请先输入要显示的文字。';
+    status.textContent = 'Enter text to display first.';
     return;
   }
 
   send.disabled = true;
-  status.textContent = '正在发送文字…';
+  status.textContent = 'Sending text...';
   try {
-    const command = await rpc.talPrintText({
+    const options = {
       text: value,
       specifications: fontSize.value,
       color: color.value,
       direction: scroll.checked ? Number(direction.value) : 0,
       speed: Number(speed.value),
-    });
+    };
+
+    const command = await rpc.talPrintText(options);
+
     await webapp.callDevice(device, command);
-    status.textContent = '文字已经显示到 PixelMug！';
+    console.log('WebApp log: Device call completed');
+    status.textContent = `Text displayed on ${device.name || 'PixelMug'}`;
   } catch (error) {
+    console.error('WebApp log: Send Failed:', error);
     status.textContent = error.message;
   } finally {
     send.disabled = false;
   }
 };
 
-try {
-  webapp = new BubbleWebApp({ ble: false });
+async function loadDevices() {
   const devices = await webapp.getDevices();
+  console.log('WebApp log: get devices:', devices);
   device = devices.find((item) =>
     item.talId === 'PixelMug' ||
     item.talId === 'PixelMugS1' ||
     /pixelmug/i.test(item.name || '')
   );
-  if (!device) {
-    throw new Error('请先在 Studio 关联一个 PixelMug，然后重新打开页面。');
+
+  if (device) {
+    status.textContent = `Ready: ${device.name || 'PixelMug'}`;
+    send.disabled = false;
+    return;
   }
-  status.textContent = `准备好啦：${device.name || 'PixelMug'}`;
-  send.disabled = false;
-} catch (error) {
-  status.textContent = error.message;
+  status.textContent = 'No PixelMug is connected. Bind a device and reopen this WebApp.';
 }
+
+async function initialize() {
+  try {
+    console.log('WebApp log: Start Initialization');
+    webapp = new BubbleWebApp();
+    await loadDevices();
+  } catch (error) {
+    console.error('[init] Initialization failed:', error);
+    status.textContent = error.message;
+  }
+}
+
+initialize();

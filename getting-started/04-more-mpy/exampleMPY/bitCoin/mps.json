@@ -1,7 +1,7 @@
 {
   "name": "getting-started-bitcoin",
-  "version": "1.0.0",
-  "description": "通过 WebSocket 显示 BTC/USD 实时行情",
+  "version": "0.0.2",
+  "description": "Show real-time BTC/USD quotes over WebSocket",
   "dependencies": [
     {
       "name": "micropyxel",
