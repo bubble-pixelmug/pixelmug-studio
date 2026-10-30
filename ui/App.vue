@@ -201,14 +201,26 @@ function updateDeploymentSnapshot(deployment){
 async function loadCurrentProjectForDeployment(){ if(!project.value) return notify(t('请先打开一个项目，再加载到服务器。'),true); await perform(async()=>{ deploymentProjectInfo.value=await api('deploy/project-info'); deploymentBotId.value=state.value?.runtimeConfig?.botId||''; deploymentMpsId.value=''; deploymentLog.value.push(`${t('当前项目')}: ${deploymentProjectInfo.value.project_id}`); notify(t('当前项目已加载，请检查 Bot 和 MPS 信息后再部署。')); }); }
 async function uploadDeployment(deployment){
    deploymentLog.value.push(t('正在打包并上传发布版本'));
-   const pollLogs=async()=>{ try{ const latest=await api('deploy/status/'+deployment.deployment_id); updateDeploymentSnapshot(latest); appendDeploymentLogs(latest); }catch{} };
-   const timer=setInterval(pollLogs,1500);
    try{
      const response=await fetch('/api/deploy/upload',{method:'POST',headers:{Authorization:'Bearer '+credential,'X-Deployment-Id':deployment.deployment_id,'X-Release-Id':'1.0.0','X-Mps-Id':deploymentMpsId.value.trim(),'X-Bot-Id':deploymentBotId.value}});
      const result=await response.json(); updateDeploymentSnapshot(result); appendDeploymentLogs(result);
      if(!response.ok) throw new Error(`Studio ${response.status} /api/deploy/upload: ${result.error||t('发布版本上传失败')}`);
      deploymentLog.value.push(t('发布版本已上传，容器正在运行'));
-   } finally { clearInterval(timer); }
+     await waitForDeployment(deployment.deployment_id);
+   } finally {}
+}
+async function waitForDeployment(deploymentId){
+  const deadline=Date.now()+15*60*1000;
+  while(Date.now()<deadline){
+    await new Promise(resolve=>setTimeout(resolve,1500));
+    const latest=await api('deploy/status/'+deploymentId);
+    updateDeploymentSnapshot(latest); appendDeploymentLogs(latest);
+    if(['deployed','unhealthy','stopped'].includes(latest.status)){
+      if(latest.status==='unhealthy') throw new Error(latest.error?.message || 'BYOC Agent deployment failed');
+      return latest;
+    }
+  }
+  throw new Error('Timed out waiting for BYOC Agent deployment');
 }
 async function createCloudDeployment(){
   let server;
@@ -258,14 +270,12 @@ async function uploadCloudRelease(){
   const server=deploymentServers.value.find(item=>item.id===selectedServerId.value), deployment=server?.deployment; if(!deployment) throw new Error(t('请先创建部署'));
  await perform(async()=>{
    deploymentLog.value.push(t('正在打包并上传发布版本'));
-   const pollLogs=async()=>{ try{ const latest=await api('deploy/status/'+deployment.deployment_id); appendDeploymentLogs(latest); }catch{} };
-   const timer=setInterval(pollLogs,1500);
    try{
      const response=await fetch('/api/deploy/upload',{method:'POST',headers:{Authorization:'Bearer '+credential,'X-Deployment-Id':deployment.deployment_id,'X-Release-Id':'1.0.0','X-Mps-Id':deploymentMpsId.value.trim()}});
      const result=await response.json(); appendDeploymentLogs(result);
      if(!response.ok) throw new Error(`Studio ${response.status} /api/deploy/upload: ${result.error||t('发布版本上传失败')}`);
-     deploymentLog.value.push(t('发布版本已上传，容器正在运行')); await refreshDeploymentServers(); notify(t('部署正在运行。'));
-   } finally { clearInterval(timer); }
+     deploymentLog.value.push(t('发布版本已上传，容器正在运行')); await waitForDeployment(deployment.deployment_id); await refreshDeploymentServers(); notify(t('部署正在运行。'));
+   } finally {}
  });
 }
 async function queryCloudDeployment(){ const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server?.deployment) return; await perform(async()=>{ const result=await api('deploy/status/'+server.deployment.deployment_id); appendDeploymentLogs(result); deploymentLog.value.push(t('状态已查询：{0}',[result.status])); await refreshDeploymentServers(); }); }
