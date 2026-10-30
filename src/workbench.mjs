@@ -26,6 +26,13 @@ function buildByocCommands(result, fallbackControlUrl) {
   const cleanup_command = `sudo systemctl disable --now pixelmug-agent 2>/dev/null || true; sudo rm -f /etc/systemd/system/pixelmug-agent.service /opt/pixelmug-agent/pixelmug-agent.mjs /var/lib/pixelmug-agent/agent-token; sudo systemctl daemon-reload`;
   return { command, check_command, cleanup_command };
 }
+function buildByocUtilityCommands(fallbackControlUrl) {
+  const control = String(fallbackControlUrl || '').replace(/\/$/, '');
+  return {
+    check_command: `systemctl is-active --quiet pixelmug-agent && echo 'PixelMug Agent service is running' || echo 'PixelMug Agent service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-agent -n 30 --no-pager`,
+    cleanup_command: 'sudo systemctl disable --now pixelmug-agent 2>/dev/null || true; sudo rm -f /etc/systemd/system/pixelmug-agent.service /opt/pixelmug-agent/pixelmug-agent.mjs /var/lib/pixelmug-agent/agent-token; sudo systemctl daemon-reload',
+  };
+}
 
 export async function startWorkbench(options = {}) {
   const deploymentServiceUrl = String(options.deploymentServiceUrl || process.env.STUDIO_DEPLOYMENT_SERVICE_URL || 'http://127.0.0.1:8788').replace(/\/$/, '');
@@ -178,7 +185,8 @@ export async function startWorkbench(options = {}) {
           return reply(res, 200, { path, parent: dirname(path), directories, drives });
         }
         if (req.method === 'GET' && url.pathname === '/api/deploy/servers') {
-          return reply(res, 200, await deploymentRequest('/api/cloud/nodes'));
+          const result = await deploymentRequest('/api/cloud/nodes');
+          return reply(res, 200, { ...result, nodes: (result.nodes || []).map(node => node.kind === 'byoc' ? { ...node, ...buildByocUtilityCommands(deploymentServiceUrl) } : node) });
         }
         if (req.method === 'POST' && url.pathname === '/api/deploy/byoc/register') {
           if (!creator.session) throw new Error('请先登录冒泡账号');
