@@ -42,7 +42,7 @@ const deploymentTextMap = {
   deployApplication: ['\u90e8\u7f72\u5e94\u7528', 'Deploy application'],
   cloudServers: ['\u6211\u7684\u4e91\u670d\u52a1\u5668', 'My cloud servers'],
   description: ['\u5c06\u5f53\u524d\u5728 Studio \u4e2d\u6253\u5f00\u7684\u9879\u76ee\u90e8\u7f72\u5230\u4e91\u670d\u52a1\u5668\u3002', 'Deploy the project currently open in Studio to an cloud server.'],
-  refresh: ['\u5237\u65b0', 'Refresh'], applyServer: ['\u7533\u8bf7\u670d\u52a1\u5668', 'Apply server'],
+  refresh: ['\u5237\u65b0', 'Refresh'],
   management: ['\u90e8\u7f72\u7ba1\u7406', 'Deployment management'], currentProject: ['\u5f53\u524d\u9879\u76ee', 'Current project'],
   loadProject: ['\u52a0\u8f7d\u9879\u76ee\u4fe1\u606f', 'Load project information'], project: ['\u9879\u76ee', 'Project'],
   deploymentId: ['\u90e8\u7f72 ID', 'Deployment ID'], notCreated: ['\u672a\u521b\u5efa', 'Not created'], notLoaded: ['\u672a\u52a0\u8f7d', 'Not loaded'],
@@ -53,7 +53,6 @@ const deploymentTextMap = {
   mpsPackage: ['\u6b63\u5728\u6253\u5305 MPS', 'Packaging MPS'], mpsUpload: ['\u6b63\u5728\u4e0a\u4f20 MPS', 'Uploading MPS'], mpsUploaded: ['MPS \u5305\u5df2\u4e0a\u4f20', 'MPS package uploaded'],
   cancel: ['\u53d6\u6d88\u90e8\u7f72', 'Cancel deployment'], stop: ['\u505c\u6b62\u90e8\u7f72', 'Stop deployment'], status: ['\u5237\u65b0\u72b6\u6001', 'Refresh status'],
   idle: ['\u7a7a\u95f2', 'Idle'], ready: ['\u53ef\u90e8\u7f72', 'Ready to deploy'], waitingAgent: ['\u7b49\u5f85 Agent \u8fde\u63a5', 'Waiting for Agent'], pending: ['\u7b49\u5f85 Agent \u6ce8\u518c', 'Waiting for Agent'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
-  authCode: ['\u6388\u6743\u7801', 'Authorization code'], serverAccepted: ['\u670d\u52a1\u5668\u7533\u8bf7\u5df2\u901a\u8fc7\u3002', 'Server application accepted.']
 };
 function deployText(key){ const value=deploymentTextMap[key]; return value ? value[language.value==='en'?1:0] : key; }
 let lastRefresh = 0, initialized = false, pollTimer, cooldownTimer, noticeTimer;
@@ -159,10 +158,6 @@ async function refreshDeploymentServers(){
   try { const result=await api('deploy/servers'); deploymentServers.value=result.nodes||[]; if(selectedServerId.value&&!deploymentServers.value.some(server=>server.id===selectedServerId.value)) selectedServerId.value=null; }
   catch(error){ notify(error.message,true); }
   finally { deploymentBusy.value=false; }
-}
-async function applyDeploymentServer(){
-  const authCode=window.prompt(deployText('authCode')); if(authCode===null) return;
-  await perform(async()=>{ await api('deploy/apply',{auth_code:authCode}); await refreshDeploymentServers(); notify(deployText('serverAccepted')); });
 }
 async function connectByocServer(){
   const label=window.prompt(language.value==='en'?'Name this VPS':'给这台 VPS 起个名字','My VPS'); if(label===null) return;
@@ -541,8 +536,8 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
       </section>
 
        <section v-show="activeSection==='deploy'" class="section-page deploy-page">
-         <div class="section-intro deployment-section-intro-v2"><div><span class="eyebrow">{{ deployText('deployApplication') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ deployText('cloudServers') }}</h2><p>{{ deployText('description') }}</p></div><div class="actions"><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ deployText('applyServer') }}</button><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
-         <div class="section-intro"><div><span class="eyebrow">{{ t('部署应用') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ t('云服务器') }}</h2><p>{{ t('将当前在 Studio 中打开的项目部署到云服务器。') }}</p></div><div class="actions"><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ t('申请服务器') }}</button><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
+         <div class="section-intro deployment-section-intro-v2"><div><span class="eyebrow">{{ deployText('deployApplication') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ deployText('cloudServers') }}</h2><p>{{ deployText('description') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
+         <div class="section-intro"><div><span class="eyebrow">{{ t('部署应用') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ t('云服务器') }}</h2><p>{{ t('将当前在 Studio 中打开的项目部署到云服务器。') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
          <div class="deployment-redesign">
            <div v-if="selectedDeploymentServer?.deployment" class="deployment-id-strip"><span>Deployment ID</span>: <strong>{{ selectedDeploymentServer.deployment.deployment_id }}</strong></div>
            <div v-if="!selectedDeploymentServer" class="server-card-grid"><button v-for="server in deploymentServers" :key="server.id" type="button" class="server-card" :class="{selected:selectedServerId===server.id}" @click="selectDeploymentServer(server)"><span class="server-cloud-art"><img :src="cloudServerIcon" alt=""></span><span class="server-card-main"><strong>{{ server.label || server.hostname || server.id }}</strong><span class="server-state"><i :class="server.deployment?.status || server.status"></i>{{ serverStatusLabel(server) }}</span><span v-if="server.deployment" class="server-card-summary"><small>Project: {{ server.deployment.project_id }}</small><small>Deploy ID: {{ server.deployment.deployment_id }}</small><small>Bot: {{ server.deployment.bot_name || '—' }}</small><small>MPS: {{ server.deployment.mps_name || '—' }} · {{ server.deployment.mps_version || '—' }} · {{ server.deployment.mps_id || '—' }}</small></span></span><span class="server-validity">Validity remaining: —</span></button><p v-if="!deploymentServers.length" class="empty">No server is connected.</p></div>
