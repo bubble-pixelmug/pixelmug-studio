@@ -51,7 +51,7 @@ const deploymentTextMap = {
   deploy: ['\u90e8\u7f72', 'Deploy application'], retry: ['\u91cd\u8bd5\u90e8\u7f72', 'Retry deployment'],
   mpsPackage: ['\u6b63\u5728\u6253\u5305 MPS', 'Packaging MPS'], mpsUpload: ['\u6b63\u5728\u4e0a\u4f20 MPS', 'Uploading MPS'], mpsUploaded: ['MPS \u5305\u5df2\u4e0a\u4f20', 'MPS package uploaded'],
   cancel: ['\u53d6\u6d88\u90e8\u7f72', 'Cancel deployment'], stop: ['\u505c\u6b62\u90e8\u7f72', 'Stop deployment'], status: ['\u5237\u65b0\u72b6\u6001', 'Refresh status'],
-  idle: ['\u7a7a\u95f2', 'Idle'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
+  idle: ['\u7a7a\u95f2', 'Idle'], pending: ['\u7b49\u5f85 Agent \u6ce8\u518c', 'Waiting for Agent'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
   authCode: ['\u6388\u6743\u7801', 'Authorization code'], serverAccepted: ['\u670d\u52a1\u5668\u7533\u8bf7\u5df2\u901a\u8fc7\u3002', 'Server application accepted.']
 };
 function deployText(key){ const value=deploymentTextMap[key]; return value ? value[language.value==='en'?1:0] : key; }
@@ -165,7 +165,7 @@ async function applyDeploymentServer(){
 }
 async function connectByocServer(){
   const label=window.prompt(language.value==='en'?'Name this VPS':'给这台 VPS 起个名字','My VPS'); if(label===null) return;
-  await perform(async()=>{ byocSetup.value=await api('deploy/byoc/register',{label}); notify(language.value==='en'?'Registration command generated.':'已生成注册命令，请在你的 VPS 终端执行。'); });
+  await perform(async()=>{ byocSetup.value=await api('deploy/byoc/register',{label}); await refreshDeploymentServers(); notify(language.value==='en'?'Registration command generated.':'已生成注册命令，请在你的 VPS 终端执行。'); });
 }
 function selectDeploymentServer(server){ selectedServerId.value=server.id; deploymentMpsId.value=server.deployment?.mps_id||''; const savedBotId=server.deployment?.deployment_id ? sessionStorage.getItem(`pixelmug-deploy-bot:${server.deployment.deployment_id}`) : ''; deploymentBotId.value=server.deployment?.bot_id||savedBotId||state.value?.runtimeConfig?.botId||''; deploymentProjectInfo.value=server.deployment ? { project_id:server.deployment.project_id, mps:server.deployment.mps_id ? {name:server.deployment.mps_name,version:server.deployment.mps_version} : null } : null; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); void syncDeploymentMetadata(server).catch(error=>deploymentLog.value.push(`Metadata update failed: ${error.message}`)); }
 async function syncDeploymentMetadata(server){
@@ -178,7 +178,7 @@ async function syncDeploymentMetadata(server){
   deploymentProjectInfo.value=info;
 }
 function backToDeploymentServers(){ selectedServerId.value=null; deploymentProjectInfo.value=null; deploymentMpsId.value=''; deploymentBotId.value=''; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); }
-function deploymentStatusLabel(status){ return deployText(status==='deployed'?'deployed':status==='deploying'?'deploying':status==='reserved'?'reserved':'idle'); }
+function deploymentStatusLabel(status){ return deployText(status==='pending'?'pending':status==='deployed'?'deployed':status==='deploying'?'deploying':status==='reserved'?'reserved':'idle'); }
 function appendDeploymentLogs(deployment){
   for(const entry of deployment?.logs||[]){
     const key=`${entry.at}|${entry.message}`;
@@ -511,7 +511,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
 
        <section v-show="activeSection==='deploy'" class="section-page deploy-page">
          <div class="section-intro deployment-section-intro-v2"><div><span class="eyebrow">{{ deployText('deployApplication') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ deployText('cloudServers') }}</h2><p>{{ deployText('description') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="refreshDeploymentServers">{{ deployText('refresh') }}</button><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ deployText('applyServer') }}</button><button :disabled="deploymentBusy||working" @click="connectByocServer">连接已有 VPS</button></div></div>
-         <section v-if="byocSetup" class="card deployment-management"><h3>在你的 VPS 上执行一次安装命令</h3><p>先在腾讯 Lighthouse、Hetzner 或其他 Ubuntu VPS 上登录，再粘贴下面的命令。Agent 注册后，这台服务器会出现在列表中。</p><textarea readonly rows="9" :value="byocSetup.command" @focus="$event.target.select()"></textarea><div class="actions"><button @click="navigator.clipboard?.writeText(byocSetup.command)">复制命令</button><button @click="byocSetup=null">关闭</button></div><p class="subtle">Registration expires: {{ byocSetup.server?.registration_expires_at }}</p></section>
+         <section v-if="byocSetup" class="card byoc-install-card"><div class="section-heading"><div><span class="eyebrow">BYOC VPS</span><h3>Run this one-time install command on your VPS</h3></div><button @click="byocSetup=null">Close</button></div><p>Log in to your Ubuntu VPS, then paste the command below. The server will appear in the list after the Agent registers.</p><textarea readonly rows="9" :value="byocSetup.command" @focus="$event.target.select()"></textarea><div class="actions"><button class="primary" @click="navigator.clipboard?.writeText(byocSetup.command)">Copy install command</button></div><p class="subtle">Registration expires: {{ byocSetup.server?.registration_expires_at }}</p></section>
          <div class="section-intro"><div><span class="eyebrow">{{ t('部署应用') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ t('云服务器') }}</h2><p>{{ t('将当前在 Studio 中打开的项目部署到云服务器。') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="refreshDeploymentServers">{{ t('刷新') }}</button><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ t('申请服务器') }}</button><button :disabled="deploymentBusy||working" @click="connectByocServer">连接已有 VPS</button></div></div>
          <div class="deployment-redesign">
            <div v-if="selectedDeploymentServer?.deployment" class="deployment-id-strip"><span>Deployment ID</span>: <strong>{{ selectedDeploymentServer.deployment.deployment_id }}</strong></div>

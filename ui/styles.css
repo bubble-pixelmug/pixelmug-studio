@@ -253,6 +253,11 @@ dialog{width:min(720px,calc(100vw - 36px));border:1px solid var(--border);border
 .deployment-redesign:has(.deployment-management) .deployment-console{display:block}
 .deployment-id-strip{display:none}
 .deployment-management{display:none}
+.byoc-install-card{display:block;position:relative;padding:22px 26px;margin-bottom:18px;border:2px solid #55c9dd;background:#f7fcff;box-shadow:0 8px 24px rgba(36,148,202,.14)}
+.byoc-install-card .section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.byoc-install-card h3{margin:4px 0 0;color:#173762;font-size:20px}
+.byoc-install-card textarea{display:block;width:100%;box-sizing:border-box;margin:14px 0;padding:14px;border:1px solid #c9d8e8;border-radius:8px;background:#101820;color:#d9e7f5;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
+.byoc-install-card .actions{display:flex;gap:10px}
 .deployment-management-v2{display:block;padding:20px 28px 22px}
 .deploy-page>.section-intro:not(.deployment-section-intro-v2){display:none}
 .deployment-management-v2{display:none}
