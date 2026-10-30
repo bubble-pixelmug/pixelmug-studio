@@ -200,6 +200,10 @@ export async function startWorkbench(options = {}) {
           const body = await bodyOf(req);
           return reply(res, 200, await deploymentRequest('/api/cloud/servers/apply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
         }
+        const deleteByocMatch = url.pathname.match(/^\/api\/deploy\/byoc\/([^/]+)\/delete$/);
+        if (req.method === 'POST' && deleteByocMatch) {
+          return reply(res, 200, await deploymentRequest(`/api/cloud/servers/${encodeURIComponent(deleteByocMatch[1])}/delete`, { method: 'POST' }));
+        }
         const deploymentMetadataMatch = url.pathname.match(/^\/api\/deploy\/metadata\/([^/]+)$/);
         if (req.method === 'POST' && deploymentMetadataMatch) {
           const body = await bodyOf(req);
