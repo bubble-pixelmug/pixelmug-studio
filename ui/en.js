@@ -340,7 +340,7 @@
   "部署应用": "Deploy application",
   "部署到云端": "Deploy to cloud",
   "云服务器": "My cloud servers",
-  "将当前在 Studio 中打开的项目部署到云服务器。": "Deploy the project currently open in Studio to an cloud server.",
+  "将当前在 Studio 中打开的项目部署到云服务器。": "Deploy the project currently open in Studio to a cloud server.",
   "刷新": "Refresh",
   "部署管理": "Deployment management",
   "当前项目": "Current project",
