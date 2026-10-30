@@ -35,6 +35,7 @@ const botEntry = ref(''), autoRunMpy = ref(false), botApi = ref('');
 const directory = ref(null), directoryDialog = ref(null);
 const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
 const byocSetup = ref(null), byocRegistrations = ref({}), byocCleanupServer = ref(null), byocCommandView = ref('install');
+const byocClock = ref(Date.now());
 const deploymentRemoteLogKeys = new Set();
 const deploymentLogElement = ref(null);
 const deploymentTextMap = {
@@ -197,6 +198,7 @@ function serverStatusLabel(server){ if(server?.kind==='byoc' && !server.online) 
 function byocCleanupCommandFor(server){ return byocRegistrations.value[server?.id]?.cleanup_command || server?.cleanup_command || 'sudo systemctl disable --now pixelmug-agent 2>/dev/null || true; sudo rm -f /etc/systemd/system/pixelmug-agent.service /opt/pixelmug-agent/pixelmug-agent.mjs /var/lib/pixelmug-agent/agent-token; sudo systemctl daemon-reload'; }
 function byocCommandFor(server){ const registration=byocRegistrations.value[server?.id]||{}; return byocCommandView.value==='check' ? registration.check_command || server?.check_command || 'Connection check command is not available in this Studio session.' : byocCommandView.value==='cleanup' ? registration.cleanup_command || server?.cleanup_command || byocCleanupCommandFor(server) : registration.command || 'The install command is only available in the Studio session that created this VPS connection.'; }
 function byocCommandDescription(){ return byocCommandView.value==='check' ? 'Run this command on the VPS to verify that the Agent service is running, the control URL is reachable, and recent Agent logs contain a successful connection.' : byocCommandView.value==='cleanup' ? 'Run this command on the VPS after deleting it from Studio. It stops and removes the PixelMug Agent service, program files, and persistent Agent token.' : 'Buy a lightweight VPS from Hetzner, Tencent Lighthouse, or another provider, make sure it has a public IP, then log in to that machine and run this command. It installs the Agent and registers this VPS with Studio. The embedded registration token is single use and expires after 30 minutes; a long-lived Agent token is saved on the VPS after registration.'; }
+function byocInstallExpiryLabel(server){ if(byocCommandView.value!=='install' || !server?.registration_expires_at) return ''; const seconds=Math.max(0,Math.ceil((Date.parse(server.registration_expires_at)-byocClock.value)/1000)); if(!seconds) return 'Install command expired'; const minutes=Math.floor(seconds/60), remaining=seconds%60; return `Install command expires after ${minutes ? `${minutes}m ` : ''}${remaining}s`; }
 function canDeleteByoc(server){ return Boolean(server?.kind==='byoc' && !(server.online && (server.deployment || ['reserved','deploying'].includes(server.status)))); }
 function appendDeploymentLogs(deployment){
   for(const entry of deployment?.logs||[]){
@@ -488,7 +490,7 @@ onMounted(async()=>{
   if(!credential) notify(t('请使用启动终端提供的完整 Studio 地址打开页面。'),true);
   await pollOnce();
   pollTimer=setInterval(async()=>{ await pollOnce(); if(state.value?.user&&!working.value&&Date.now()-lastRefresh>15000){ lastRefresh=Date.now(); try{ await refreshDevices(); }catch(error){ notify(error.message,true); } } },1000);
-  cooldownTimer=setInterval(()=>{ if(cooldown.value>0) cooldown.value--; },1000);
+  cooldownTimer=setInterval(()=>{ if(cooldown.value>0) cooldown.value--; byocClock.value=Date.now(); },1000);
 });
 onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); clearTimeout(noticeTimer); });
 </script>
@@ -570,7 +572,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
                  <textarea readonly rows="9" :value="byocCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
                  <p v-if="selectedDeploymentServer.online && byocCommandView==='install'" class="byoc-warning">Already connected — you do not need to run this install command.</p>
                  <div class="actions"><button :class="{primary:byocCommandView==='install'}" :disabled="deploymentBusy||working" @click="refreshByocConnection(selectedDeploymentServer)">Refresh install command</button><button :class="{primary:byocCommandView==='check'}" @click="byocCommandView='check'">Check connection command</button><button class="danger" :disabled="deploymentBusy||working||!canDeleteByoc(selectedDeploymentServer)" @click="deleteByocServer(selectedDeploymentServer)">Delete VPS</button></div>
-                 <p class="subtle">Connection command expires: {{ selectedDeploymentServer.registration_expires_at || 'Already connected; no registration command is required.' }}</p>
+                 <p v-if="byocInstallExpiryLabel(selectedDeploymentServer)" class="subtle">{{ byocInstallExpiryLabel(selectedDeploymentServer) }}</p>
                </div>
              </section>
              <section v-if="!byocCleanupServer" class="card deployment-management-v3">
