@@ -1,7 +1,7 @@
 {
   "name": "motion-tilt-level",
   "version": "1.0.0",
-  "description": "使用 G-sensor 加速度显示倾斜水平仪",
+  "description": "Display a tilt level using G-sensor acceleration",
   "dependencies": [
     {
       "name": "micropyxel",

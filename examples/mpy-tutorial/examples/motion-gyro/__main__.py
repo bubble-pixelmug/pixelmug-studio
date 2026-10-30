@@ -1,8 +1,9 @@
-# G-sensor 三轴角速度示例。
-# X、Y、Z 三个轴分别显示在三页中；单击 PixelMug 底部触摸区域切换页面。
-# 每页中线右侧表示正角速度，左侧表示负角速度，色条长度表示角速度大小。
-# 采用较强的平滑滤波和 500°/s 显示量程，让动效变化更缓慢、稳定。
-# 展示 API：get_gyro()；返回单位为度每秒（°/s）。
+# G-sensor three-axis angular velocity example.
+# The X, Y, and Z axes are shown on separate pages; click the PixelMug bottom touch area to switch pages.
+# On each page, the right side of the center line represents positive angular velocity and the left side negative;
+# the bar length represents the angular velocity magnitude.
+# Strong smoothing and a 500°/s display range make the animation slower and more stable.
+# Demonstrates get_gyro(), which returns values in degrees per second (°/s).
 
 import time
 import g_sensor
@@ -57,14 +58,14 @@ def main():
         def update(rt):
             nonlocal page
 
-            # 取完当前积压的触摸事件。每次 click 切换到下一个轴。
+            # Drain pending touch events. Each click switches to the next axis.
             while True:
                 button_event = mpy_button.get()
                 if button_event is None:
                     break
                 if button_event == "click":
                     page = (page + 1) % 3
-                    print("当前显示 {} 轴角速度".format(AXIS_NAMES[page]))
+                    print("Showing {}-axis angular velocity".format(AXIS_NAMES[page]))
 
             gx, gy, gz = g_sensor.get_gyro()
             samples = (gx, gy, gz)
@@ -82,7 +83,7 @@ def main():
             label_x = (rt.width - rt.DEFAULT_FONT_WIDTH) // 2
             rt.text(label_x, 0, name, color)
 
-            # 中线是零点；正角速度向右，负角速度向左。
+            # The center line is zero; positive angular velocity points right and negative points left.
             rt.line(BAR_CENTER, 5, BAR_CENTER, 12, 7)
             length = int(
                 clamp(value / MAX_DISPLAY_DPS, -1.0, 1.0)
@@ -99,13 +100,13 @@ def main():
                     color,
                 )
 
-            # 底部三个点表示页码，当前轴对应的点使用轴颜色。
+            # The three dots at the bottom show the page; the current axis uses its axis color.
             for index in range(3):
                 dot_color = color if index == page else 5
                 rt.pset(14 + index * 2, 14, dot_color)
 
-        print("三轴角速度显示开始：当前显示 X 轴")
-        print("单击底部触摸区域，在 X、Y、Z 页面之间切换")
+        print("Three-axis angular velocity display started: showing the X axis")
+        print("Click the bottom touch area to switch between the X, Y, and Z pages")
         upyxel.run(update, draw, fps=FPS)
     finally:
         mpy_button.clear()

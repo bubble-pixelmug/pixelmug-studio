@@ -1,7 +1,7 @@
 {
   "name": "upyxel-animation",
   "version": "1.0.0",
-  "description": "MicroPyxel小球碰边反弹动画",
+  "description": "MicroPyxel bouncing ball animation",
   "dependencies": [
     {
       "name": "micropyxel",

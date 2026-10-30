@@ -1,7 +1,7 @@
 {
   "name": "network-wss-btc",
   "version": "1.0.0",
-  "description": "通过安全 WebSocket 订阅 BTC/USD 行情并显示最新价格",
+  "description": "Secure WebSocket BTC/USD ticker display",
   "dependencies": [
     {
       "name": "micropyxel",

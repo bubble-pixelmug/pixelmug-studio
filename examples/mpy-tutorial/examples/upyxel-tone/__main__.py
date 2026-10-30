@@ -1,7 +1,6 @@
-# MicroPyxel Tone API 示例：比较自定义波表、采样位数和两种噪声音色。
-# 展示 API：tones()、get_mode()/set_mode()、get_sample_bits()/set_sample_bits()、
-# get_gain()/set_gain()、get_wavetable()、len()、to_list() 和 from_list()。
-# 波表与噪声是两个测试阶段，阶段之间静音 2 秒。
+# MicroPyxel Tone API example.
+# Compares custom wavetables, sample bit depth, gain, and noise modes.
+# The demo runs through two waveform tests and two noise tests with a quiet gap between phases.
 
 import time
 
@@ -44,12 +43,12 @@ def main():
             with_opus_decoder=False,
         )
         audio_inited = True
-        audio.configure(output_volume=100)
+        audio.configure(output_volume=80)
 
         upyxel.init(start_audio=True)
         upyxel_inited = True
 
-        # 这段旋律中的 "t" 使用全局 Tone 0。
+        # The "t" waveform in this melody uses global Tone 0.
         upyxel.sounds(0).set(
             "c2e2g2c3",
             "t",
@@ -96,7 +95,7 @@ def main():
             restart_sound()
             title = "WAVE 4B"
             value_text = "DEFAULT"
-            print_tone("默认波表：")
+            print_tone("Default wavetable:")
 
         def play_saw():
             nonlocal title, value_text
@@ -107,7 +106,7 @@ def main():
             restart_sound()
             title = "WAVE 4B"
             value_text = "SAW"
-            print_tone("4-bit 锯齿波：")
+            print_tone("4-bit sawtooth wave:")
 
         def play_step():
             nonlocal title, value_text
@@ -118,7 +117,7 @@ def main():
             restart_sound()
             title = "WAVE 2B"
             value_text = "STEP"
-            print_tone("2-bit 阶梯波：")
+            print_tone("2-bit step wave:")
 
         def play_noise(mode, label):
             nonlocal title, value_text
@@ -127,7 +126,7 @@ def main():
             restart_sound()
             title = "NOISE"
             value_text = label
-            print_tone(label + " 噪声：")
+            print_tone(label + " noise:")
 
         test_started = None
         step = 0
@@ -158,7 +157,7 @@ def main():
                 step = 3
                 title = "NOISE"
                 value_text = "NEXT"
-                print("波表测试结束，静音 2 秒")
+                print("Wavetable test finished; quiet for 2 seconds")
             elif step == 3 and elapsed >= PHASE_GAP_MS:
                 test_started = now
                 step = 4
@@ -179,9 +178,9 @@ def main():
             rt.text(0, 0, title, color)
             rt.text(0, 8, value_text, color)
 
-        print("MicroPyxel Tone API 演示开始")
+        print("MicroPyxel Tone API demo started")
         upyxel.run(update, draw, fps=FPS)
-        print("MicroPyxel Tone API 演示结束")
+        print("MicroPyxel Tone API demo finished")
     finally:
         if channel is not None:
             try:

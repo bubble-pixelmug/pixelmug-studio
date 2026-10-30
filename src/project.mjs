@@ -7,6 +7,11 @@ const BOT_ENTRY_CANDIDATES = [
   "bot/bot.js", "bot/bot.mjs", "bot/bot.cjs",
 ];
 
+function parseJson(bytes) {
+  const text = typeof bytes === "string" ? bytes : new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  return JSON.parse(text.replace(/^\uFEFF/, ""));
+}
+
 function isInside(root, target) {
   const value = relative(root, target);
   return value !== "" && !value.startsWith("..") && !isAbsolute(value);
@@ -56,7 +61,7 @@ async function readProjectPackage(root) {
     throw new Error("项目必须提供 package.json");
   }
   let manifest;
-  try { manifest = JSON.parse(await readFile(packagePath, "utf8")); }
+  try { manifest = parseJson(await readFile(packagePath)); }
   catch { throw new Error("package.json 不是合法的 JSON"); }
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw new Error("package.json 必须是 JSON 对象");
   if (typeof manifest.name !== "string" || !manifest.name.trim()) throw new Error("package.json 必须包含非空的 name 字段");
@@ -74,7 +79,7 @@ export async function inspectProject(path) {
     await requiredFile(root, mpy, "__main__.py");
     const manifestPath = await requiredFile(root, mpy, "mps.json");
     let manifest;
-    try { manifest = JSON.parse(await readFile(manifestPath, "utf8")); }
+    try { manifest = parseJson(await readFile(manifestPath)); }
     catch { throw new Error("mpy/mps.json 不是合法的 JSON"); }
     if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw new Error("mpy/mps.json 必须是 JSON 对象");
   }

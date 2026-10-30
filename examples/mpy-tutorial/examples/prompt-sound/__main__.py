@@ -1,8 +1,8 @@
-# 提示音播放器示例：使用触摸触发可互相打断的 Ogg Opus 提示音。
-# 第一次按下触摸区域会生成一个向上漂浮的泡泡，并播放 bubble-create-optimized.ogg。
-# 泡泡离开屏幕前再次按下会戳破泡泡，并播放 bubble-pop-optimized.ogg。
-# 新提示音会打断尚未结束的上一个提示音。
-# 替换资源应为 48 kHz、单声道、固定 60 ms 包的 Ogg Opus 文件。
+# Prompt sound player example: use touch input to trigger interruptible Ogg Opus sounds.
+# The first press creates a bubble that floats upward and plays bubble-create.ogg.
+# Press again before the bubble leaves the screen to pop it and play bubble-pop.ogg.
+# A new prompt sound interrupts the previous sound when necessary.
+# Replacement assets should be 48 kHz, mono, fixed 60 ms packet Ogg Opus files.
 
 import random
 
@@ -48,8 +48,7 @@ def main():
     def play_sound(path):
         interrupt = sound.is_playing()
         if not sound.play(path, interrupt=interrupt):
-            print("播放失败：", path, sound.last_error)
-
+            print("Playback failed:", path, sound.last_error)
 
     def create_bubble(rt):
         nonlocal bubble, burst
@@ -63,7 +62,7 @@ def main():
         }
         burst = None
         play_sound(CREATE_SOUND)
-        print("生成泡泡，半径：", radius)
+        print("Bubble created, radius:", radius)
 
     def pop_bubble():
         nonlocal bubble, burst
@@ -75,7 +74,7 @@ def main():
         }
         bubble = None
         play_sound(POP_SOUND)
-        print("泡泡破裂")
+        print("Bubble popped")
 
     def update_bubble(rt):
         nonlocal bubble, burst
@@ -138,7 +137,7 @@ def main():
     sound.preload_many((CREATE_SOUND, POP_SOUND))
 
     try:
-        print("提示音示例开始：按下触摸区域生成或戳破泡泡")
+        print("Prompt sound demo started: tap the button to create or pop a bubble")
         upyxel.run(update, draw, fps=FPS)
     finally:
         sound.deinit()

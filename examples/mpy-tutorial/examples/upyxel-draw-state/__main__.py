@@ -1,8 +1,8 @@
-﻿# MicroPyxel 绘图状态示例：分两段展示裁剪窗口和相机滚动。
-# 展示 API：clip(x, y, w, h)、clip()、camera(x, y)、camera()。
-# 第 1 段让彩色图案穿过固定裁剪框，框外部分不会被绘制。
-# 第 2 段让小球在较宽的场景中移动，相机跟随后背景向左滚动。
-# clip 和 camera 会持续影响后续绘图，使用后应调用无参数形式恢复默认状态。
+# MicroPyxel drawing state example: demonstrate clipping and camera scrolling in two phases.
+# Demonstrates clip(x, y, w, h), clip(), camera(x, y), and camera().
+# Phase 1 moves a colorful pattern through a fixed clipping window; pixels outside the window are hidden.
+# Phase 2 moves a ball through a wider scene while the camera follows it and scrolls the background.
+# clip and camera continue to affect later drawing, so call their no-argument forms to restore defaults.
 
 import micropyxel as upyxel
 
@@ -23,14 +23,14 @@ WORLD_WIDTH = 64
 
 
 def draw_pattern(rt, x, y):
-    # 6×6 彩色图案，便于观察进入和离开裁剪区的过程。
+    # A 6x6 color pattern makes movement into and out of the clipping area easy to see.
     rt.rect(x, y, 6, 6, 12)
     rt.rect(x + 1, y + 1, 4, 4, 10)
     rt.rect(x + 2, y + 2, 2, 2, 8)
 
 
 def draw_world(rt):
-    # 重复的彩色柱子构成宽于屏幕的场景，滚动时更容易观察相机运动。
+    # Repeated colored pillars form a scene wider than the screen, making camera movement visible.
     rt.line(0, 14, WORLD_WIDTH - 1, 14, 6)
     for x in range(0, WORLD_WIDTH, 8):
         height = 3 + (x // 8 % 3) * 2
@@ -49,16 +49,16 @@ def main():
             phase = 0 if rt.frame_count < CLIP_FRAMES else 1
             if phase != shown_phase:
                 if phase == 0:
-                    print("阶段 1：clip 裁剪窗口")
+                    print("Phase 1: clipping window")
                 else:
-                    print("阶段 2：camera 跟随移动")
+                    print("Phase 2: camera follows the moving ball")
                 shown_phase = phase
 
             if rt.frame_count >= TOTAL_FRAMES:
                 rt.quit()
 
         def draw(rt):
-            # 每帧先恢复默认状态，避免上一段的绘图状态影响下一段。
+            # Restore defaults each frame so one phase cannot affect the other.
             upyxel.clip()
             upyxel.camera()
             rt.cls(0)
@@ -71,7 +71,7 @@ def main():
                 draw_pattern(rt, pattern_x, 5)
                 upyxel.clip()
 
-                # 裁剪框在恢复全屏裁剪后绘制，因此始终完整可见。
+                # Draw the clipping frame after restoring the full-screen clip so it remains complete.
                 rt.rectb(CLIP_X, CLIP_Y, CLIP_WIDTH, CLIP_HEIGHT, 7)
                 return
 
@@ -88,12 +88,12 @@ def main():
             rt.circ(ball_x, 10, 2, 10)
             upyxel.camera()
 
-            # 屏幕边框不受相机影响，用来强调相机只移动场景坐标。
+            # The screen border is unaffected by the camera, emphasizing that only the scene moves.
             rt.rectb(0, 0, rt.width, rt.height, 7)
 
-        print("绘图状态演示开始")
+        print("Drawing state demo started")
         upyxel.run(update, draw, fps=FPS)
-        print("绘图状态演示结束")
+        print("Drawing state demo finished")
     finally:
         upyxel.clip()
         upyxel.camera()

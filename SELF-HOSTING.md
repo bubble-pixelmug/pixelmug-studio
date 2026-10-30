@@ -184,7 +184,8 @@ STUDIO_MPS_VERSION=<mps.json version>
 ```json
 {
   "name": "pixel_text",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "dependencies": []
 }
 ```
 

@@ -1,7 +1,7 @@
-# Network HTTP 下载示例：通过 HTTPS 流式下载 64 KiB 文件并保存到设备。
-# 展示 API：response.raw.readinto、固定缓冲区写文件以及 response.close。
-# 整个响应不会一次载入 MicroPython 堆；每次最多读取 1 KiB。
-# 下载完成后同时校验累计字节数和 download.bin 的实际文件大小。
+# Network HTTP download example: stream a 64 KiB file over HTTPS and save it to the device.
+# Demonstrates response.raw.readinto, writing with a fixed buffer, and response.close.
+# The complete response is never loaded into the MicroPython heap; each read is at most 1 KiB.
+# After downloading, verify both the accumulated byte count and the actual size of download.bin.
 
 import os
 import time

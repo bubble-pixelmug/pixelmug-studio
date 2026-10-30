@@ -1,17 +1,17 @@
-# BLE Simple 运动数据示例
+# BLE Simple Motion
 
-这个示例通过 BLE 高速数据通道，把 PixelMug 的加速度和角速度实时发送到 WebApp。
+This example sends a PixelMug's acceleration and angular velocity to a WebApp in real time over the BLE Simple data channel.
 
-WebApp 只包含连接按钮和六个实时变化的数值：
+The WebApp provides MPY installation, a Bluetooth connection button, and six live values:
 
-- `ax`、`ay`、`az`：三轴加速度，单位为 `g`
-- `gx`、`gy`、`gz`：三轴角速度，单位为 `°/s`
+- `ax`, `ay`, `az`: three-axis acceleration in `g`
+- `gx`, `gy`, `gz`: three-axis angular velocity in `°/s`
 
-## 数据格式
+## Data format
 
-设备端每隔 40 ms 读取一次 G-sensor，并使用 `send_simple_raw()` 发送一个 24 字节的数据包。数据包由六个小端序 `float32` 组成：
+The device reads the G-sensor every 40 ms and sends a 24-byte packet with `send_simple_raw()`. The packet contains six little-endian `float32` values:
 
-| 字节偏移 | 数据 | 单位 |
+| Byte offset | Data | Unit |
 | --- | --- | --- |
 | 0 | `ax` | `g` |
 | 4 | `ay` | `g` |
@@ -20,14 +20,14 @@ WebApp 只包含连接按钮和六个实时变化的数值：
 | 16 | `gy` | `°/s` |
 | 20 | `gz` | `°/s` |
 
-设备端把六个数值编码为 RAW 数据：
+The device encodes the six values as RAW data:
 
 ```python
 packet = struct.pack("<6f", ax, ay, az, gx, gy, gz)
 ble.send_simple_raw(packet)
 ```
 
-WebApp 通过 `simpleData` 接收数据，再按相同顺序解析：
+The WebApp receives the data through `simpleData` and parses the values in the same order:
 
 ```js
 ble.on('simpleData', (data) => {
@@ -48,13 +48,13 @@ ble.on('simpleData', (data) => {
 })
 ```
 
-`true` 表示按小端序读取，与设备端的 `<6f` 对应。运动数据具有实时性；如果发送队列忙，本例直接丢弃当前采样，不会稍后重发旧数据。
+`true` selects little-endian decoding, matching the device-side `<6f`. Motion data is real time; if the send queue is busy, this example drops the current sample instead of retransmitting stale data later.
 
-## 运行示例
+## Run
 
-1. 发布 `bot` 和 `webapp`。
-2. 把 `mpy` 安装并运行在 PixelMug 上。
-3. 在冒泡 App 中绑定 PixelMug，然后打开 WebApp。
-4. 点击“连接蓝牙”，观察六个数值随 PixelMug 的运动实时变化。
+1. Start the project in Studio and run the Bot and WebApp.
+2. In the Bubble app, bind a PixelMug and open the WebApp.
+3. Select **Install MPY** and wait for the installation to start.
+4. Select **Connect Bluetooth**, then move the PixelMug to watch all six values change.
 
-PixelMug 屏幕会显示当前状态：`WAIT` 表示等待传感器就绪，`DISC` 表示蓝牙未连接，`CONN` 表示蓝牙已连接。
+The WebApp receives the MPS ID and version from the Bot URL and calls `talMpyExecOneScript` before connecting over Bluetooth. The PixelMug display shows `WAIT` while the sensor initializes, `DISC` when Bluetooth is disconnected, and `CONN` after Bluetooth connects.

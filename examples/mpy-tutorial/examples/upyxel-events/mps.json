@@ -1,7 +1,7 @@
-﻿{
+{
   "name": "upyxel-events",
   "version": "1.0.0",
-  "description": "使用触摸按键和MicroPyxel事件控制计数器",
+  "description": "MicroPyxel event-driven counter controlled by a touch button",
   "dependencies": [
     {
       "name": "micropyxel",

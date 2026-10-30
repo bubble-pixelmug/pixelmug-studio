@@ -1,4 +1,4 @@
-﻿"""Dust 粒子控制示例：单击发射粒子，粒子碰到底部后消失。"""
+"""Dust particle control example: click to launch particles that disappear at the bottom."""
 
 import random
 
@@ -20,7 +20,7 @@ dust.set_bound_mode(pixel_dust.PixelDust.BOUND_BOUNCE)
 snapshot = bytearray(CAPACITY * 4)
 
 
-# 屏幕中央的 8x2 障碍物。
+# An 8x2 obstacle in the center of the screen.
 for y in range(10, 12):
     for x in range(12, 20):
         dust.set_obstacle(x, y)
@@ -29,14 +29,14 @@ for x in range(15, 32):
 
 
 def launch_particle():
-    """从左侧发射一个粒子，偶尔在旁边同时发射第二个。"""
+    """Launch one particle from the left, occasionally launching a second beside it."""
     def spawn_one(y):
         vx = random.randint(500, 800)
         vy = random.randint(-100, 100)
         try:
             dust.spawn(0, y, vx, vy, random.randint(8, 15))
         except OSError:
-            # 粒子池暂时已满时，等待已有粒子离场后再发射。
+            # If the particle pool is temporarily full, wait for existing particles to leave before launching.
             pass
 
     spawn_one(4)
@@ -45,7 +45,7 @@ def launch_particle():
 
 
 def remove_bottom_particles():
-    """回收已经到达最底行的粒子。"""
+    """Recycle particles that have reached the bottom row."""
     count = dust.alive_snapshot(snapshot)
     for index in range(count):
         offset = index * 4

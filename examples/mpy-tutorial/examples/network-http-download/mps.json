@@ -1,7 +1,7 @@
 {
   "name": "network-http-download",
   "version": "1.0.0",
-  "description": "使用固定缓冲区通过 HTTPS 流式下载文件",
+  "description": "Stream a file over HTTPS with a fixed-size buffer",
   "dependencies": [
     {
       "name": "micropyxel",

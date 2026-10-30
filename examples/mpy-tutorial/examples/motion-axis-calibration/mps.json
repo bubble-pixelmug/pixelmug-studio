@@ -1,7 +1,7 @@
 {
   "name": "g-sensor-axis-calibration",
   "version": "1.0.0",
-  "description": "标定 G-sensor X、Y、Z 轴与水杯方向的对应关系",
+  "description": "Calibrate the mapping between G-sensor X, Y, and Z axes and mug directions",
   "dependencies": [
     {
       "name": "g_sensor",

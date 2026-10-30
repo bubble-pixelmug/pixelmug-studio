@@ -1,7 +1,7 @@
 {
   "name": "motion-show-axis",
   "version": "1.0.0",
-  "description": "通过实心圆的位置和大小展示 PixelMug 三轴运动交互",
+  "description": "Demonstrate PixelMug three-axis motion with the position and size of a filled circle",
   "dependencies": [
     {
       "name": "micropyxel",

@@ -1,8 +1,8 @@
-# MicroPyxel Music + MML 示例：将四段 MML 声部组织成 Music 并同步播放。
-# 展示 API：Audio Service 初始化、sounds().mml()、musics().set()、playm()、play_pos()、stop()。
-# MML 中包含速度 T、门限 Q、音色 @、音量 V、八度 O、音符长度及附点等写法。
-# 屏幕顶部显示 MMLmusic，下一行显示通道 0～3；黄色表示正在播放。
-# 四个声部循环播放 60 秒后，示例自动停止并释放资源。
+# MicroPyxel Music + MML example: organize four MML parts into a Music and play them together.
+# Demonstrates Audio Service initialization, sounds().mml(), musics().set(), playm(), play_pos(), and stop().
+# The MML uses tempo T, gate Q, instrument @, volume V, octave O, note lengths, dotted notes, and more.
+# The top row displays MMLmusic and the next row displays channels 0-3; yellow means a channel is playing.
+# The four parts loop for 60 seconds, then the example stops and releases its resources.
 
 import time
 
@@ -52,7 +52,7 @@ def setup_music():
     upyxel.sounds(2).mml(c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9 + c10)
     upyxel.sounds(3).mml(d1 + d2 + d3 + d4 + d5 + d6 + d7 + d8 + d9 + d10)
 
-    # Music 的第 1～4 个序列依次映射到通道 0～3。
+    # Map Music sequences 1-4 to channels 0-3.
     upyxel.musics(0).set([0], [1], [2], [3])
 
 
@@ -77,7 +77,7 @@ def main():
 
         started = time.ticks_ms()
         upyxel.playm(0, should_loop=True)
-        print("四声部 MML Music 开始播放，持续 60 秒")
+        print("Four-part MML Music playback started for 60 seconds")
 
         def update(rt):
             if time.ticks_diff(time.ticks_ms(), started) >= DEMO_DURATION_MS:
@@ -91,7 +91,7 @@ def main():
                 rt.text(2 + channel * 8, 8, str(channel), color)
 
         upyxel.run(update, draw, fps=FPS)
-        print("四声部 MML Music 演示结束")
+        print("Four-part MML Music demo finished")
     finally:
         if upyxel_inited:
             try:

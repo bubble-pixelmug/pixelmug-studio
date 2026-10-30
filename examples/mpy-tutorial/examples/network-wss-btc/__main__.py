@@ -1,8 +1,8 @@
-# Network WSS 示例：连接 Kraken 公共行情 WebSocket，在屏幕显示 BTC/USD 最新价格。
-# 展示 API：mps_websocket.ws_connect、send_json、异步消息迭代和连接关闭。
-# 连接使用 wss://，默认验证服务端证书；设备必须已联网且系统 UTC 正确。
-# 连接中断后使用 1、2、4……30 秒的退避时间重连，并在重连后重新订阅。
-# MicroPyxel 仅用于显示价格，不启动声音系统。
+# Network WSS example: connect to the Kraken public market-data WebSocket and display the latest BTC/USD price.
+# Demonstrates mps_websocket.ws_connect, send_json, asynchronous message iteration, and connection closing.
+# The connection uses wss:// and validates the server certificate by default; the device needs network access and a correct UTC clock.
+# After a disconnect, reconnect with 1, 2, 4 ... 30-second backoff delays and resubscribe.
+# MicroPyxel is used only to display the price; the audio system is not started.
 import asyncio
 import errno
 import json
@@ -120,4 +120,4 @@ def main(proxy=None):
         print("[btc] stopped")
 
 
-main(proxy="http://172.16.30.186:7897")  # 可选代理，或 None
+main(proxy="http://172.16.30.186:7897")  # Optional proxy, or None.

@@ -1,4 +1,4 @@
-﻿// Effects adapted for a 32x16 canvas from andzhelo/leds_wall niji.py (MIT).
+// Effects adapted for a 32x16 canvas from andzhelo/leds_wall niji.py (MIT).
 // Each effect owns its animation state and returns one RGB frame per render call.
 
 export const WIDTH = 32;
@@ -238,11 +238,11 @@ function createRipple() {
 }
 
 const DEFINITIONS = {
-  fire: { label: "火焰", create: createFire },
-  rain: { label: "数字雨", create: createRain },
-  plasma: { label: "等离子", create: createPlasma },
-  aurora: { label: "极光", create: createAurora },
-  ripple: { label: "涟漪", create: createRipple },
+  fire: { label: "Fire", create: createFire },
+  rain: { label: "Digital Rain", create: createRain },
+  plasma: { label: "Plasma", create: createPlasma },
+  aurora: { label: "Aurora", create: createAurora },
+  ripple: { label: "Ripple", create: createRipple },
 };
 
 export const EFFECTS = Object.entries(DEFINITIONS).map(([id, definition]) => ({

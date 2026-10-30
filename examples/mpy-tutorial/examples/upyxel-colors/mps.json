@@ -1,7 +1,7 @@
 {
   "name": "upyxel-colors",
   "version": "1.0.0",
-  "description": "MicroPyxel 颜色与调色板 API 演示",
+  "description": "MicroPyxel palette and color API demo",
   "dependencies": [
     {
       "name": "micropyxel",

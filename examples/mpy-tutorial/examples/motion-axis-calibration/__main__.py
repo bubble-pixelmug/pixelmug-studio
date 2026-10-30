@@ -1,8 +1,8 @@
-# G-sensor 坐标系标定示例。
-# 按日志提示依次向上、下、前（靠近自己）、后（远离自己）、左、右平移水杯。
-# 程序从静止基线中减去重力分量，捕获每次平移开始后的首次明显加速度，
-# 再用相反方向互相校验，输出杯体方向与 g_sensor X/Y/Z 轴的对应关系。
-# 测试时始终面对水杯并保持杯体朝向不变；不要倾斜、转动或甩动水杯。
+# G-sensor coordinate calibration example.
+# Follow the prompts to move the mug up, down, forward (toward you), backward (away from you), left, and right.
+# The program subtracts the gravity component from the stationary baseline and captures the first clear acceleration
+# after each translation begins, then cross-checks opposite directions to map mug directions to g_sensor X/Y/Z axes.
+# Face the mug throughout the test and keep its orientation unchanged; do not tilt, rotate, or swing it.
 
 import time
 import g_sensor
@@ -15,12 +15,12 @@ FIRST_MOTION_WINDOW_MS = 160
 MOTION_THRESHOLD_G = 0.16
 
 TESTS = (
-    ("up", "上", "向上平移水杯约 10 至 20 厘米"),
-    ("down", "下", "向下平移水杯约 10 至 20 厘米"),
-    ("front", "前（靠近你）", "向前平移，也就是让水杯靠近你"),
-    ("back", "后（远离你）", "向后平移，也就是让水杯远离你"),
-    ("left", "左", "向你的左手方向平移水杯"),
-    ("right", "右", "向你的右手方向平移水杯"),
+    ("up", "up", "Move the mug upward about 10 to 20 cm"),
+    ("down", "down", "Move the mug downward about 10 to 20 cm"),
+    ("front", "forward (toward you)", "Move the mug forward, toward you"),
+    ("back", "backward (away from you)", "Move the mug backward, away from you"),
+    ("left", "left", "Move the mug toward your left hand"),
+    ("right", "right", "Move the mug toward your right hand"),
 )
 
 
@@ -75,23 +75,23 @@ def axis_result(vector):
 
 def _capture_first_motion_once(label, instruction):
     print("")
-    print("准备测试：{}".format(label))
+    print("Preparing test: {}".format(label))
     print(instruction)
-    print("保持杯体朝向不变；看到‘现在移动’后立即平移一次。")
+    print("Keep the mug orientation unchanged; move it once as soon as you see 'Move now'.")
 
-    print("倒计时 3")
+    print("Countdown 3")
     time.sleep_ms(1000)
-    print("倒计时 2")
+    print("Countdown 2")
     time.sleep_ms(1000)
-    print("倒计时 1：保持不动，正在记录静止基线")
+    print("Countdown 1: stay still while recording the stationary baseline")
     baseline = average_accel()
 
     print(
-        "静止基线：x={:.3f}, y={:.3f}, z={:.3f}".format(
+        "Stationary baseline: x={:.3f}, y={:.3f}, z={:.3f}".format(
             baseline[0], baseline[1], baseline[2]
         )
     )
-    print("现在移动：{}".format(label))
+    print("Move now: {}".format(label))
 
     deadline = time.ticks_add(time.ticks_ms(), MOVE_TIMEOUT_MS)
     detected_at = None
@@ -118,8 +118,8 @@ def _capture_first_motion_once(label, instruction):
             best_strength = abs(delta[trigger_axis])
 
         if detected_at is not None:
-            # 只追踪首次运动方向上的峰值，避免把停车时的反向减速度
-            # 错认成用户指定的移动方向。
+            # Track peaks only in the initial motion direction so that deceleration while stopping
+            # is not mistaken for the requested movement direction.
             same_direction = delta[trigger_axis] * trigger_sign > 0
             if dominant_axis(delta) == trigger_axis and same_direction:
                 strength = abs(delta[trigger_axis])
@@ -133,18 +133,18 @@ def _capture_first_motion_once(label, instruction):
         time.sleep_ms(SAMPLE_INTERVAL_MS)
 
     if best is None:
-        print("没有检测到足够明显的移动，本方向重新测试。")
+        print("No clear movement detected; this direction will be tested again.")
         time.sleep_ms(1500)
         return None
 
     _, axis, sign, value = axis_result(best)
     print(
-        "{}：Δx={:+.3f}, Δy={:+.3f}, Δz={:+.3f}".format(
+        "{}: Δx={:+.3f}, Δy={:+.3f}, Δz={:+.3f}".format(
             label, best[0], best[1], best[2]
         )
     )
-    print("{} 的主要响应：{}{} ({:+.3f} g)".format(label, sign, axis, value))
-    print("请把水杯移回中央并保持原来的朝向。")
+    print("{} primary response: {}{} ({:+.3f} g)".format(label, sign, axis, value))
+    print("Move the mug back to the center and keep its original orientation.")
     time.sleep_ms(2000)
     return best
 
@@ -170,10 +170,10 @@ def analyze_pair(pair_name, positive_name, negative_name, positive, negative):
     index, axis, sign, _ = axis_result(combined)
 
     print("")
-    print("{}校验：{}".format(pair_name, "通过" if pair_ok else "未通过"))
-    print("水杯{}方向对应 g_sensor {}{}".format(positive_name, sign, axis))
+    print("{} check: {}".format(pair_name, "PASS" if pair_ok else "FAIL"))
+    print("Mug {} direction maps to g_sensor {}{}".format(positive_name, sign, axis))
     print(
-        "g_sensor +{} 指向水杯的{}方向".format(
+        "g_sensor +{} points toward the mug's {} direction".format(
             axis, positive_name if sign == "+" else negative_name
         )
     )
@@ -184,28 +184,28 @@ def analyze_pair(pair_name, positive_name, negative_name, positive, negative):
 def main():
     try:
         first = wait_until_ready()
-        print("G-sensor 已就绪：", first)
+        print("G-sensor ready:", first)
         print("")
-        print("坐标系标定开始")
-        print("右手拿杯并面对杯子，整个测试过程保持相同握姿和杯体朝向。")
-        print("每次只做直线平移，不要旋转或倾斜水杯。")
+        print("Coordinate calibration started")
+        print("Hold the mug in your right hand and face it; keep the same grip and orientation throughout the test.")
+        print("Use straight translations only; do not rotate or tilt the mug.")
 
         results = {}
         for key, label, instruction in TESTS:
             results[key] = capture_first_motion(label, instruction)
 
         print("")
-        print("========== 坐标标定结果 ==========")
+        print("========== Coordinate calibration results ==========")
         mappings = (
-            analyze_pair("上下", "上", "下", results["up"], results["down"]),
+            analyze_pair("up/down", "up", "down", results["up"], results["down"]),
             analyze_pair(
-                "前后",
-                "前（靠近你）",
-                "后（远离你）",
+                "forward/backward",
+                "forward (toward you)",
+                "backward (away from you)",
                 results["front"],
                 results["back"],
             ),
-            analyze_pair("左右", "右", "左", results["right"], results["left"]),
+            analyze_pair("left/right", "right", "left", results["right"], results["left"]),
         )
 
         axes = (mappings[0][0], mappings[1][0], mappings[2][0])
@@ -218,14 +218,14 @@ def main():
 
         print("")
         if pairs_ok and axes_unique:
-            print("结论：三组相反方向一致，并分别对应 X、Y、Z，结果可信。")
+            print("Conclusion: all three opposite-direction pairs agree and map to distinct X, Y, and Z axes; results are reliable.")
         else:
-            print("结论：本次结果不够可靠。")
+            print("Conclusion: these results are not reliable enough.")
             if not pairs_ok:
-                print("至少一组相反方向没有落在同一轴的相反符号上。")
+                print("At least one opposite-direction pair did not map to opposite signs on the same axis.")
             if not axes_unique:
-                print("上下、前后、左右没有分别落在三个不同的传感器轴上。")
-            print("请保持杯体朝向不变，减少旋转和倾斜后重新运行测试。")
+                print("The up/down, forward/backward, and left/right pairs did not map to three different sensor axes.")
+            print("Keep the mug orientation unchanged, minimize rotation and tilt, and run the test again.")
     finally:
         g_sensor.deinit()
 

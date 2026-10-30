@@ -69,7 +69,6 @@ bot.on('message:text', async (ctx) => {
 
     try {
       await ctx.sendText('Installing and starting MPY. Please wait ⏳');
-      // Studio intercepts this RPC for local runs; cloud devices use the uploaded MPS.
       const command = mug.rpc.talMpyExecOneScript({ id: mpsId, version: mpsVersion });
       const response = await bot.callDevice(ctx.chat, device, command);
       if (pendingInstalls.get(deviceId) !== pending) return;

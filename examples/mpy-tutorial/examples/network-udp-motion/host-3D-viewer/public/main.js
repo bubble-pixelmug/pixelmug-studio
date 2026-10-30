@@ -1,4 +1,4 @@
-﻿import * as THREE from "/three.module.js";
+import * as THREE from "/three.module.js";
 
 const sceneElement = document.querySelector("#scene");
 const statusDot = document.querySelector("#status-dot");
@@ -466,7 +466,7 @@ eventSource.onmessage = (event) => {
 };
 eventSource.onerror = () => {
   statusDot.classList.remove("online");
-  statusText.textContent = "正在重新连接查看器";
+  statusText.textContent = "Reconnecting to viewer";
 };
 
 resetButton.addEventListener("click", setNeutralPose);
@@ -488,7 +488,7 @@ function updateConnectionStatus(now) {
 
   connectionOnline = online;
   statusDot.classList.toggle("online", online);
-  statusText.textContent = online ? "正在接收 PixelMug 姿态" : "等待 PixelMug 数据";
+  statusText.textContent = online ? "Receiving PixelMug pose" : "Waiting for PixelMug data";
 }
 
 function resize() {

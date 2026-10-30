@@ -1,15 +1,15 @@
-# Audio Service 完整用例：生成并播放半秒 440 Hz PCM 提示音。
-# 展示 API：audio.init/configure/player/deinit，Player.play，
-# PlaySession.drain/state/cancel。
-# PCM 为 48 kHz、单声道、16 位小端；半秒共 24000 个样本，占 48000 字节。
-# 先生成完整 PCM，再交给 Player 按 20 ms 分块播放，避免边计算边播放造成断供。
-# 样本峰值 6000 与 output_volume 都影响音量；有符号 16 位最大正值为 32767。
+# Complete Audio Service example: generate and play a half-second 440 Hz PCM tone.
+# Demonstrates audio.init/configure/player/deinit, Player.play,
+# and PlaySession.drain/state/cancel.
+# PCM is 48 kHz, mono, 16-bit little-endian; half a second has 24,000 samples and uses 48,000 bytes.
+# Generate the complete PCM buffer first, then let Player play it in 20 ms chunks to avoid underruns during computation.
+# The sample peak of 6000 and output_volume both affect volume; the maximum positive signed 16-bit value is 32767.
 
 import math
 import struct
 import audio_service
 
-# 先生成所有样本，计算期间尚未开始播放。
+# Generate all samples before playback starts.
 pcm = bytearray(24000 * 2)
 for i in range(24000):
     value = int(6000 * math.sin(2 * math.pi * 440 * i / 48000))
@@ -25,7 +25,7 @@ try:
     session = player.play(pcm)
     session.drain(3000)
     if session.state() != "ended":
-        raise RuntimeError("播放等待超时")
+        raise RuntimeError("Timed out waiting for playback")
 finally:
     try:
         if session is not None and session.state() not in ("ended", "canceled", "error"):

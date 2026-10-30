@@ -1,11 +1,10 @@
-# MicroPyxel 逐帧动画示例：用 Audio Service 的 VAD 驱动小鸟扇动翅膀。
-# 展示 API：images、load_from_png、blt、run，以及
-# audio.on("vad", callback)、audio.poll()、Recorder.start 和 read。
-#
-# canvas.png 左上角依次排列三张 8x8 小鸟精灵：
-# 第 0 帧位于 (0, 0)，第 1 帧位于 (8, 0)，第 2 帧位于 (16, 0)。
-# VAD 检测到有人说话时循环播放三帧；没有说话时停留在当前帧。
-# 程序只使用录音数据触发 VAD，不保存声音，因此每次更新都会清空录音队列。
+# MicroPyxel sprite animation driven by audio_service VAD events.
+# Demonstrates images, load_from_png, blt, run, audio.on("vad"), audio.poll(),
+# and recorder.start/read.
+# canvas.png contains three 8x8 bird sprites arranged horizontally at (0, 0),
+# (8, 0), and (16, 0). The animation cycles while speech is detected and holds
+# the current frame when the environment is quiet.
+# Audio data is used only to trigger VAD; it is read and discarded rather than saved.
 
 import audio_service
 import micropyxel as upyxel
@@ -29,7 +28,11 @@ def main():
     def on_vad(event):
         nonlocal speaking
         speaking = event["data"]["speaking"]
-        print("有人说话，小鸟开始扇动翅膀" if speaking else "环境安静，小鸟停在当前帧")
+        print(
+            "Someone is speaking; the bird starts flapping"
+            if speaking
+            else "The environment is quiet; the bird holds its current frame"
+        )
 
     audio.init(
         enable_input=True,
@@ -49,12 +52,11 @@ def main():
             def update(rt):
                 nonlocal sprite_frame, animation_tick
 
-                # poll() 交付 VAD 状态变化并同步调用 on_vad。
+                # poll() delivers VAD state changes and invokes on_vad.
                 audio.poll()
                 while audio.get_event() is not None:
-                    pass  # 回调执行后事件仍在队列中；本例已处理，及时移除。
-
-                # queue 模式仍会产生 PCM 数据；本例不使用声音内容，及时读出并丢弃。
+                    pass  # Remove events after their callbacks have run.
+                # Queue mode still produces PCM data; read and discard it promptly.
                 while session.read(0) is not None:
                     pass
 
@@ -77,7 +79,7 @@ def main():
                     0,
                 )
 
-            print("VAD 小鸟动画已启动：请对着 PixelMug 说话")
+            print("VAD bird animation started; speak to the PixelMug")
             upyxel.run(update, draw, fps=FPS)
         finally:
             upyxel.destroy()

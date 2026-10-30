@@ -1,9 +1,12 @@
-# MicroPyxel 入门示例：手动刷新，让一个白色像素点从左向右移动，重复五次。
-# 展示 API：init、cls、pset、render_graphics、destroy。
-# 绘图只修改屏幕缓冲；每帧画好后调用 render_graphics，才把画面提交到屏幕。
-# render_graphics 不清屏、不休眠、不限制帧率，需要由自己的循环安排。
-# 本例每帧等待 50 ms，实际帧间隔还包含绘图和刷新耗时，不是精确的 20 fps。
-# 不使用 run 或 update/draw 回调；循环自然结束即可，不需要 quit。
+# MicroPyxel beginner example: manually refresh the screen while moving a white pixel
+# from left to right and repeating the animation five times.
+# Demonstrates init, cls, pset, render_graphics, and destroy.
+# Drawing changes only the screen buffer; render_graphics submits the completed frame.
+# render_graphics does not clear the screen, sleep, or limit the frame rate, so the
+# application must manage those steps itself.
+# This example waits 50 ms per frame. The actual frame interval also includes drawing
+# and refresh time, so it is not an exact 20 FPS loop.
+# It does not use run or update/draw callbacks; the loop ends naturally after five passes.
 
 import time
 import micropyxel as upyxel
@@ -17,14 +20,14 @@ def main():
     upyxel.init(start_audio=False)
     try:
         y = upyxel.height // 2
-        print("手动刷新动画开始，像素点从左向右移动五次")
+        print("Manual render animation started; moving the pixel from left to right five times")
         for _ in range(REPEATS):
             for x in range(upyxel.width):
-                upyxel.cls(0)  # 清掉上一帧。
-                upyxel.pset(x, y, 7)  # 默认调色板：0 为黑色，7 为白色。
-                upyxel.render_graphics()  # 手动提交这一帧。
-                time.sleep_ms(FRAME_DELAY_MS)  # 控制移动速度，并让出执行时间。
-        print("手动刷新动画结束")
+                upyxel.cls(0)  # Clear the previous frame.
+                upyxel.pset(x, y, 7)  # Palette color 7 is white; color 0 is black.
+                upyxel.render_graphics()  # Submit this frame manually.
+                time.sleep_ms(FRAME_DELAY_MS)  # Control movement speed and yield execution.
+        print("Manual render animation finished")
     finally:
         upyxel.destroy()
 

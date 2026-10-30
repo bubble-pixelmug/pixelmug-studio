@@ -4,7 +4,13 @@ import {
 } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1/ext';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const webAppUrl = process.env.STUDIO_WEBAPP_URL;
+if (!webAppUrl) throw new Error('WebApp URL is not configured');
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
 });
 
@@ -17,23 +23,23 @@ bot.on('message:text', async (ctx) => {
 
   if (command === '/bind') {
     await ctx.sendBindDevice({
-      content: '请选择一台 PixelMug S1。',
-      actionButtonTitle: '关联设备',
+      content: 'Bind a PixelMug S1.',
+      actionButtonTitle: 'Bind device',
     });
     return;
   }
 
   if (command === '/open') {
     const keyboard = new InlineKeyboard()
-      .url('打开设备事件页面', process.env.STUDIO_WEBAPP_URL);
+      .url('Open device events', webAppUrl);
 
-    await ctx.sendKeyboard('打开 WebApp，订阅 PixelMug S1 的充电事件。', keyboard);
+    await ctx.sendKeyboard('Open the WebApp to subscribe to PixelMug S1 charging events.', keyboard);
   }
 });
 
 await bot.setCommands([
-  { command: 'bind', description: '关联 PixelMug S1' },
-  { command: 'open', description: '打开设备事件页面' },
+  { command: 'bind', description: 'Bind a PixelMug S1' },
+  { command: 'open', description: 'Open device events' },
 ]);
 
 await bot.start();

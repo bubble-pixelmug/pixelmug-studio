@@ -1,7 +1,7 @@
-# Network TCP 示例：使用原始 Socket 请求 example.com，并读取 HTTP 响应。
-# 展示 API：getaddrinfo、socket、settimeout、connect、sendall、recv 和 close。
-# HTTP 只作为稳定的 TCP 测试协议；实际 HTTP 业务应使用 requests。
-# TCP 不保留消息边界，因此状态行可能跨越多个 recv 数据块。
+# Network TCP example: request example.com with a raw socket and read the HTTP response.
+# Demonstrates getaddrinfo, socket, settimeout, connect, sendall, recv, and close.
+# HTTP is used as a stable TCP test protocol; real HTTP applications should use requests.
+# TCP does not preserve message boundaries, so the status line may span multiple recv chunks.
 
 import socket
 import time

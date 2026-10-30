@@ -1,7 +1,7 @@
 {
   "name": "audio-output-spectrum",
   "version": "1.0.0",
-  "description": "依次播放16个频段的PCM测试音并显示输出频谱",
+  "description": "Play PCM test tones for 16 bands in sequence and display the output spectrum",
   "dependencies": [
     {
       "name": "audio_service",

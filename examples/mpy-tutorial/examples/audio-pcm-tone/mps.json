@@ -1,7 +1,7 @@
 {
   "name": "audio-pcm-tone",
   "version": "1.0.0",
-  "description": "播放 PCM 提示音",
+  "description": "Play a PCM notification tone",
   "dependencies": [
     {
       "name": "audio_service",

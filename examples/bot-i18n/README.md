@@ -1,11 +1,11 @@
-# 国际化 Bot
+# Internationalized Bot
 
-这个示例根据 `ctx.chat.language` 或 `ctx.from.language` 选择中文、日文或英文回复，并为命令菜单提供对应语言的说明。
+This example replies in Chinese, Japanese, or English based on `ctx.chat.language` or `ctx.from.language`. It also provides localized descriptions for the bot commands.
 
-在 Studio 中启动后：
+After starting the example in Studio:
 
-- 发送 `/hello`，查看当前语言的问候语。
-- 发送 `/language`，查看 Bot 识别出的语言。
-- 发送其他文字，查看当前语言的帮助信息。
+- Send `/hello` to receive a greeting in the detected language.
+- Send `/language` to see the language detected by the bot.
+- Send any other text to receive help in the detected language.
 
-SDK 不会自动翻译业务消息。示例通过 `messages` 保存文案，并在处理器中主动选择语言。语言字段不存在或不支持时回退到英文。
+The bot reads its configuration from the `BOT_TOKEN` and `BOT_API_BASE_URL` environment variables. The SDK does not translate business messages automatically; this example selects messages from the `messages` table and falls back to English when a language is unavailable.

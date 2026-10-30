@@ -34,10 +34,7 @@ def main():
             nonlocal greeting_index, scroll_x
             scroll_x -= 1
             if scroll_x < -widths[greeting_index]:
-                if greeting_index == len(GREETINGS) - 1:
-                    rt.quit()
-                    return
-                greeting_index += 1
+                greeting_index = (greeting_index + 1) % len(GREETINGS)
                 scroll_x = rt.width
 
         def draw(rt):

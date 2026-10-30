@@ -1,22 +1,23 @@
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 
-const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
-
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
-
-const bot = new BubbleBot(token, { apiBaseUrl });
+const bot = new BubbleBot(requiredEnv('BOT_TOKEN'), {
+  apiBaseUrl: requiredEnv('BOT_API_BASE_URL'),
+});
 
 bot.on('error', (ctx) => {
   console.error('[bot-first-bot]', ctx.error?.message || ctx.error);
 });
 
 bot.on('message:text', async (ctx) => {
-  await ctx.replyText('收到：' + ctx.message.text);
+  await ctx.replyText(`Received: ${ctx.message.text}`);
 });
 
 await bot.start({ device: false });
 
-console.log('第一个 Bot 已启动，请在冒泡 App 中发送文字。');
+console.log('First Bot example started. Send a message from the Bubble app.');
+
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}

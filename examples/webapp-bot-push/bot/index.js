@@ -3,7 +3,13 @@ import {
   InlineKeyboard,
 } from '@jeejio-bubble/bot/sdk';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const webAppUrl = process.env.STUDIO_WEBAPP_URL;
+if (!webAppUrl) throw new Error('WebApp URL is not configured');
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
 });
 
@@ -15,20 +21,20 @@ bot.onWebAppRequest('app.startTask', async (ctx) => {
     await ctx.sendWebAppData('app.progress', { progress });
   }
 
-  return { message: '任务完成' };
+  return { message: 'Task complete.' };
 });
 
 bot.on('message:text', async (ctx) => {
   if (ctx.message.text.trim() !== '/open') return;
 
   const keyboard = new InlineKeyboard()
-    .url('打开 WebApp', process.env.STUDIO_WEBAPP_URL);
+    .url('Open WebApp', webAppUrl);
 
-  await ctx.sendKeyboard('打开页面，查看 Bot 推送的任务进度。', keyboard);
+  await ctx.sendKeyboard('Open the page to watch the Bot push task progress.', keyboard);
 });
 
 await bot.setCommands([
-  { command: 'open', description: '打开 WebApp' },
+  { command: 'open', description: 'Open the WebApp' },
 ]);
 
 await bot.start({ device: false });

@@ -1,4 +1,4 @@
-﻿"""Dust 基础示例：一排小球只受模拟重力作用，并在底部弹跳。"""
+"""Dust basics: a row of balls responds to simulated gravity and bounces at the bottom."""
 
 import micropyxel as upyxel
 import pixel_dust
@@ -7,16 +7,16 @@ import pixel_dust
 WIDTH = 32
 HEIGHT = 16
 CAPACITY = 12
-SCALE = 8 # scale 提高重力效果
-ELASTICITY = 210 # elasticity 提高反弹效果。
+SCALE = 8  # Scale increases the gravity effect.
+ELASTICITY = 210  # Elasticity increases the bounce effect.
 
 dust = pixel_dust.PixelDust(WIDTH, HEIGHT, CAPACITY, SCALE, ELASTICITY)
 dust.set_bound_mode(pixel_dust.PixelDust.BOUND_BOUNCE)
-# dust.set_bound_mode(pixel_dust.PixelDust.BOUND_CLAMP) # 也可以尝试 BOUND_CLAMP 模式，粒子会在底部停下。
+# dust.set_bound_mode(pixel_dust.PixelDust.BOUND_CLAMP)  # Try BOUND_CLAMP mode to stop particles at the bottom.
 snapshot = bytearray(CAPACITY * 4)
 
 
-# 只设置一次很小的初始差异；进入模拟后不再施加横向力。
+# Set small initial differences once; apply no horizontal force after the simulation starts.
 BALLS = (
     (2, 0, -18),
     (5, 1, 10),
@@ -32,20 +32,20 @@ BALLS = (
 
 
 def seed_particles():
-    """在顶部放置一排间距和初始横向速度略有差异的小球。"""
+    """Place a row of balls at the top with slightly different spacing and initial horizontal speeds."""
     for index, (x, y, vx) in enumerate(BALLS):
         dust.spawn(x, y, vx, 0, 8 + (index % 8))
 
 
 def update(_rt):
-    # 运行过程中只有向下的重力，没有横向加速度。
+    # During the simulation, only downward gravity acts; there is no horizontal acceleration.
     dust.iterate(0.0, 0.35 * 32, 0.0)
 
 
 def draw(rt):
-    rt.cls(1)    
+    rt.cls(1)
 
-    # 每个粒子占 4 个字节：[id, x, y, color]。
+    # Each particle occupies 4 bytes: [id, x, y, color].
     count = dust.alive_snapshot(snapshot)
     for index in range(count):
         offset = index * 4

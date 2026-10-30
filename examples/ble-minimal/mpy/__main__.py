@@ -38,7 +38,7 @@ def update(rt):
     ble.poll()
     if not disconnect_pending:
         return
-    # 先发送命令响应；队列清空后再留出 200 ms，然后请求物理断开。
+    # Send the command response first, then wait 200 ms before disconnecting.
     if ble.stats()["outbox"] != 0:
         disconnect_sent_at = None
     elif disconnect_sent_at is None:
@@ -63,8 +63,8 @@ ble.command("disconnect", request_disconnect, mutates=False)
 
 pyxel.init(start_audio=False)
 try:
-    pyxel.set_color(8, 0xFF0000)   # DISC：红色
-    pyxel.set_color(11, 0x00FF00)  # CONN：绿色
+    pyxel.set_color(8, 0xFF0000)   # DISC: red
+    pyxel.set_color(11, 0x00FF00)  # CONN: green
     ble.start()
     pyxel.run(update, draw, fps=20)
 finally:

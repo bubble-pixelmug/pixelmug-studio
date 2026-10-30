@@ -1,24 +1,20 @@
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 
 const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
-
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
+if (!token) throw new Error('BOT_TOKEN is required');
 
 const messages = {
   'zh-CN': {
     welcome: '你好！我会根据当前对话的语言回复。',
     hello: '你好，很高兴认识你！',
-    language: '当前使用的语言是：{locale}',
+    language: '当前使用的语言：{locale}',
     help: '发送 /hello 获取问候，发送 /language 查看当前语言。',
   },
   ja: {
     welcome: 'こんにちは！現在のチャットの言語に合わせて返信します。',
     hello: 'こんにちは、お会いできてうれしいです！',
-    language: '現在使用している言語：{locale}',
-    help: '/hello で挨拶し、/language で現在の言語を確認できます。',
+    language: '現在の言語：{locale}',
+    help: '/hello であいさつ、/language で現在の言語を確認できます。',
   },
   'en-US': {
     welcome: 'Hello! I reply in the language of the current chat.',
@@ -28,7 +24,7 @@ const messages = {
   },
 };
 
-const bot = new BubbleBot(token, { apiBaseUrl });
+const bot = new BubbleBot(token, { apiBaseUrl: process.env.BOT_API_BASE_URL });
 
 bot.on('error', (ctx) => {
   console.error('[bot-i18n]', ctx.error?.message || ctx.error);
@@ -39,9 +35,7 @@ bot.on('contact_added', async (ctx) => {
 });
 
 bot.on('joined_group', async (ctx) => {
-  await ctx.sendText(getText(ctx, 'welcome'), {
-    mentionOnly: false,
-  });
+  await ctx.sendText(getText(ctx, 'welcome'), { mentionOnly: false });
 });
 
 bot.on('message:text', async (ctx) => {
@@ -51,8 +45,7 @@ bot.on('message:text', async (ctx) => {
   if (command === '/hello') {
     await ctx.sendText(text(locale, 'hello'));
   } else if (command === '/language') {
-    const message = text(locale, 'language');
-    await ctx.sendText(message.replace('{locale}', locale));
+    await ctx.sendText(text(locale, 'language').replace('{locale}', locale));
   } else {
     await ctx.sendText(text(locale, 'help'));
   }
@@ -64,7 +57,7 @@ await bot.setCommands([
     description: 'Say hello',
     descTranslations: {
       'zh-CN': '打个招呼',
-      ja: '挨拶する',
+      ja: 'あいさつする',
       en: 'Say hello',
     },
   },
@@ -81,12 +74,10 @@ await bot.setCommands([
 
 await bot.start({ device: false });
 
-console.log('国际化 Bot 示例已启动。');
+console.log('Internationalized Bot example started.');
 
 function localeFromContext(ctx) {
-  const language = String(
-    ctx.chat?.language || ctx.from?.language || '',
-  ).toLowerCase();
+  const language = String(ctx.chat?.language || ctx.from?.language || '').toLowerCase();
 
   if (language.startsWith('zh')) return 'zh-CN';
   if (language.startsWith('ja')) return 'ja';

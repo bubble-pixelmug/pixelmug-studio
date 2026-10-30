@@ -1,10 +1,10 @@
-# Audio Service + MicroPyxel 完整用例：显示十秒麦克风频谱，然后退出。
-# 展示 API：audio.spectrum_analyzer/recorder/poll，enable_dump_input，
-# enable_on_pcm(1)、set_fps、get_bands_u8_into、disable，以及 MicroPyxel 绘图。
-# 及时读取并丢弃录音帧，避免队列堵塞；复用 16 字节频谱缓冲减少分配。
-# MicroPyxel 仅绘图，使用 start_audio=False，不启动声音合成。
-# 若柱子太低可降低 noise 或 amplitude；这些参数仅改变频谱显示。
-# 结束时停止 FFT、关闭 dump，再释放 Audio Service 和绘图资源。
+# Complete Audio Service + MicroPyxel example: display the microphone spectrum for ten seconds, then exit.
+# Demonstrates audio.spectrum_analyzer/recorder/poll, enable_dump_input,
+# enable_on_pcm(1), set_fps, get_bands_u8_into, disable, and MicroPyxel drawing.
+# Read and discard recording frames promptly to avoid blocking the queue; reuse a 16-byte spectrum buffer to reduce allocations.
+# MicroPyxel only draws with start_audio=False, so audio synthesis is not started.
+# If the bars are too low, reduce noise or amplitude; these parameters only change the spectrum display.
+# At the end, stop the FFT, disable the dump, and release Audio Service and drawing resources.
 
 import time
 import audio_service
@@ -32,7 +32,7 @@ def main():
             started = time.ticks_ms()
             while time.ticks_diff(time.ticks_ms(), started) < 10000:
                 audio.poll()
-                # 不保存录音，但仍及时取走帧，避免录音队列堵住采集。
+                # Do not save the recording, but read frames promptly so the recording queue does not block capture.
                 while session.read(0) is not None:
                     pass
                 pyxel.cls(0)
@@ -48,7 +48,7 @@ def main():
     finally:
         try:
             if session is not None:
-                session.cancel()  # 此例不保存尾帧。
+                session.cancel()  # This example does not save the tail frames.
                 session.close()
         finally:
             try:

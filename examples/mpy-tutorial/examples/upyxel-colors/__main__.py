@@ -1,8 +1,11 @@
-# MicroPyxel 颜色示例：分四页展示默认颜色、自定义 RGB、索引映射和有序抖动。
-# 展示 API：NUM_COLORS、color_rgb、set_color、set_palette、pal、dither。
-# 绘图接口接收的是颜色索引，不是 0xRRGGBB；set_color/set_palette 修改索引对应的 RGB。
-# pal 只改变后续绘图写入的索引；dither 用规则像素图案模拟覆盖率，不进行 Alpha 混合。
-# 每页显示约 3 秒，演示完成后自动退出。
+# MicroPyxel color example: four pages covering the default palette, custom RGB colors,
+# palette index mapping, and ordered dithering.
+# Demonstrates NUM_COLORS, color_rgb, set_color, set_palette, pal, and dither.
+# Drawing APIs receive palette indices rather than 0xRRGGBB values.
+# set_color and set_palette update the RGB values associated with palette indices.
+# pal changes the indices written by later drawing calls; dither simulates coverage using
+# an ordered pixel pattern and does not perform alpha blending.
+# Each page is shown for about 3 seconds before the demo exits.
 
 import micropyxel as upyxel
 
@@ -49,22 +52,22 @@ def configure_page(page):
 
     if page == 0:
         upyxel.set_palette(DEFAULT_COLORS)
-        print("默认调色板，共", upyxel.NUM_COLORS, "种颜色")
+        print("Default palette:", upyxel.NUM_COLORS, "colors")
         for index in range(upyxel.NUM_COLORS):
             print(index, upyxel.color_rgb(index))
     elif page == 1:
         upyxel.set_palette(CUSTOM_COLORS)
-        print("set_palette：索引 0..7 已替换为自定义 RGB")
+        print("set_palette: indices 0..7 replaced with custom RGB colors")
         for index in range(len(CUSTOM_COLORS)):
             print(index, upyxel.color_rgb(index))
     elif page == 2:
         upyxel.set_palette(DEFAULT_COLORS)
         upyxel.set_color(8, 0xFF0000)
-        print("set_color：索引 8 =", upyxel.color_rgb(8))
-        print("pal：右侧把绘图颜色 7 映射到索引 8")
+        print("set_color: index 8 =", upyxel.color_rgb(8))
+        print("pal: the right side maps drawing color 7 to index 8")
     else:
         upyxel.set_palette(DEFAULT_COLORS)
-        print("dither：从左到右依次为 0.25、0.5、0.75、1.0")
+        print("dither: left to right coverage values are 0.25, 0.5, 0.75, and 1.0")
 
 
 def draw_default_palette(rt):
@@ -119,9 +122,9 @@ def main():
             else:
                 draw_dither(rt)
 
-        print("颜色 API 演示开始")
+        print("Color API demo started")
         upyxel.run(update, draw, fps=FPS)
-        print("颜色 API 演示结束")
+        print("Color API demo finished")
     finally:
         upyxel.destroy()
 

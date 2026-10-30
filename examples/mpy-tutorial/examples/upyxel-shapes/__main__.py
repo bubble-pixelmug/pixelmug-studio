@@ -1,10 +1,10 @@
-# MicroPyxel 入门示例：分三页展示屏幕缓冲区的基础图形接口。
-# 第 1 页：像素、线、实心矩形和矩形边框。
-# 第 2 页：实心圆、圆形边框、实心椭圆和椭圆边框。
-# 第 3 页：实心三角形、三角形边框，以及在封闭区域内使用 fill。
-# 展示 API：pset、line、rect、rectb、circ、circb、elli、ellib、tri、trib、fill。
-# 每页显示约 2 秒，全部页面重复两轮后退出；run 会在每次 draw 后自动刷新屏幕。
-# 图形坐标可以超出屏幕，超出的部分会被裁掉；颜色参数是调色板索引。
+# MicroPyxel beginner example: three pages of basic shape drawing APIs.
+# Page 1: pixels, lines, filled rectangles, and rectangle outlines.
+# Page 2: filled circles, circle outlines, filled ellipses, and ellipse outlines.
+# Page 3: filled and outlined triangles, plus fill inside a closed region.
+# Demonstrates pset, line, rect, rectb, circ, circb, elli, ellib, tri, trib, and fill.
+# Each page is shown for about 2 seconds; all pages repeat twice before the program exits.
+# Coordinates may extend beyond the screen and are clipped; colors use the palette index.
 
 import micropyxel as upyxel
 
@@ -16,13 +16,13 @@ REPEATS = 2
 
 
 def draw_lines_and_rectangles(rt):
-    # 左侧展示像素和交叉线。
+    # Show pixels and crossing lines on the left.
     rt.line(0, 0, 13, 15, 8)
     rt.line(0, 15, 13, 0, 9)
     rt.pset(6, 7, 7)
     rt.pset(7, 8, 7)
 
-    # 右侧分别展示实心矩形和矩形边框。
+    # Show a filled rectangle and a rectangle outline on the right.
     rt.rect(16, 2, 6, 12, 10)
     rt.rectb(24, 2, 7, 12, 11)
 
@@ -35,7 +35,7 @@ def draw_circles_and_ellipses(rt):
 
 
 def draw_triangles_and_fill(rt):
-    # 先画封闭圆框，再从圆心填充内部，边框不会被覆盖。
+    # Draw a closed outline first, then fill from its center without covering the outline.
     rt.circb(6, 8, 5, 7)
     rt.fill(6, 8, 3)
 
@@ -60,9 +60,9 @@ def main():
             else:
                 draw_triangles_and_fill(rt)
 
-        print("基础图形演示开始：每页约 2 秒，共重复两轮")
+        print("Basic shapes demo started: each page lasts about 2 seconds and repeats twice")
         upyxel.run(update, draw, fps=FPS)
-        print("基础图形演示结束")
+        print("Basic shapes demo finished")
     finally:
         upyxel.destroy()
 

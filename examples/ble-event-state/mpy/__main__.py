@@ -20,7 +20,7 @@ def update(rt):
     last_tick = now
     count = (count + 1) % 100
 
-    # 计数始终继续；应用会话就绪时才向网页推送。
+    # Keep counting even when disconnected; publish only when the app is ready.
     if ble.ready:
         ble.publish_state()
         if count == 0:
@@ -35,7 +35,7 @@ def draw(rt):
     rt.text((rt.width - len(text) * 4) // 2, (rt.height - 6) // 2, text, 10)
 
 
-# 网页 requestSnapshot() 读取的内容由这个函数提供。
+# requestSnapshot() reads its value from this provider.
 ble.set_state_provider(read_state)
 
 pyxel.init(start_audio=False)

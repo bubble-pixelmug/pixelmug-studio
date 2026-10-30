@@ -1,26 +1,26 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>第一个 WebApp</title>
-  <link rel="stylesheet" href="./style.css">
+  <title>Hello WebApp</title>
+  <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
   <main class="card">
-    <p class="eyebrow">WebApp 与 Bot 通信</p>
-    <h1>你好，冒泡！</h1>
-    <p class="description">输入一个名字，页面会向 Bot 请求一句问候。</p>
+    <p class="eyebrow">WebApp and Bot communication</p>
+    <h1>Hello, Bubble!</h1>
+    <p class="description">Enter a name and ask the Bot for a greeting.</p>
 
     <form id="hello-form">
-      <label for="name">名字</label>
+      <label for="name">Name</label>
       <input id="name" name="name" value="PixelMug" autocomplete="name">
-      <button type="submit">发送问候</button>
+      <button type="submit">Send greeting</button>
     </form>
 
-    <p id="result" class="result" aria-live="polite">等待发送</p>
+    <p id="result" class="result" aria-live="polite">Waiting to send</p>
   </main>
 
-  <script type="module" src="./main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

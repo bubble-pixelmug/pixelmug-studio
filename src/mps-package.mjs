@@ -9,12 +9,16 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const EXCLUDE_DIRS = new Set(['dist', '.git', '.svn', '.hg', '__pycache__']);
 const EXCLUDE_FILES = new Set(['.DS_Store', 'Thumbs.db']);
 
+function parseJson(bytes) {
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^\uFEFF/, ''));
+}
+
 export async function createMpsArchive(projectPath) {
   const root = resolve(projectPath);
   const mpyRoot = join(root, 'mpy');
   const metaPath = join(mpyRoot, 'mps.json');
   await access(join(mpyRoot, '__main__.py'));
-  const meta = JSON.parse(await readFile(metaPath, 'utf8'));
+  const meta = parseJson(await readFile(metaPath));
   const { name, version, changed } = normalizeMetadata(meta);
   if (changed) await writeFile(metaPath, JSON.stringify(meta, null, 2) + '\n', 'utf8');
 

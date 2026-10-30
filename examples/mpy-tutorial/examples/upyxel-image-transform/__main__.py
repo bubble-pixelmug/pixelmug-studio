@@ -1,12 +1,11 @@
-# MicroPyxel 图片变换示例：分三页展示翻转、缩放和旋转。
-# 展示 API：images、load_from_png、blt 的负宽高、rotate 和 scale 参数。
-# 每一页左侧显示原始海豚，右侧显示变换结果：
-# 第 1 页依次展示水平、垂直、双向翻转，各停留 1 秒；
-# 第 2 页依次展示 0.5、1.0、1.5 倍缩放，各停留 1 秒；
-# 第 3 页顺时针旋转两圈，然后结束。
-#
+# MicroPyxel image transformation example: three pages demonstrating flips, scaling, and rotation.
+# Demonstrates images, load_from_png, blt negative width/height, and the rotate and scale arguments.
+# Each page shows the original dolphin on the left and the transformed result on the right.
+# Page 1 cycles through horizontal, vertical, and two-direction flips for one second each.
+# Page 2 cycles through 0.5x, 1.0x, and 1.5x scaling for one second each.
+# Page 3 rotates clockwise for two full turns, then exits.
 # blt(x, y, img, u, v, w, h, colkey, rotate, scale)
-# w/h 为负数时分别水平/垂直翻转；旋转和缩放围绕图块中心进行。
+# Negative w/h values flip horizontally/vertically; rotation and scaling use the block center.
 
 import micropyxel as upyxel
 
@@ -63,11 +62,11 @@ def main():
 
             if page != shown_page:
                 if page == 1:
-                    print("第 1 页：水平、垂直和双向翻转")
+                    print("Page 1: horizontal, vertical, and two-direction flips")
                 elif page == 2:
-                    print("第 2 页：0.5、1.0 和 1.5 倍缩放")
+                    print("Page 2: 0.5x, 1.0x, and 1.5x scaling")
                 else:
-                    print("第 3 页：顺时针旋转两圈")
+                    print("Page 3: clockwise rotation for two turns")
                 shown_page = page
 
             if rt.frame_count >= TOTAL_FRAMES:
@@ -76,11 +75,11 @@ def main():
         def draw(rt):
             rt.cls(0)
 
-            # 左侧始终显示原图，作为变换前后的对照。
+            # Always show the original image as a before-and-after reference.
             draw_dolphin(rt, ORIGINAL_X, DRAW_Y)
 
             if rt.frame_count < FLIP_FRAMES:
-                # 第 1 页：每秒切换一种翻转方式。
+                # Page 1: switch the flip direction every second.
                 step = rt.frame_count // STEP_FRAMES
                 if step == 0:
                     draw_dolphin(rt, TRANSFORM_X, DRAW_Y, -SPRITE_SIZE, SPRITE_SIZE)
@@ -91,7 +90,7 @@ def main():
                 return
 
             if rt.frame_count < FLIP_FRAMES + SCALE_FRAMES:
-                # 第 2 页：每秒切换一个固定缩放倍数。
+                # Page 2: switch the fixed scale factor every second.
                 page_frame = rt.frame_count - FLIP_FRAMES
                 scales = (0.5, 1.0, 1.5)
                 scale = scales[page_frame // STEP_FRAMES]
@@ -104,7 +103,7 @@ def main():
                 )
                 return
 
-            # 第 3 页：6 秒内顺时针旋转两圈。
+            # Page 3: rotate clockwise through two turns in six seconds.
             page_frame = rt.frame_count - FLIP_FRAMES - SCALE_FRAMES
             angle = (page_frame + 1) * 720 / ROTATE_FRAMES
             draw_dolphin(
@@ -115,9 +114,9 @@ def main():
                 scale=1.0,
             )
 
-        print("图片变换演示开始")
+        print("Image transformation demo started")
         upyxel.run(update, draw, fps=FPS)
-        print("图片变换演示结束")
+        print("Image transformation demo finished")
     finally:
         upyxel.destroy()
 

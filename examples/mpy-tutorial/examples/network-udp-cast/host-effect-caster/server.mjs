@@ -1,4 +1,4 @@
-﻿// PixelMug UDP effect caster: generate 32x16 frames and send them to the device.
+// PixelMug UDP effect caster: generate 32x16 frames and send them to the device.
 import dgram from "node:dgram";
 import fs from "node:fs";
 import http from "node:http";
@@ -181,24 +181,24 @@ function applyControl(next) {
     ? Boolean(next.playing)
     : playing;
   if (requestedPlaying && !requestedDeviceIp) {
-    throw new Error("请先填写 PixelMug 的局域网 IP");
+    throw new Error("Enter the PixelMug LAN IP address first");
   }
   if (Object.hasOwn(next, "deviceIp")) {
     const value = String(next.deviceIp || "").trim();
-    if (value && net.isIP(value) !== 4) throw new Error("设备地址必须是 IPv4 地址");
+    if (value && net.isIP(value) !== 4) throw new Error("The device address must be an IPv4 address");
     deviceIp = value;
     lastPaletteSentAt = 0;
   }
   if (Object.hasOwn(next, "udpPort")) {
     const value = Number(next.udpPort);
     if (!Number.isInteger(value) || value < 1 || value > 65535) {
-      throw new Error("UDP 端口必须是 1 到 65535 的整数");
+      throw new Error("The UDP port must be an integer from 1 to 65535");
     }
     udpPort = value;
     lastPaletteSentAt = 0;
   }
   if (Object.hasOwn(next, "effect") && next.effect !== effectId) {
-    if (!EFFECTS.some((item) => item.id === next.effect)) throw new Error("未知效果");
+    if (!EFFECTS.some((item) => item.id === next.effect)) throw new Error("Unknown effect");
     effectId = next.effect;
     effect = createEffect(effectId);
     advancePalette();
@@ -206,7 +206,7 @@ function applyControl(next) {
   if (Object.hasOwn(next, "brightness")) {
     const value = Number(next.brightness);
     if (!Number.isFinite(value) || value < 0.1 || value > 1) {
-      throw new Error("亮度必须在 0.1 到 1 之间");
+      throw new Error("Brightness must be between 0.1 and 1");
     }
     if (value !== brightness) {
       brightness = value;
@@ -216,7 +216,7 @@ function applyControl(next) {
   if (Object.hasOwn(next, "speed")) {
     const value = Number(next.speed);
     if (!Number.isFinite(value) || value < 0.5 || value > 2) {
-      throw new Error("速度必须在 0.5 到 2 之间");
+      throw new Error("Speed must be between 0.5 and 2");
     }
     speed = value;
   }
@@ -229,7 +229,7 @@ function applyControl(next) {
     paused = Boolean(next.paused);
   }
   if (!playing) paused = false;
-  if (playing && !deviceIp) throw new Error("请先填写 PixelMug 的局域网 IP");
+  if (playing && !deviceIp) throw new Error("Enter the PixelMug LAN IP address first");
   if (playing) sendPalette();
   broadcastState();
   return statePayload();
@@ -283,7 +283,7 @@ function readJson(request) {
     request.on("data", (chunk) => {
       size += chunk.length;
       if (size > MAX_BODY_BYTES) {
-        reject(new Error("请求内容过大"));
+        reject(new Error("Request body is too large"));
         request.destroy();
         return;
       }
@@ -293,7 +293,7 @@ function readJson(request) {
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"));
       } catch {
-        reject(new Error("请求不是有效的 JSON"));
+        reject(new Error("Request body is not valid JSON"));
       }
     });
     request.on("error", reject);

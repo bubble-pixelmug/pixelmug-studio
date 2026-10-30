@@ -1,7 +1,7 @@
-// PixelMug UDP Motion 配套上位机。
-// 首次运行：npm install
-// 启动服务：npm start
-// 然后把设备端 __main__.py 的 HOST_IP 改为与 PixelMug 同一局域网的地址。
+// PixelMug UDP Motion companion host viewer.
+// First run: npm install
+// Start the service: npm start
+// Then set HOST_IP in the device __main__.py to an address on the same LAN as PixelMug.
 import dgram from "node:dgram";
 import fs from "node:fs";
 import http from "node:http";

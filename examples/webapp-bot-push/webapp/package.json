@@ -1,0 +1,15 @@
+{
+  "name": "pixelmug-studio-example-webapp-bot-push-webapp",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@jeejio-bubble/bot": "0.1.9"
+  },
+  "devDependencies": {
+    "vite": "6.4.3"
+  }
+}

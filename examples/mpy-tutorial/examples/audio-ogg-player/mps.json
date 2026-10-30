@@ -1,7 +1,7 @@
 {
   "name": "audio-ogg-player",
   "version": "1.0.0",
-  "description": "播放本地 OGG Opus",
+  "description": "Play a local OGG Opus file",
   "dependencies": [
     {
       "name": "audio_service",

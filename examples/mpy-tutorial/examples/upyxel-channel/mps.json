@@ -1,0 +1,15 @@
+{
+  "name": "upyxel-channel",
+  "version": "1.0.0",
+  "description": "MicroPyxel channel gain and detune demo",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "audio_service",
+      "version": ">=1.0.0"
+    }
+  ]
+}

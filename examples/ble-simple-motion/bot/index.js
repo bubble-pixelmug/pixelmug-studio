@@ -1,7 +1,23 @@
 import { BubbleBot, InlineKeyboard } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const webAppUrl = process.env.STUDIO_WEBAPP_URL;
+if (!webAppUrl) throw new Error('WebApp URL is not configured');
+
+const mpsId = process.env.STUDIO_MPS_ID;
+if (!mpsId) throw new Error('STUDIO_MPS_ID is required');
+
+const mpsVersion = process.env.STUDIO_MPS_VERSION;
+if (!mpsVersion) throw new Error('STUDIO_MPS_VERSION is required');
+
+const launchUrl = new URL(webAppUrl);
+launchUrl.searchParams.set('mps_id', mpsId);
+launchUrl.searchParams.set('mps_version', mpsVersion);
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
   webAppDeviceAccess: 'any',
 });
@@ -11,29 +27,29 @@ bot.on('message:text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text === '/help') {
     await ctx.sendText(
-      'BLE Simple 运动数据示例：在 WebApp 中实时查看 PixelMug 的三轴加速度和三轴角速度。\n\n' +
-      '1. 在 Studio 中启动项目并运行设备代码。\n' +
-      '2. 使用 /bindPixelMug 关联 PixelMug。\n' +
-      '3. 使用 /webApp 打开页面。\n' +
-      '4. 连接蓝牙并移动 PixelMug。'
+      'BLE Simple motion example: view a PixelMug\'s three-axis acceleration and angular velocity in real time.\n\n' +
+      '1. Start the project in Studio and run the device code.\n' +
+      '2. Use /bindPixelMug to bind a PixelMug.\n' +
+      '3. Use /webApp to open the page and install MPY.\n' +
+      '4. Connect over Bluetooth and move the PixelMug.'
     );
   } else if (text === '/bindPixelMug') {
     await ctx.sendBindDevice({
-      content: '请选择用于 BLE Simple 运动数据示例的 PixelMug。',
-      actionButtonTitle: '关联 PixelMug',
+      content: 'Select the PixelMug for the BLE Simple motion example.',
+      actionButtonTitle: 'Bind PixelMug',
     });
   } else if (text === '/webApp') {
     await ctx.sendKeyboard(
-      '打开六轴运动数据页面。',
-      new InlineKeyboard().url('打开 BLE 示例', process.env.STUDIO_WEBAPP_URL)
+      'Open the six-axis motion data page.',
+      new InlineKeyboard().url('Open BLE example', launchUrl.toString())
     );
   }
 });
 
 bot.on('error', (ctx) => console.error(ctx.error.message));
 await bot.setCommands([
-  { command: 'bindPixelMug', description: '关联 PixelMug' },
-  { command: 'help', description: '查看示例使用方法' },
-  { command: 'webApp', description: '打开运动数据页面' },
+  { command: 'bindPixelMug', description: 'Bind a PixelMug' },
+  { command: 'help', description: 'Show example instructions' },
+  { command: 'webApp', description: 'Open the motion data page' },
 ]);
 await bot.start();

@@ -1,15 +1,15 @@
-# G-sensor 与屏幕交互示例：移动水杯，观察屏幕中央实心圆的惯性反馈。
-# 使用姿态：右手持握水杯，屏幕面向用户，并尽量保持杯体竖直。
+# G-sensor and screen interaction example: move the mug and observe the inertial response of the filled circle.
+# Recommended pose: hold the mug in your right hand with the screen facing you, keeping the mug upright.
 #
-# 坐标映射：
-# - 水杯向左移动时，圆因惯性向屏幕右侧移动；向右移动时相反。
-# - 水杯向下移动时，圆因惯性向屏幕上方移动；向上移动时相反。
-# - 水杯向前靠近用户时，圆变小；向后远离用户时，圆变大。
+# Coordinate mapping:
+# - When the mug moves left, inertia moves the circle to the right; moving right has the opposite effect.
+# - When the mug moves down, inertia moves the circle upward; moving up has the opposite effect.
+# - When the mug moves forward toward you, the circle becomes smaller; moving backward makes it larger.
 #
-# 左右方向会保证整个圆留在屏幕内。上下方向只限制圆心，允许最多约一半
-# 的圆超出屏幕。圆的直径限制在 2 至 8 像素。
-# 屏幕四周绘制 32×16 白色边框，实心圆使用默认调色板中的紫色。
-# 展示 API：g_sensor.get_accel()、micropyxel.run()、elli()、rectb()。
+# Horizontal movement keeps the entire circle inside the screen. Vertical movement only limits the center,
+# allowing up to about half of the circle to extend beyond the screen. The diameter is limited to 2–8 pixels.
+# A 32×16 white border is drawn around the screen, and the filled circle uses the default palette's purple.
+# Demonstrates g_sensor.get_accel(), micropyxel.run(), elli(), and rectb().
 
 import time
 import g_sensor
@@ -58,7 +58,7 @@ def remove_dead_zone(value):
 
 def wait_until_ready(timeout_ms=5000):
     if not g_sensor.init():
-        raise RuntimeError("g_sensor init failed")
+        raise RuntimeError("g_sensor initialization failed")
 
     deadline = time.ticks_add(time.ticks_ms(), timeout_ms)
     while time.ticks_diff(deadline, time.ticks_ms()) > 0:
@@ -69,7 +69,7 @@ def wait_until_ready(timeout_ms=5000):
                 pass
         time.sleep_ms(20)
 
-    raise RuntimeError("g_sensor not ready")
+    raise RuntimeError("g_sensor is not ready")
 
 
 def measure_baseline():
@@ -77,7 +77,7 @@ def measure_baseline():
     sy = 0.0
     sz = 0.0
 
-    print("请保持水杯竖直且静止，正在记录 G-sensor 基线……")
+    print("Keep the mug upright and still while recording the G-sensor baseline...")
     for _ in range(BASELINE_SAMPLES):
         ax, ay, az = g_sensor.get_accel()
         sx += ax
@@ -88,7 +88,7 @@ def measure_baseline():
     scale = 1.0 / BASELINE_SAMPLES
     baseline = sx * scale, sy * scale, sz * scale
     print(
-        "基线：x={:.3f}, y={:.3f}, z={:.3f}".format(
+        "Baseline: x={:.3f}, y={:.3f}, z={:.3f}".format(
             baseline[0], baseline[1], baseline[2]
         )
     )
@@ -126,8 +126,8 @@ def main():
 
             ax, ay, az = g_sensor.get_accel()
 
-            # 持续缓慢跟踪静态重力分量。手持角度造成的长期偏置会被吸收，
-            # 短时间的平移动作仍会作为动态加速度保留下来。
+            # Slowly track the static gravity component. Long-term bias from the holding angle is absorbed,
+            # while short translational movements remain as dynamic acceleration.
             baseline_x += (ax - baseline_x) * BASELINE_TRACK_RATE
             baseline_y += (ay - baseline_y) * BASELINE_TRACK_RATE
             baseline_z += (az - baseline_z) * BASELINE_TRACK_RATE
@@ -136,22 +136,22 @@ def main():
             dynamic_y = remove_dead_zone(ay - baseline_y)
             dynamic_z = remove_dead_zone(az - baseline_z)
 
-            # 轻度低通滤波，保留移动响应并抑制单帧噪声。
+            # Apply light low-pass filtering to preserve motion response and suppress single-frame noise.
             filtered_x = filtered_x * 0.55 + dynamic_x * 0.45
             filtered_y = filtered_y * 0.55 + dynamic_y * 0.45
             filtered_z = filtered_z * 0.55 + dynamic_z * 0.45
 
-            # G-sensor +X 指向用户左侧。水杯向左加速时 ax 为正，
-            # 圆作为虚拟惯性物体向屏幕右侧移动，因此直接使用 +ax。
+            # G-sensor +X points to the user's left. When the mug accelerates left, ax is positive;
+            # the circle moves right as a virtual inertial object, so use +ax directly.
             velocity_x += filtered_x * POSITION_ACCEL
 
-            # G-sensor +Z 向上。水杯向下加速时 az 为负，圆向屏幕上方移动。
+            # G-sensor +Z points upward. When the mug accelerates down, az is negative and the circle moves up.
             velocity_y += filtered_z * POSITION_ACCEL
 
-            # G-sensor +Y 朝向用户。向前靠近用户时 ay 为正，圆缩小。
+            # G-sensor +Y points toward the user. When the mug moves forward, ay is positive and the circle shrinks.
             size_velocity -= filtered_y * SIZE_ACCEL
 
-            # 没有动态输入时加强回中；检测到动作时减弱回中，保留惯性行程。
+            # Strengthen the return-to-center force without dynamic input and weaken it during motion to preserve inertia.
             moving = dynamic_x != 0.0 or dynamic_y != 0.0 or dynamic_z != 0.0
             position_return = POSITION_RETURN if moving else IDLE_POSITION_RETURN
             size_return = SIZE_RETURN if moving else IDLE_SIZE_RETURN
@@ -163,7 +163,7 @@ def main():
             velocity_y *= VELOCITY_DAMPING
             size_velocity *= SIZE_DAMPING
 
-            # 提高灵敏度后限制最大变化速度，避免快速挥动时画面突然跳变。
+            # Limit the maximum change speed after increasing sensitivity to avoid sudden jumps during fast swings.
             velocity_x = clamp(
                 velocity_x, -MAX_POSITION_SPEED, MAX_POSITION_SPEED
             )
@@ -179,7 +179,7 @@ def main():
             diameter += size_velocity
             diameter = clamp(diameter, MIN_DIAMETER, MAX_DIAMETER)
 
-            # 左右边界挡住整个圆。
+            # Keep the entire circle within the left and right boundaries.
             half = diameter / 2
             min_x = half
             max_x = rt.width - half
@@ -190,7 +190,7 @@ def main():
                 x = max_x
                 velocity_x = 0.0
 
-            # 上下只限制圆心，因此圆可以有一部分超出屏幕。
+            # Limit only the center vertically, allowing part of the circle to extend beyond the screen.
             if y < 0:
                 y = 0.0
                 velocity_y = 0.0
@@ -210,10 +210,10 @@ def main():
             left = int(x - size / 2)
             top = int(y - size / 2)
             rt.elli(left, top, size, size, BALL_COLOR)
-            # 最后绘制边框，让圆到达边缘时呈现被边框挡住的效果。
+            # Draw the border last so the circle appears blocked when it reaches an edge.
             rt.rectb(0, 0, rt.width, rt.height, BORDER_COLOR)
 
-        print("运动交互开始：左右、上下、前后移动水杯观察实心圆")
+        print("Motion interaction started: move the mug left, right, up, down, forward, and backward")
         upyxel.run(update, draw, fps=FPS)
     finally:
         try:

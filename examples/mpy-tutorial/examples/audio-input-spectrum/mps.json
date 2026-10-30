@@ -1,7 +1,7 @@
 {
   "name": "audio-input-spectrum",
   "version": "1.0.0",
-  "description": "显示麦克风频谱",
+  "description": "Display the microphone spectrum",
   "dependencies": [
     {
       "name": "audio_service",

@@ -34,7 +34,8 @@ export class ProjectFiles {
     const bytes = await readFile(target);
     if(bytes.includes(0)) throw new Error('此文件是二进制文件，不能作为文本编辑');
     let content;
-    try { content = new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes); }
+    // Decode UTF-8 while consuming an optional BOM so editors never expose U+FEFF as content.
+    try { content = new TextDecoder('utf-8',{fatal:true}).decode(bytes); }
     catch { throw new Error('仅支持 UTF-8 编码的文本文件'); }
     return {path,content,revision:revision(bytes)};
   }

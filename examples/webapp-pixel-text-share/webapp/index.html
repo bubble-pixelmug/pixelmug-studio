@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pixel Text Share</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./src/style.css">
   <script>
     if (!globalThis.JeeWeb) {
       const jeeScript = document.createElement('script');
@@ -18,56 +18,56 @@
     <h1>Pixel Text Share</h1>
 
     <form id="text-form">
-      <label for="text">显示文字</label>
+      <label for="text">Text to display</label>
       <input id="text" name="text" value="Hello" maxlength="20" autocomplete="off">
 
       <div class="settings">
         <label>
-          颜色
+          Color
           <select id="color">
-            <option value="#ff0000">红色</option>
-            <option value="#00ff00" selected>绿色</option>
-            <option value="#0000ff">蓝色</option>
+            <option value="#ff0000">Red</option>
+            <option value="#00ff00" selected>Green</option>
+            <option value="#0000ff">Blue</option>
           </select>
         </label>
 
         <label>
-          字体
+          Text size
           <select id="size">
-            <option value="LARGE">大</option>
-            <option value="MEDIUM" selected>中</option>
-            <option value="SMALL">小</option>
+            <option value="LARGE">Large</option>
+            <option value="MEDIUM" selected>Medium</option>
+            <option value="SMALL">Small</option>
           </select>
         </label>
 
         <label>
-          滚动方向
+          Scroll direction
           <select id="direction">
-            <option value="0" selected>静止</option>
-            <option value="1">向左滚动</option>
+            <option value="0" selected>Static</option>
+            <option value="1">Scroll left</option>
           </select>
         </label>
       </div>
 
-      <p class="target-title">发送到</p>
+      <p class="target-title">Send to</p>
       <div class="devices">
         <label class="device-option">
           <input type="radio" name="device" value="1" disabled>
-          <span id="device-1">位置 1 未关联</span>
+          <span id="device-1">Slot 1 is unbound</span>
         </label>
 
         <label class="device-option">
           <input type="radio" name="device" value="2" disabled>
-          <span id="device-2">位置 2 未关联</span>
+          <span id="device-2">Slot 2 is unbound</span>
         </label>
       </div>
 
-      <button type="submit" disabled>发送</button>
+      <button type="submit" disabled>Send</button>
     </form>
 
-    <p id="status" aria-live="polite">正在连接冒泡 App…</p>
+    <p id="status" aria-live="polite">Connecting to the Bubble app…</p>
   </main>
 
-  <script type="module" src="./main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

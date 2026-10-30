@@ -1,7 +1,16 @@
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1/ext';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const mpsId = process.env.STUDIO_MPS_ID;
+if (!mpsId) throw new Error('STUDIO_MPS_ID is required');
+
+const mpsVersion = process.env.STUDIO_MPS_VERSION;
+if (!mpsVersion) throw new Error('STUDIO_MPS_VERSION is required');
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
   group_policy: 'mention',
 });
@@ -20,21 +29,56 @@ bot.on('message', async (ctx) => {
 
   if (command === '/bind') {
     await ctx.sendBindDevice({
-      content: '请选择一台 PixelMug S1，用于安装并运行本示例的 MPY 脚本。',
-      actionButtonTitle: '关联 PixelMug',
+      content: 'Select a PixelMug S1 for this MPY example.',
+      actionButtonTitle: 'Bind PixelMug',
     });
-  } else if (command === '/help') {
+    return;
+  }
+
+  if (command === '/installMPY') {
+    const [device] = await bot.getBoundDevices(ctx);
+    if (!device) {
+      await ctx.sendBindDevice({
+        content: 'Bind a PixelMug S1 before installing MPY.',
+        actionButtonTitle: 'Bind PixelMug',
+      });
+      return;
+    }
+
+    try {
+      await ctx.sendText('Installing and starting MPY. Please wait.');
+      const commandRpc = pixelMug.rpc.talMpyExecOneScript({
+        id: mpsId,
+        version: mpsVersion,
+      });
+      const response = await bot.callDevice(ctx.chat, device, commandRpc);
+      const code = readMpyReturnCode(response);
+      if (code === 264) {
+        await ctx.sendText('MPY is already running on the PixelMug.');
+      } else if ([260, 261, 262, 263, 265].includes(code)) {
+        await ctx.sendText('MPY installation started. Wait for the device to finish.');
+      } else {
+        await ctx.sendText(`The device rejected the MPY request (code ${code}).`);
+      }
+    } catch (error) {
+      await ctx.sendText(`MPY installation failed: ${error.message}`);
+    }
+    return;
+  }
+
+  if (command === '/help') {
     await ctx.sendText([
-      '这是一个演示 PixelMugBLECentral 主机库的示例。',
-      'Bot 只负责关联 PixelMug，并配合 Studio 安装和运行 mpy/ 中的设备脚本。',
-      '发送 /bind 选择测试用的 PixelMug S1。',
+      'This example demonstrates the PixelMugBLECentral host library.',
+      'The Bot binds a PixelMug and installs the device script from mpy/.',
+      'Use /bind to select a PixelMug S1, then /installMPY to install and start MPY.',
     ].join('\n'));
   }
 });
 
 await bot.setCommands([
-  { command: 'bind', description: '关联测试用 PixelMug' },
-  { command: 'help', description: '查看示例说明' },
+  { command: 'bind', description: 'Bind a test PixelMug' },
+  { command: 'installMPY', description: 'Install and start MPY' },
+  { command: 'help', description: 'Show example instructions' },
 ]);
 
 await bot.start();
@@ -44,4 +88,12 @@ function extractCommand(text) {
     /\/[a-zA-Z0-9_-]+(?:@[a-zA-Z0-9_-]+)?/,
   );
   return match?.[0].split('@')[0] || '';
+}
+
+function readMpyReturnCode(response) {
+  const result = response?.tal?.result ?? response?.result;
+  const value = result && typeof result === 'object'
+    ? result.value ?? result.return ?? result.result?.value ?? result.result
+    : result ?? response?.value;
+  return Number(value);
 }

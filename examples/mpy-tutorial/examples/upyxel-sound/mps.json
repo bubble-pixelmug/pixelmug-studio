@@ -1,7 +1,7 @@
 {
   "name": "upyxel-sound",
   "version": "1.0.0",
-  "description": "自动演示 MicroPyxel Sound API 与三个声部",
+  "description": "MicroPyxel Sound API playback and channel control demo",
   "dependencies": [
     {
       "name": "micropyxel",

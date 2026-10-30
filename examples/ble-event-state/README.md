@@ -1,51 +1,51 @@
-# BLE 状态与事件
+# BLE State and Events
 
-一个 Bot + WebApp + MPY 完整教学项目，适用于 PixelMug S1 Pro/Lite。MPY 从 0 开始，每隔约一秒加一，到 99 后回到 0。杯子和网页显示同一个计数，网页另外保留最近一次事件。
+A complete Bot, WebApp, and MPY teaching project for PixelMug S1 Pro and Lite devices. The MPY program starts at 0, increments about once per second, and returns to 0 after 99. The mug and WebApp show the same counter, while the page also keeps the latest event.
 
-## 运行
+## Run
 
-1. 在 Studio 打开本目录，选择 `bot/index.js`，填写 Bot token。
-2. 勾选“启动后自动运行设备代码”，启动智能体。
-3. 在冒泡 App 发送 `/bindPixelMug` 关联杯子，等待 MPY 开始显示计数。
-4. 发送 `/webApp` 打开页面，点击“连接”。页面使用第一台已关联设备。
-5. 观察网页数字每秒更新；点击“读取当前值”可主动读取一次。
-6. 计数到 10、20…90 时，事件区域显示“计数到达 N”；99 回到 0 时显示“计数归零，开始新一轮”。
+1. Open this directory in Studio, select `bot/index.js`, and configure the Bot token.
+2. Enable automatic device code startup and start the Agent.
+3. In the Bubble app, send `/bindPixelMug` and bind a PixelMug.
+4. Send `/webApp`, select **Install MPY**, then select **Connect**.
+5. Watch the count update every second. Select **Read current value** to request a snapshot.
+6. At 10, 20, and other multiples of ten, the event area shows a notification; after 99, it shows the counter reset event.
 
-`/help` 可查看操作说明。页面需要在冒泡 App 中打开，手机需能访问 Studio 的页面地址并允许蓝牙权限。两端应用标识均为 `BleEventState`，修改时需保持一致。
+The WebApp receives the MPS ID and version from the Bot URL and calls `talMpyExecOneScript` before connecting over Bluetooth. Both sides use the `BleEventState` application ID.
 
-## 只看这几组 API
+## Key APIs
 
-| 用途 | MPY | WebApp |
+| Purpose | MPY | WebApp |
 | --- | --- | --- |
-| 定义可读取的状态 | `ble.set_state_provider(read_state)`，返回 `{"count": count}` | `await client.requestSnapshot()`，得到 `{ count: 当前值 }` |
-| 主动推送状态 | `ble.publish_state()` | `client.on('state', showCount)` |
-| 整十事件 | `ble.send_event("multipleOfTen", {"count": count})` | 在 `client.on('event', ...)` 中检查 `event.event`，读取 `event.count` |
-| 重新计数事件 | `ble.send_event("counterReset", {"count": 0})` | 同一个事件监听中处理 `counterReset` |
+| Define readable state | `ble.set_state_provider(read_state)` returns `{"count": count}` | `await client.requestSnapshot()` returns `{ count: currentValue }` |
+| Publish state | `ble.publish_state()` | `client.on('state', showCount)` |
+| Multiple-of-ten event | `ble.send_event("multipleOfTen", {"count": count})` | Check `event.event` and read `event.count` in `client.on('event', ...)` |
+| Counter reset event | `ble.send_event("counterReset", {"count": 0})` | Handle `counterReset` in the same event listener |
 
-状态是“现在是多少”，事件是“刚发生了什么”。例如到 20 时，设备既发布状态 `{"count": 20}`，也发送一次 `multipleOfTen` 事件；到 21 时只发布状态，网页的事件区域继续显示最近一次通知。
+State represents the current value, while an event represents something that just happened. At 20, the device publishes `{"count": 20}` and sends one `multipleOfTen` event; at 21, it only publishes state and the event area keeps the previous notification.
 
-0 只触发重置事件，不同时触发整十事件。程序刚启动时不发送重置事件，第一次重置发生在计数完成一轮之后。
+Zero triggers only the reset event, not the multiple-of-ten event. Startup does not emit a reset event; the first reset occurs after a complete counting cycle.
 
-## 连接与数据行为
+## Connection and data behavior
 
-计数不依赖网页连接，断开时也会继续。MPY 只有在 `ble.ready` 时发布状态和事件，并在每次画面更新中调用 `ble.poll()` 推进通信。
+Counting does not depend on the WebApp connection and continues while disconnected. MPY publishes state and events only when `ble.ready`, and calls `ble.poll()` during each frame update.
 
-网页在连接前注册监听，连接后主动读取当前状态，因此可能首次看到 7、15 等数值，而不是 0。`requestSnapshot()` 只读取，不会重置计数。没有连接时发生的事件不补发，重新连接后仍可取得当前计数。
+The WebApp registers listeners before connecting and requests the current state after connecting, so the first value may be 7 or 15 instead of 0. `requestSnapshot()` only reads the value and does not reset the counter. Events that occur while disconnected are not replayed, but reconnecting still provides the current count.
 
-本例只保留连接、读状态和收通知的代码，不添加应用命令或断开流程；主动断开的写法见 [ble-minimal](../ble-minimal/README.md)。`client.close()` 清理页面监听，不代表物理 BLE 连接已断开。
+This example only covers connection, state reads, and event notifications. It does not add app commands or a disconnect flow; see [ble-minimal](../ble-minimal/README.md) for an active disconnect. `client.close()` cleans up page listeners but does not guarantee a physical BLE disconnect.
 
-状态和事件通过标准消息通道传输，不逐条等待网页业务确认。状态用于显示最新值，不是保存每次计数的历史记录。
+State and events use the standard message channel and do not wait for per-message WebApp acknowledgements. State displays the latest value and is not a history of every count.
 
-## 文件
+## Files
 
-- `mpy/__main__.py`：计数、定义状态、发布状态和事件、居中显示。
-- `webapp/main.js`：连接、读取状态、监听状态与事件。
-- `webapp/index.html`、`style.css`：两个按钮、一个计数和一条事件提示。
-- `bot/index.js`：绑定设备、帮助和打开页面。
+- `mpy/__main__.py`: Counts, defines state, publishes state and events, and draws the value.
+- `webapp/src/main.js`: Installs MPY, connects, reads state, and listens for state and events.
+- `webapp/index.html` and `webapp/src/style.css`: Define the install, connection, snapshot, count, and event controls.
+- `bot/index.js`: Handles device binding, help, and the WebApp entry.
 
-## 对应文档
+## Related documentation
 
-- [WebApp SDK BLE 接口](../../../../docs/ble/app/webapp.md)
-- [MPY 状态与事件](../../../../docs/ble/app/mpy/state-events.md)
+- [WebApp SDK BLE API](../../../../docs/ble/app/webapp.md)
+- [MPY state and events](../../../../docs/ble/app/mpy/state-events.md)
 
-本例使用固件内置的 `maopaoBleApp`；`mps.json` 只声明 MicroPyxel 显示组件依赖。
+This example uses the built-in `maopaoBleApp`; `mps.json` declares only the MicroPyxel display dependency.

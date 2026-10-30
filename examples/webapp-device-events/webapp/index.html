@@ -1,25 +1,25 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>设备事件</title>
-  <link rel="stylesheet" href="./style.css">
+  <title>Device Events</title>
+  <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
   <main class="card">
-    <h1>设备事件</h1>
-    <p id="device">正在获取关联设备…</p>
+    <h1>Device Events</h1>
+    <p id="device">Loading bound device…</p>
 
     <div class="actions">
-      <button id="subscribe" type="button" disabled>订阅事件</button>
-      <button id="unsubscribe" type="button" class="secondary" disabled>取消订阅</button>
+      <button id="subscribe" type="button" disabled>Subscribe</button>
+      <button id="unsubscribe" type="button" class="secondary" disabled>Unsubscribe</button>
     </div>
 
-    <p id="subscription">尚未订阅</p>
-    <p id="charging">等待充电事件</p>
+    <p id="subscription">Not subscribed</p>
+    <p id="charging">Waiting for charging events</p>
   </main>
 
-  <script type="module" src="./main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

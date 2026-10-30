@@ -1,8 +1,9 @@
-# MicroPyxel 入门示例：先显示两行静态文字，再让长文字从右向左滚动。
-# 展示 API：text、cls、run、quit、destroy。
-# 内置字体每个字符占 4×6 像素，支持字符码 32..127；本例只使用英文、数字和空格。
-# text 不会自动换行、缩放或滚动；滚动效果通过每帧改变 x 坐标实现。
-# 前 3 秒显示静态文字，随后滚动约 12 秒；长文字完全移出左侧后从右侧重新进入。
+# MicroPyxel text example: show two static lines, then scroll a long message from right to left.
+# Demonstrates the text, cls, run, quit, and destroy APIs.
+# The built-in font uses 4x6 pixel glyphs and supports character codes 32..127.
+# This example uses only ASCII letters, numbers, and spaces.
+# The text API does not wrap, scale, or scroll automatically; scrolling is implemented by changing x each frame.
+# The first 3 seconds show static text, followed by about 12 seconds of scrolling.
 
 import micropyxel as upyxel
 
@@ -22,7 +23,7 @@ def main():
         def update(rt):
             nonlocal scroll_x
             if rt.frame_count >= STATIC_FRAMES:
-                # 每两帧向左移动 1 像素，让小屏幕上的文字更容易看清。
+                # Move one pixel every two frames for easier reading on the small display.
                 if (rt.frame_count - STATIC_FRAMES) % 2 == 0:
                     scroll_x -= 1
                 if scroll_x < -len(MESSAGE) * FONT_WIDTH:
@@ -38,9 +39,9 @@ def main():
             else:
                 rt.text(scroll_x, 5, MESSAGE, 10)
 
-        print("文字演示开始：静态文字后切换为滚动文字")
+        print("Text demo started: static text followed by scrolling text")
         upyxel.run(update, draw, fps=FPS)
-        print("文字演示结束")
+        print("Text demo finished")
     finally:
         upyxel.destroy()
 

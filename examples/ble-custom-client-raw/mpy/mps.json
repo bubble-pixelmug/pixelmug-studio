@@ -1,0 +1,12 @@
+{
+  "name": "ble-custom-client-raw",
+  "version": "1.0.0",
+  "description": "Low-level BLE example: send raw Simple data from an ESP32-C3 to PixelMug",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    }
+  ],
+  "date": "2026-10-29"
+}

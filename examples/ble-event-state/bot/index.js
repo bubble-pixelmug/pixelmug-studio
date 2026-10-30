@@ -1,7 +1,23 @@
 import { BubbleBot, InlineKeyboard } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const webAppUrl = process.env.STUDIO_WEBAPP_URL;
+if (!webAppUrl) throw new Error('WebApp URL is not configured');
+
+const mpsId = process.env.STUDIO_MPS_ID;
+if (!mpsId) throw new Error('STUDIO_MPS_ID is required');
+
+const mpsVersion = process.env.STUDIO_MPS_VERSION;
+if (!mpsVersion) throw new Error('STUDIO_MPS_VERSION is required');
+
+const launchUrl = new URL(webAppUrl);
+launchUrl.searchParams.set('mps_id', mpsId);
+launchUrl.searchParams.set('mps_version', mpsVersion);
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
   webAppDeviceAccess: 'any',
 });
@@ -11,27 +27,27 @@ bot.on('message:text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text === '/help') {
     await ctx.sendText(
-      'BLE 状态与事件：杯子每秒计数，网页显示当前值和最近一次事件。\n\n' +
-      '1. 在 Studio 勾选“启动后自动运行设备代码”并启动。\n' +
-      '2. /bindPixelMug：关联 PixelMug S1 Pro/Lite。\n' +
-      '3. 等杯子开始计数后，/webApp 打开页面并点击连接。\n' +
-      '4. 10、20…90 时产生整十事件，99 回到 0 时产生重置事件。'
+      'BLE state and events: the mug counts every second while the WebApp shows the current value and latest event.\n\n' +
+      '1. Enable automatic device code startup in Studio and start the Agent.\n' +
+      '2. Use /bindPixelMug to bind a PixelMug S1 Pro or Lite.\n' +
+      '3. Wait for the counter to start, then use /webApp and install MPY.\n' +
+      '4. Connect to watch multiples of ten and counter reset events.'
     );
   } else if (text === '/bindPixelMug') {
     await ctx.sendBindDevice({
-      content: '请选择用于 BLE 状态与事件示例的 PixelMug S1 Pro/Lite。',
-      actionButtonTitle: '关联 PixelMug',
+      content: 'Select the PixelMug S1 Pro or Lite for this BLE state and events example.',
+      actionButtonTitle: 'Bind PixelMug',
     });
   } else if (text === '/webApp') {
-    await ctx.sendKeyboard('查看杯子的当前计数与事件通知。',
-      new InlineKeyboard().url('打开状态与事件示例', process.env.STUDIO_WEBAPP_URL));
+    await ctx.sendKeyboard('View the mug counter and event notifications.',
+      new InlineKeyboard().url('Open state and events', launchUrl.toString()));
   }
 });
 
 bot.on('error', (ctx) => console.error(ctx.error.message));
 await bot.setCommands([
-  { command: 'bindPixelMug', description: '关联 PixelMug' },
-  { command: 'help', description: '查看状态与事件示例使用方法' },
-  { command: 'webApp', description: '打开状态与事件页面' },
+  { command: 'bindPixelMug', description: 'Bind a PixelMug' },
+  { command: 'help', description: 'Show state and events instructions' },
+  { command: 'webApp', description: 'Open the state and events page' },
 ]);
 await bot.start();

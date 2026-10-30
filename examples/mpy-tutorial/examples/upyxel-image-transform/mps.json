@@ -1,7 +1,7 @@
 {
   "name": "upyxel-image-transform",
   "version": "1.0.0",
-  "description": "MicroPyxel 图片翻转、旋转与缩放演示",
+  "description": "MicroPyxel image flip, rotation, and scaling demo",
   "dependencies": [
     {
       "name": "micropyxel",

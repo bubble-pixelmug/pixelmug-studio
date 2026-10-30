@@ -1,7 +1,8 @@
-# Network UDP Motion 示例：把 PixelMug 的融合四元数实时发送给配套 3D 查看器。
-# 展示 API：g_sensor.get_quaternion、socket.getaddrinfo、UDP sendto 和 socket.close。
-# 先启动 network-udp-motion-viewer，再把 HOST_IP 改为上位机输出的局域网地址。
-# 设备约每 40 ms 采样并发送一包；UDP 不保证到达，查看器按序号统计丢帧。
+# Network UDP Motion example: stream PixelMug fused quaternions to the 3D viewer.
+# Demonstrates g_sensor.get_quaternion, socket.getaddrinfo, UDP sendto, and socket.close.
+# Start the network-udp-motion viewer first, then set HOST_IP to the host's LAN address.
+# The device samples and sends one packet about every 40 ms. UDP delivery is not guaranteed,
+# so the viewer tracks dropped frames by sequence number.
 import gc
 import json
 import socket
@@ -10,7 +11,7 @@ import time
 import g_sensor
 
 
-HOST_IP = "172.16.30.186"
+HOST_IP = "172.16.30.18"
 HOST_PORT = 9000
 SEND_INTERVAL_MS = 40
 READY_TIMEOUT_MS = 5000

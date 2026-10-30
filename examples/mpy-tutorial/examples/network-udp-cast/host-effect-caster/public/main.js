@@ -1,4 +1,4 @@
-﻿const deviceIpInput = document.querySelector("#device-ip");
+const deviceIpInput = document.querySelector("#device-ip");
 const udpPortInput = document.querySelector("#udp-port");
 const effectsElement = document.querySelector("#effects");
 const brightnessInput = document.querySelector("#brightness");
@@ -48,7 +48,7 @@ async function control(changes) {
     body: JSON.stringify(changes),
   });
   const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || "设置失败");
+  if (!response.ok) throw new Error(payload.error || "Failed to apply settings");
   renderState(payload);
 }
 
@@ -82,13 +82,13 @@ function renderState(nextState) {
   speedValue.value = `${nextState.speed.toFixed(1)}×`;
   statusDot.classList.toggle("playing", nextState.playing);
   statusText.textContent = nextState.paused
-    ? "已暂停"
+    ? "Paused"
     : nextState.playing
-      ? `正在向 ${nextState.deviceIp}:${nextState.udpPort} 发送 UDP`
-      : "尚未开始投屏";
-  pauseButton.textContent = nextState.paused ? "继续" : "暂停";
+      ? `Sending UDP to ${nextState.deviceIp}:${nextState.udpPort}`
+      : "Casting has not started";
+  pauseButton.textContent = nextState.paused ? "Resume" : "Pause";
   pauseButton.disabled = !nextState.playing;
-  statsElement.textContent = `${nextState.sentFrames} 帧 · ${nextState.sendErrors} 个发送错误`;
+  statsElement.textContent = `${nextState.sentFrames} frames · ${nextState.sendErrors} send errors`;
   renderEffects();
 }
 
@@ -166,7 +166,7 @@ eventSource.addEventListener("frame", (event) => {
   const frame = JSON.parse(event.data);
   if (frame.paletteId === paletteId) drawFrame(decodeBase64(frame.pixels));
 });
-eventSource.onerror = () => showError("与上位机服务的连接已断开，正在重连……");
+eventSource.onerror = () => showError("Connection to the host service was lost; reconnecting...");
 eventSource.onopen = () => showError();
 
 try {

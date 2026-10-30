@@ -3,22 +3,21 @@ import { fileURLToPath } from 'node:url';
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 
 const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
+if (!token) throw new Error('BOT_TOKEN is required');
 
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
+const bot = new BubbleBot(token, {
+  apiBaseUrl: process.env.BOT_API_BASE_URL,
+});
 
-const bot = new BubbleBot(token, { apiBaseUrl });
-const projectDir = path.resolve(
+const assetsDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  '..',
+  'assets',
 );
 const uploads = new Map();
 
 function upload(name) {
   if (!uploads.has(name)) {
-    const filePath = path.join(projectDir, 'assets', name);
+    const filePath = path.join(assetsDir, name);
     uploads.set(name, bot.inputFile(filePath));
   }
   return uploads.get(name);
@@ -50,41 +49,41 @@ bot.on('message:text', async (ctx) => {
     const gif = await upload('game.gif');
     await ctx.sendGif({ ...gif, width: 32, height: 16 });
   } else {
-    await ctx.sendText('发送 /image、/voice、/video 或 /gif。');
+    await ctx.sendText('Send /image, /voice, /video, or /gif.');
   }
 });
 
 bot.on('message:image', async (ctx) => {
   const image = ctx.message.image;
   await ctx.sendText(
-    '收到图片：' + (image?.width || '?') + ' × ' + (image?.height || '?'),
+    `Received an image: ${image?.width || '?'} x ${image?.height || '?'}`,
   );
 });
 
 bot.on('message:voice', async (ctx) => {
   await ctx.sendText(
-    '收到语音：' + (ctx.message.voice?.duration || 0) + ' 毫秒',
+    `Received a voice message: ${ctx.message.voice?.duration || 0} ms`,
   );
 });
 
 bot.on('message:video', async (ctx) => {
   const video = ctx.message.video;
   await ctx.sendText(
-    '收到视频：' + (video?.width || '?') + ' × ' + (video?.height || '?'),
+    `Received a video: ${video?.width || '?'} x ${video?.height || '?'}`,
   );
 });
 
 bot.on('message:gif', async (ctx) => {
-  await ctx.sendText('收到 GIF。');
+  await ctx.sendText('Received a GIF.');
 });
 
 await bot.setCommands([
-  { command: 'image', description: '发送示例图片' },
-  { command: 'voice', description: '发送示例语音' },
-  { command: 'video', description: '发送示例视频' },
-  { command: 'gif', description: '发送示例 GIF' },
+  { command: 'image', description: 'Send a sample image' },
+  { command: 'voice', description: 'Send a sample voice message' },
+  { command: 'video', description: 'Send a sample video' },
+  { command: 'gif', description: 'Send a sample GIF' },
 ]);
 
 await bot.start({ device: false });
 
-console.log('媒体消息示例已启动。');
+console.log('Media messages example started.');

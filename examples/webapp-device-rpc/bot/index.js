@@ -4,13 +4,19 @@ import {
 } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1/ext';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const webAppUrl = process.env.STUDIO_WEBAPP_URL;
+if (!webAppUrl) throw new Error('WebApp URL is not configured');
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
   webAppDeviceAccess: 'any',
 });
 
 const mug = new PixelMugS1();
-mug.name = '像素水杯';
+mug.name = 'PixelMug';
 mug.compatible = ['PixelMug'];
 bot.registerDevices([mug]);
 
@@ -23,25 +29,25 @@ bot.on('message:text', async (ctx) => {
 
   if (command === '/bind') {
     await ctx.sendBindDevice({
-      content: '请选择一台 PixelMug S1 或 PixelMug P1。',
-      actionButtonTitle: '关联设备',
+      content: 'Bind a PixelMug S1 or PixelMug P1.',
+      actionButtonTitle: 'Bind device',
     });
     return;
   }
 
   if (command === '/open') {
     const keyboard = new InlineKeyboard()
-      .url('打开设备控制', process.env.STUDIO_WEBAPP_URL);
+      .url('Open device control', webAppUrl);
 
-    await ctx.sendKeyboard('打开 WebApp，控制水杯屏幕。', keyboard);
+    await ctx.sendKeyboard('Open the WebApp to control the PixelMug display.', keyboard);
   }
 });
 
 await bot.setCommands([
-  { command: 'bind', description: '关联 PixelMug' },
-  { command: 'open', description: '打开设备控制页面' },
+  { command: 'bind', description: 'Bind a PixelMug' },
+  { command: 'open', description: 'Open device control' },
 ]);
 
 await bot.start({ device: false });
 
-console.log('WebApp 设备 RPC 示例已启动，请先发送 /bind，再发送 /open。');
+console.log('WebApp device RPC example started. Send /bind, then /open.');

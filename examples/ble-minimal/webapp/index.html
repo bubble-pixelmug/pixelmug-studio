@@ -1,18 +1,19 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BLE 最小示例</title>
-  <link rel="stylesheet" href="./style.css">
+  <title>Minimal BLE</title>
+  <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
+  <button id="install-mpy" type="button">Install MPY</button>
   <fieldset disabled>
-    <button id="connect">连接</button>
-    <button id="disconnect">断开</button>
-    <button id="reconnect">重连</button>
-    <button id="echo">echo</button>
+    <button id="connect" type="button">Connect</button>
+    <button id="disconnect" type="button">Disconnect</button>
+    <button id="reconnect" type="button">Reconnect</button>
+    <button id="echo" type="button">Echo</button>
   </fieldset>
-  <script type="module" src="./main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

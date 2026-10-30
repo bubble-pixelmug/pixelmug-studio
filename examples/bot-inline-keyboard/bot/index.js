@@ -1,31 +1,48 @@
 import { BubbleBot, InlineKeyboard } from '@jeejio-bubble/bot/sdk';
+import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1/ext';
 
 const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
+if (!token) throw new Error('BOT_TOKEN is required');
 
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
+const bot = new BubbleBot(token, {
+  apiBaseUrl: process.env.BOT_API_BASE_URL,
+});
 
-const bot = new BubbleBot(token, { apiBaseUrl });
+const mug = new PixelMugS1();
+mug.name = 'PixelMug S1';
+mug.compatible = ['PixelMug'];
+bot.registerDevices([mug]);
 
 bot.on('error', (ctx) => {
   console.error('[bot-inline-keyboard]', ctx.error?.message || ctx.error);
 });
 
 bot.on('message:text', async (ctx) => {
-  if (ctx.message.text.trim() !== '/panel') {
-    await ctx.sendText('发送 /panel 打开操作面板。');
+  const command = ctx.message.text.trim();
+
+  if (command === '/bindPixelMug') {
+    await ctx.sendBindDevice({
+      content: 'Select a PixelMug S1 or PixelMug P1 for this Bot.',
+      actionButtonTitle: 'Bind device',
+    });
+    return;
+  }
+
+  if (command !== '/panel') {
+    await ctx.sendText('Send /panel to open the action panel.');
     return;
   }
 
   const keyboard = new InlineKeyboard()
-    .text('打招呼', 'hello')
-    .text('查看时间', 'time')
+    .text('Say hello', 'hello')
+    .text('Show time', 'time')
     .row()
-    .url('打开 PixelMug 网站', 'https://pixelmug.com/');
+    .text('Display on', 'screen:on')
+    .text('Display off', 'screen:off')
+    .row()
+    .url('Open PixelMug website', 'https://pixelmug.com/');
 
-  await ctx.sendKeyboard('**操作面板**\n请选择一个操作：', keyboard);
+  await ctx.sendKeyboard('**Action panel**\nChoose an action:', keyboard);
 });
 
 bot.on('callback', async (ctx) => {
@@ -35,16 +52,30 @@ bot.on('callback', async (ctx) => {
     : data?.value || data?.data;
 
   if (action === 'hello') {
-    await ctx.sendText('你好，' + (ctx.from?.name || '朋友') + '！');
+    await ctx.sendText(`Hello, ${ctx.from?.name || 'friend'}!`);
   } else if (action === 'time') {
+    await ctx.sendText(`Current bot time: ${new Date().toLocaleString('en-US')}`);
+  } else if (action === 'screen:on' || action === 'screen:off') {
+    // Handle screen on/off actions
+    const rpc = mug.rpc.talSetDisplayOnOff({ onoff: action === 'screen:on' });
+    await bot.callDevice(ctx.chat, mug, rpc, {
+      to: ctx.from,
+      requireOnline: true,
+      timeout: 10000,
+    });
     await ctx.sendText(
-      'Bot 当前时间：' + new Date().toLocaleString('zh-CN'),
+      `Display is turned ${action === 'screen:on' ? 'on' : 'off'}`
     );
   } else {
-    await ctx.sendText('请重新发送 /panel 打开操作面板。');
+    await ctx.sendText('Send /panel to open the action panel again.');
   }
 });
 
-await bot.start({ device: false });
+await bot.setCommands([
+  { command: 'panel', description: 'Open the action panel' },
+  { command: 'bindPixelMug', description: 'Bind a PixelMug device' },
+]);
 
-console.log('InlineKeyboard 示例已启动。');
+await bot.start();
+
+console.log('Inline keyboard example started.');

@@ -1,7 +1,7 @@
-﻿{
+{
   "name": "dust-particle-control",
   "version": "1.0.0",
-  "description": "单击发射 Dust 粒子并观察障碍物碰撞",
+  "description": "Click to launch Dust particles and observe obstacle collisions",
   "dependencies": [
     {
       "name": "micropyxel",

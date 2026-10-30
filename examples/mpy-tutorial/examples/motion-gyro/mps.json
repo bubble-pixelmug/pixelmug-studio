@@ -1,7 +1,7 @@
 {
   "name": "motion-gyro",
   "version": "1.0.0",
-  "description": "显示 G-sensor 三轴角速度的方向和大小",
+  "description": "Display the direction and magnitude of G-sensor angular velocity on three axes",
   "dependencies": [
     {
       "name": "micropyxel",

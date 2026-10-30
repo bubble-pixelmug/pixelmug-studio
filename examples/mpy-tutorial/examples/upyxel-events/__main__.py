@@ -1,9 +1,9 @@
-﻿# MicroPyxel 应用事件示例：单击 PixelMug 底部触摸按键，暂停或恢复计数器。
-# 展示 API：on、emit、state、off，以及 mpy_button.get、mpy_button.clear。
-# 计数器从 000 开始，每 500 ms 加 1，999 后回到 000。
-# mpy_button 提供设备按键事件；emit 将 click 转换成应用内部的 toggle_pause 事件。
-# run 在下一帧开始时分发事件，处理器通过 state() 切换共享的暂停状态。
-# 示例持续运行，直到在 Studio 中停止。
+# MicroPyxel application event example: tap the PixelMug button to pause or resume the counter.
+# Demonstrates on, emit, state, off, mpy_button.get, and mpy_button.clear.
+# The counter starts at 000, increments every 500 ms, and wraps to 000 after 999.
+# mpy_button provides device button events; emit converts click into the internal toggle_pause event.
+# run dispatches events at the start of the next frame, and the handler uses state() to share pause state.
+# The example runs continuously until it is stopped in Studio.
 
 import time
 import micropyxel as upyxel
@@ -33,20 +33,20 @@ def main():
     def toggle_pause(event):
         state = upyxel.state()
         state["paused"] = not state["paused"]
-        # 暂停期间不累计时间；恢复后重新等待完整的 500 ms。
+        # Do not accumulate time while paused; wait for a full 500 ms after resuming.
         state["last_count_ms"] = time.ticks_ms()
         if state["paused"]:
-            print("计数器已暂停")
+            print("Counter paused")
         else:
-            print("计数器继续运行")
+            print("Counter resumed")
 
     upyxel.on(EVENT_TOGGLE_PAUSE, toggle_pause)
     mpy_button.clear()
 
     try:
         def update(rt):
-            # 取完当前积压的按键事件。单击转换为 MicroPyxel 应用事件；
-            # 双击事件不参与本例。
+            # Drain pending button events. A single click becomes a MicroPyxel application event;
+            # double-click events are ignored in this example.
             while True:
                 button_event = mpy_button.get()
                 if button_event is None:
@@ -59,7 +59,7 @@ def main():
                 return
 
             now = time.ticks_ms()
-            # 使用固定时间步进；即使某帧稍晚，也不会让计数器长期漂移。
+            # Use a fixed time step so a late frame does not cause long-term counter drift.
             while time.ticks_diff(now, state["last_count_ms"]) >= COUNT_INTERVAL_MS:
                 state["count"] = (state["count"] + 1) % 1000
                 state["last_count_ms"] = time.ticks_add(
@@ -75,7 +75,7 @@ def main():
             color = 10 if state["paused"] else 7
             rt.text(x, y, text, color)
 
-        print("计数器开始：单击触摸按键可暂停或继续")
+        print("Counter started: tap the button to pause or resume")
         upyxel.run(update, draw, fps=FPS)
     finally:
         upyxel.off(EVENT_TOGGLE_PAUSE, toggle_pause)

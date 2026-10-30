@@ -1,7 +1,7 @@
 {
   "name": "upyxel-sprite-animation",
   "version": "1.0.0",
-  "description": "使用 VAD 驱动 MicroPyxel 小鸟逐帧动画",
+  "description": "VAD-driven MicroPyxel bird sprite animation",
   "dependencies": [
     {
       "name": "micropyxel",

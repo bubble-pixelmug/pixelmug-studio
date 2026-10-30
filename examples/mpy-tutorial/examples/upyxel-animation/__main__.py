@@ -1,8 +1,10 @@
-# MicroPyxel 入门示例：一个白色小球在屏幕内移动，碰到边缘后反弹。
-# 展示 API：init、run(update, draw)、cls、circ、quit、destroy。
-# update 只更新位置；draw 清屏并绘制；run 在 draw 后自动刷新，无需手动 render_graphics。
-# 目标帧率为 20 fps，每帧移动 1 像素；运行约 15 秒后 quit 退出循环，再 destroy 释放资源。
-# quit 不负责释放资源，destroy 也不替代退出循环。
+# MicroPyxel beginner example: a white ball moves inside the screen and bounces off the edges.
+# Demonstrates init, run(update, draw), cls, circ, quit, and destroy.
+# update changes the position; draw clears and redraws the frame.
+# run refreshes automatically after draw, so render_graphics is not needed here.
+# The target frame rate is 20 FPS and the ball moves one pixel per frame.
+# After about 15 seconds, quit ends the loop and destroy releases resources.
+# quit does not release resources, and destroy does not replace exiting the loop.
 
 import time
 import micropyxel as upyxel
@@ -23,7 +25,7 @@ def main():
             nonlocal x, y, dx, dy
             x += dx
             y += dy
-            # 圆心与屏幕边缘至少相距一个半径，保证整个小球都在屏幕内。
+            # Keep the entire ball inside the screen by maintaining one radius from each edge.
             if x <= RADIUS or x >= rt.width - 1 - RADIUS:
                 dx = -dx
             if y <= RADIUS or y >= rt.height - 1 - RADIUS:
@@ -32,12 +34,12 @@ def main():
                 rt.quit()
 
         def draw(rt):
-            rt.cls(0)  # 清掉上一帧，避免留下运动轨迹。
-            rt.circ(x, y, RADIUS, 7)  # 默认调色板：0 为黑色，7 为白色。
+            rt.cls(0)  # Clear the previous frame so the motion leaves no trail.
+            rt.circ(x, y, RADIUS, 7)  # Palette color 7 is white; color 0 is black.
 
-        print("小球动画开始，约 15 秒后自动结束")
+        print("Ball animation started; it will finish automatically after about 15 seconds")
         upyxel.run(update, draw, fps=20)
-        print("动画结束")
+        print("Ball animation finished")
     finally:
         upyxel.destroy()
 

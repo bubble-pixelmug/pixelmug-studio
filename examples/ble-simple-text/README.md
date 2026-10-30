@@ -1,14 +1,14 @@
-# BLE Simple 文本示例
+# BLE Simple Text
 
-这个示例使用 BLE 高速数据通道（Simple），从 WebApp 的虚拟键盘向 PixelMug 发送小写字母。
+This example uses the BLE Simple data channel to send lowercase letters from a WebApp virtual keyboard to a PixelMug.
 
-WebApp 显示 26 个小写字母。每次点击一个字母，立即使用 `sendSimpleText()` 发送：
+The WebApp displays 26 lowercase letters. Each key sends its letter immediately with `sendSimpleText()`:
 
 ```js
 await ble.sendSimpleText(letter);
 ```
 
-PixelMug 使用 `on_simple()` 接收，并根据 `DATA_TYPE_TEXT` 解码。屏幕从左向右最多显示 6 个字母；收到第 7 个字母时清屏，并从该字母重新开始：
+The PixelMug receives the data with `on_simple()` and decodes it using `DATA_TYPE_TEXT`. The display shows up to six letters from left to right; receiving a seventh letter clears the display and starts again with that letter:
 
 ```python
 from maopaoBleApp import DATA_TYPE_TEXT
@@ -20,11 +20,14 @@ def receive_text(data_type, payload, context):
 ble.on_simple(receive_text)
 ```
 
-## 运行
+## Run
 
-1. 在 Studio 中启动项目并运行 `mpy` 设备代码。
-2. 在 Bot 中使用 `/bindPixelMug` 关联设备。
-3. 使用 `/webApp` 打开页面。
-4. 点击“连接蓝牙”，连接成功后依次点击字母键。
+1. Start this project in Studio and run the `mpy` device code.
+2. In the Bot chat, use `/bindPixelMug` to bind a device.
+3. Use `/webApp` to open the page.
+4. Select **Install MPY** and wait for the installation to start.
+5. Select **Connect Bluetooth**, then tap the letter keys.
 
-连接前 PixelMug 显示 `DISC`，连接后显示 `CONN`，随后逐个显示收到的字母。
+Before connecting, the PixelMug shows `DISC`. After connecting it shows `CONN`, then displays each received letter.
+
+The WebApp receives the MPS ID and version from the Bot URL and calls `talMpyExecOneScript` to install the project before opening the BLE connection.

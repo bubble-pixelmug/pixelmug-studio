@@ -7,15 +7,13 @@ import PixelMugS1, {
 } from '@jeejio-bubble/bot/devices/pixelmug-s1/ext';
 
 const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
+if (!token) throw new Error('BOT_TOKEN is required');
 
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
-
-const bot = new BubbleBot(token, { apiBaseUrl });
-const firstMug = createMug('第一个杯子');
-const secondMug = createMug('第二个杯子');
+const bot = new BubbleBot(token, {
+  apiBaseUrl: process.env.BOT_API_BASE_URL,
+});
+const firstMug = createMug('First mug');
+const secondMug = createMug('Second mug');
 const printTasks = new Map();
 
 bot.registerDevices([firstMug, secondMug]);
@@ -35,18 +33,14 @@ bot.on('message:text', async (ctx) => {
   const parts = splitText(text);
   if (parts.length < 2) {
     await ctx.sendText(
-      '请输入至少两个字，或输入两个用空格分隔的单词。',
+      'Enter at least two characters, or enter two words separated by a space.',
     );
     return;
   }
 
   const devices = await bot.getBoundDevices(ctx);
-  const firstBound = devices.some(
-    (device) => Number(device.slot) === 1,
-  );
-  const secondBound = devices.some(
-    (device) => Number(device.slot) === 2,
-  );
+  const firstBound = devices.some((device) => Number(device.slot) === 1);
+  const secondBound = devices.some((device) => Number(device.slot) === 2);
 
   if (!firstBound || !secondBound) {
     await sendBindCard(ctx);
@@ -54,12 +48,12 @@ bot.on('message:text', async (ctx) => {
   }
 
   try {
-    await submitPrintTask(ctx, firstMug, parts[0], '第一个杯子');
-    await submitPrintTask(ctx, secondMug, parts[1], '第二个杯子');
+    await submitPrintTask(ctx, firstMug, parts[0], 'First mug');
+    await submitPrintTask(ctx, secondMug, parts[1], 'Second mug');
 
     await ctx.sendText(
-      '已提交显示任务：第一个杯子显示“' + parts[0] +
-      '”，第二个杯子显示“' + parts[1] + '”。',
+      `Print tasks submitted: First mug displays "${parts[0]}", `
+      + `Second mug displays "${parts[1]}".`,
     );
   } catch (error) {
     if (isNeedBindDeviceError(error)) {
@@ -68,7 +62,7 @@ bot.on('message:text', async (ctx) => {
     }
 
     if (error?.response?.code === 'DEVICE_OFFLINE') {
-      await ctx.sendText('有杯子处于离线状态，请开机联网后再试。');
+      await ctx.sendText('A mug is offline. Turn it on and connect it before trying again.');
       return;
     }
 
@@ -79,28 +73,28 @@ bot.on('message:text', async (ctx) => {
 bot.on('device_call:response', async (ctx) => {
   const task = finishPrintTask(ctx);
   if (!task) return;
-  await ctx.sendText(task.label + '显示完成。');
+  await ctx.sendText(`${task.label} finished displaying the text.`);
 });
 
 bot.on('device_call:timeout', async (ctx) => {
   const task = finishPrintTask(ctx);
   if (!task) return;
-  await ctx.sendText(task.label + '等待响应超时。');
+  await ctx.sendText(`${task.label} timed out while waiting for a response.`);
 });
 
 bot.on('device_call:error', async (ctx) => {
   const task = finishPrintTask(ctx);
   if (!task) return;
-  await ctx.sendText(task.label + '显示失败。');
+  await ctx.sendText(`${task.label} failed to display the text.`);
 });
 
 await bot.setCommands([
-  { command: 'bind', description: '关联两个像素水杯' },
+  { command: 'bind', description: 'Bind two PixelMug devices' },
 ]);
 
 await bot.start();
 
-console.log('Word By Bot 已启动。');
+console.log('Word By Bot started.');
 
 function createMug(name) {
   const mug = new PixelMugS1();
@@ -113,9 +107,7 @@ function splitText(text) {
   if (!text) return [];
 
   const words = text.split(/\s+/);
-  if (words.length > 1) {
-    return words.slice(0, 2);
-  }
+  if (words.length > 1) return words.slice(0, 2);
 
   return Array.from(text).slice(0, 2);
 }
@@ -150,7 +142,7 @@ function finishPrintTask(ctx) {
 
 async function sendBindCard(ctx) {
   await ctx.sendBindDevice({
-    content: '请分别为两个 slot 关联一台 S1 或 P1。',
-    actionButtonTitle: '关联两个杯子',
+    content: 'Bind one PixelMug S1 or PixelMug P1 to each slot.',
+    actionButtonTitle: 'Bind two mugs',
   });
 }

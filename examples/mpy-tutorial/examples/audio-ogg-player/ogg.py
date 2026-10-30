@@ -1,6 +1,6 @@
-# Audio Service OGG 播放示例的辅助拆包器：将 Ogg Opus 文件拆成完整 Opus 包。
-# 配合 __main__.py 使用；这是示例代码，不是固件内置 API。
-# Ogg Opus 拆包逻辑摘自 mps/audio-visualizer/mpy/net_player.py。
+# Helper demuxer for the Audio Service OGG playback example: split an Ogg Opus file into complete Opus packets.
+# Used with __main__.py; this is example code, not a built-in firmware API.
+# The Ogg Opus demuxing logic is adapted from mps/audio-visualizer/mpy/net_player.py.
 SUPPORTED_FRAME_MS_X10 = (200, 400, 600)
 
 def _opus_packet_duration_ms_x10(packet):

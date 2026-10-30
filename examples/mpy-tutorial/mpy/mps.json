@@ -1,12 +1,11 @@
 {
-  "name": "upyxel-font",
-  "version": "1.0.1",
-  "description": "MicroPyxel BDF 字体测宽、居中和滚动文字演示",
+  "name": "audio-opus-record",
+  "version": "1.0.0",
+  "description": "Record Opus through events and stream it back",
   "dependencies": [
     {
-      "name": "micropyxel",
+      "name": "audio_service",
       "version": ">=1.0.0"
     }
-  ],
-  "date": "2026-10-19"
+  ]
 }

@@ -1,7 +1,23 @@
 import { BubbleBot, InlineKeyboard } from '@jeejio-bubble/bot/sdk';
 import PixelMugS1 from '@jeejio-bubble/bot/devices/pixelmug-s1';
 
-const bot = new BubbleBot(process.env.BOT_TOKEN, {
+const token = process.env.BOT_TOKEN;
+if (!token) throw new Error('BOT_TOKEN is required');
+
+const webAppUrl = process.env.STUDIO_WEBAPP_URL;
+if (!webAppUrl) throw new Error('WebApp URL is not configured');
+
+const mpsId = process.env.STUDIO_MPS_ID;
+if (!mpsId) throw new Error('STUDIO_MPS_ID is required');
+
+const mpsVersion = process.env.STUDIO_MPS_VERSION;
+if (!mpsVersion) throw new Error('STUDIO_MPS_VERSION is required');
+
+const launchUrl = new URL(webAppUrl);
+launchUrl.searchParams.set('mps_id', mpsId);
+launchUrl.searchParams.set('mps_version', mpsVersion);
+
+const bot = new BubbleBot(token, {
   apiBaseUrl: process.env.BOT_API_BASE_URL,
   webAppDeviceAccess: 'any',
 });
@@ -11,27 +27,27 @@ bot.on('message:text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text === '/help') {
     await ctx.sendText(
-      'BLE 最小示例：连接 PixelMug，点击 echo，在杯子上看到 echo。\n\n' +
-      '1. 在 Studio 勾选“启动后自动运行设备代码”并启动。\n' +
-      '2. /bindPixelMug：关联 PixelMug S1 Pro/Lite。\n' +
-      '3. 等杯子显示 DISC 后，/webApp 打开页面。\n' +
-      '4. 连接后显示 CONN；点击 echo 后显示 echo；断开后显示 DISC。'
+      'Minimal BLE example: connect a PixelMug, select echo, and see echo on the display.\n\n' +
+      '1. Enable automatic device code startup in Studio and start the Agent.\n' +
+      '2. Use /bindPixelMug to bind a PixelMug S1 Pro or Lite.\n' +
+      '3. Wait for DISC on the mug, then use /webApp to open the page.\n' +
+      '4. Connect for CONN, select echo to display echo, and disconnect to return to DISC.'
     );
   } else if (text === '/bindPixelMug') {
     await ctx.sendBindDevice({
-      content: '请选择用于 BLE 示例的 PixelMug S1 Pro/Lite。',
-      actionButtonTitle: '关联 PixelMug',
+      content: 'Select the PixelMug S1 Pro or Lite for this BLE example.',
+      actionButtonTitle: 'Bind PixelMug',
     });
   } else if (text === '/webApp') {
-    await ctx.sendKeyboard('连接 PixelMug，发送第一条 BLE 命令。',
-      new InlineKeyboard().url('打开 BLE 示例', process.env.STUDIO_WEBAPP_URL));
+    await ctx.sendKeyboard('Connect the PixelMug and send the first BLE command.',
+      new InlineKeyboard().url('Open BLE example', launchUrl.toString()));
   }
 });
 
 bot.on('error', (ctx) => console.error(ctx.error.message));
 await bot.setCommands([
-  { command: 'bindPixelMug', description: '关联 PixelMug' },
-  { command: 'help', description: '查看 BLE 示例使用方法' },
-  { command: 'webApp', description: '打开 BLE 示例页面' },
+  { command: 'bindPixelMug', description: 'Bind a PixelMug' },
+  { command: 'help', description: 'Show BLE example instructions' },
+  { command: 'webApp', description: 'Open the BLE example page' },
 ]);
 await bot.start();

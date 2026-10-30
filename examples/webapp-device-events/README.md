@@ -1,25 +1,26 @@
-# WebApp 接收设备事件
+# WebApp Device Events
 
-一个最小的设备事件示例。页面获取当前对话关联的 PixelMug S1，订阅或取消订阅设备事件，并显示充电状态变化。设备关联改变后，页面会更新目标设备；如果此前已经订阅，还会自动订阅新设备。
+This example loads the PixelMug S1 bound to the current chat, subscribes or unsubscribes to device events, and displays charging state changes. When the bound device changes, the page updates its target device and automatically resubscribes if it was already subscribed.
 
-## 运行
+## Run
 
-1. 在 Studio 中打开本目录，配置 Bot token 和 API 地址。
-2. 启动 Bot，不需要运行设备代码。
-3. 在冒泡 App 中发送 `/bind`，关联一台 PixelMug S1。
-4. 发送 `/open`，打开 WebApp。
-5. 点击“订阅事件”，再连接或断开充电电源。
-6. 点击“取消订阅”后，页面不再接收新的充电事件。
+1. Open this directory in Studio and configure the Bot token and API URL.
+2. Start the Bot. No device-side project is required.
+3. In the Bubble app, send `/bind` and bind a PixelMug S1.
+4. Send `/open` to open the WebApp.
+5. Select **Subscribe**, then connect or disconnect the charging cable.
+6. Select **Unsubscribe** to stop receiving new charging events.
 
-保持页面打开并重新关联设备，可以验证 `onDevicesChanged()`。
+Keep the page open and bind a different device to verify `onDevicesChanged()`.
 
-## 文件
+## Files
 
-| 文件 | 内容 |
+| File | Purpose |
 | --- | --- |
-| `bot/index.js` | 注册 PixelMug S1，并提供关联入口和 WebApp 入口 |
-| `webapp/index.html` | 设备、订阅和充电状态界面 |
-| `webapp/main.js` | 查询设备、管理订阅并解析充电事件 |
-| `webapp/style.css` | 页面样式 |
+| `bot/index.js` | Registers a PixelMug S1 and provides binding and WebApp entry points |
+| `webapp/index.html` | Defines device, subscription, and charging status controls |
+| `webapp/src/main.js` | Loads the device, manages subscriptions, and parses charging events |
+| `webapp/src/style.css` | Styles the WebApp |
+| `webapp/vite.config.js` | Configures relative asset URLs for Studio |
 
-对应文档：[接收设备主动上报事件](../../../../docs/webapp/device-events.md)。
+Related documentation: [Receive device events](../../../../docs/webapp/device-events.md).

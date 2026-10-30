@@ -1,8 +1,9 @@
-# MicroPyxel 图片示例：从 canvas.png 精灵图中截取 9x9 表情，每页显示三个。
-# 展示 API：images、load_from_png、blt、cls、run、quit、destroy。
-# canvas.png 是 256x256 的完整画布，SPRITES 直接使用画布坐标。
-# 加载时传入 True 导入 PNG 颜色；透明像素成为索引 0，本例用黑色背景承接这些像素。
-# 每页显示约 3 秒，四页播放完成后自动退出。
+# MicroPyxel image example: extract 9x9 animal sprites from canvas.png and show three per page.
+# Demonstrates images, load_from_png, blt, cls, run, quit, and destroy.
+# canvas.png is a complete 256x256 sprite sheet; SPRITES use coordinates within that canvas.
+# Passing True while loading imports PNG colors; transparent pixels become palette index 0.
+# This example uses a black background to display those transparent pixels.
+# Each page is shown for about 3 seconds, then the program exits after all four pages.
 
 import micropyxel as upyxel
 
@@ -11,25 +12,25 @@ FPS = 20
 PAGE_FRAMES = FPS * 3
 SPRITE_SIZE = 9
 
-# 每个坐标都是对应 9x9 表情左上角在 256x256 画布中的位置。
+# Each coordinate points to the top-left corner of a 9x9 sprite in the 256x256 canvas.
 SPRITES = (
-    ("老鼠", 120, 107),
-    ("羊", 120, 116),
-    ("猴", 138, 116),
-    ("鸡", 147, 116),
-    ("海豚", 111, 134),
-    ("兔子", 147, 134),
-    ("乌龟", 147, 125),
-    ("鲸鱼", 174, 134),
-    ("狗", 57, 143),
-    ("松鼠", 147, 143),
+    ("Old mouse", 120, 107),
+    ("Sheep", 120, 116),
+    ("Monkey", 138, 116),
+    ("Chicken", 147, 116),
+    ("Dolphin", 111, 134),
+    ("Rabbit", 147, 134),
+    ("Crow", 147, 125),
+    ("Fish", 174, 134),
+    ("Dog", 57, 143),
+    ("Squirrel", 147, 143),
 )
 
 PAGES = (
-    (0, 1, 2),       # 老鼠、羊、猴
-    (3, 4, 5),       # 鸡、海豚、兔子
-    (6, 7, 8),       # 乌龟、鲸鱼、狗
-    (9, 0, 1),       # 松鼠、老鼠、羊
+    (0, 1, 2),       # Old mouse, sheep, monkey
+    (3, 4, 5),       # Chicken, dolphin, rabbit
+    (6, 7, 8),       # Crow, fish, dog
+    (9, 0, 1),       # Squirrel, old mouse, sheep
 )
 
 
@@ -45,7 +46,7 @@ def main():
             page = min(rt.frame_count // PAGE_FRAMES, len(PAGES) - 1)
             if page != shown_page:
                 names = [SPRITES[index][0] for index in PAGES[page]]
-                print("第", page + 1, "页：", "、".join(names))
+                print("Page", page + 1, ":", ", ".join(names))
                 shown_page = page
             if rt.frame_count >= PAGE_FRAMES * len(PAGES):
                 rt.quit()
@@ -67,9 +68,9 @@ def main():
                     None,
                 )
 
-        print("表情图片演示开始")
+        print("Sprite image demo started")
         upyxel.run(update, draw, fps=FPS)
-        print("表情图片演示结束")
+        print("Sprite image demo finished")
     finally:
         upyxel.destroy()
 

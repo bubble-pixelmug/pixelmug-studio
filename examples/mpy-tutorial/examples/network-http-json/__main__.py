@@ -1,7 +1,7 @@
-# Network HTTP JSON 示例：通过 HTTPS 获取 Chicago 当前温度并显示在屏幕上。
-# 展示 API：requests.get、status_code、response.json 和 response.close。
-# Open-Meteo 不需要 API Key；正常时每 15 分钟更新，失败后 30 秒重试。
-# response.json 会把完整响应载入内存，本例响应很小，适合直接解析。
+# Network HTTP JSON example: fetch and display the current temperature in Chicago over HTTPS.
+# Demonstrates requests.get, status_code, response.json, and response.close.
+# Open-Meteo requires no API key; update every 15 minutes normally and retry after 30 seconds on failure.
+# response.json loads the complete response into memory; this response is small enough to parse directly.
 
 import time
 

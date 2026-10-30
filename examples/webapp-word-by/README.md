@@ -1,27 +1,28 @@
 # WebApp Word By
 
-这个示例使用两个设备 slot，每个 slot 默认使用 PixelMug S1，同时兼容 PixelMug P1。只有两个 slot 都关联设备后，WebApp 才能打开。
+This example registers two device slots. Each slot uses a PixelMug S1 definition and accepts a PixelMug S1 or PixelMug P1. Both slots must have a bound device before the WebApp can control them.
 
-页面按以下规则拆分输入：
+The WebApp splits the input in two ways:
 
-- 输入“你好”时，第一个杯子显示“你”，第二个杯子显示“好”。
-- 输入“hello world”时，第一个杯子显示“hello”，第二个杯子显示“world”。
+- A string without spaces is split into its first two characters.
+- A string with spaces uses its first two whitespace-separated words.
 
-每个杯子可以分别选择字体大小以及红、绿、蓝三种颜色。文字使用静止显示，不会滚动。
+Each device has independent text-size and color controls. Text is displayed statically and does not scroll.
 
-## 运行
+## Run
 
-1. 在 Studio 中打开本目录，配置 Bot token 和 API 地址。
-2. 启动 Bot，不需要运行设备代码。
-3. 在冒泡 App 中发送 `/bind`，为两个 slot 分别关联 S1 或 P1。
-4. 发送 `/open`，打开 WebApp。
-5. 输入两个字或两个单词，设置两台设备的字体和颜色，然后点击“显示”。
+1. Open this directory in Studio and configure the Bot token and API URL.
+2. Start the Bot. No device-side project is required.
+3. In the Bubble app, send `/bind` and bind one PixelMug S1 or PixelMug P1 to each slot.
+4. Send `/open` to receive the WebApp link.
+5. Enter two characters or two words, choose the settings for each device, and select **Display**.
 
-## 文件
+## Files
 
-| 文件 | 内容 |
+| File | Purpose |
 | --- | --- |
-| `bot/index.js` | 声明两个兼容设备 slot，并提供关联入口和 WebApp 入口 |
-| `webapp/index.html` | 输入框和两台设备的显示设置 |
-| `webapp/main.js` | 拆分文字、构造 RPC 并调用两台设备 |
-| `webapp/style.css` | 页面样式 |
+| `bot/index.js` | Registers the two device slots and handles binding and WebApp commands |
+| `webapp/index.html` | Defines the input form and device controls |
+| `webapp/src/main.js` | Loads bound devices, splits input, builds RPC commands, and calls both devices |
+| `webapp/src/style.css` | Styles the WebApp |
+| `webapp/vite.config.js` | Configures Vite to emit relative asset URLs for Studio |

@@ -1,8 +1,9 @@
-# G-sensor 放杯计数示例。
-# 杯子拿起后重新放到桌面，每收到一次 EVENT_TAP，计数器加一并播放扩散圆环动画。
-# EVENT_TAP 来自运动传感器的 Z 轴冲击检测，不是底部触摸区域的 click。
-# 当前接口不区分单击、双击或三击类型；固件检测到的敲击统一产生 EVENT_TAP。
-# 展示 API：on()、off()、EVENT_TAP、circb()。
+# G-sensor tap counter example.
+# Pick up the mug and place it back on the table. Each EVENT_TAP increments the counter
+# and plays an expanding ring animation.
+# EVENT_TAP comes from the motion sensor's Z-axis impact detection, not the bottom touch area's click event.
+# The current interface does not distinguish single, double, or triple taps; all detected taps produce EVENT_TAP.
+# Demonstrates on(), off(), EVENT_TAP, and circb().
 
 import time
 import g_sensor
@@ -73,7 +74,7 @@ def main():
                 radius = 1 + (PULSE_FRAMES - pulse) // 2
                 rt.circb(rt.width // 2, rt.height // 2, radius, 8)
 
-        print("计数开始：拿起杯子，然后轻放到桌面")
+        print("Counter started: pick up the mug, then place it gently on the table")
         upyxel.run(update, draw, fps=FPS)
     finally:
         if callback_registered:

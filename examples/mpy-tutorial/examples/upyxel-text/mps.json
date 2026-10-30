@@ -1,7 +1,7 @@
 {
   "name": "upyxel-text",
   "version": "1.0.0",
-  "description": "MicroPyxel 静态文字与滚动文字演示",
+  "description": "MicroPyxel built-in default font example",
   "dependencies": [
     {
       "name": "micropyxel",

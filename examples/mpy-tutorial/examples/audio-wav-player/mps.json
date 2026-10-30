@@ -1,7 +1,7 @@
 {
   "name": "audio-wav-player",
   "version": "1.0.0",
-  "description": "流式播放本地48kHz单声道PCM WAV文件",
+  "description": "Stream a local 48 kHz mono PCM WAV file",
   "dependencies": [
     {
       "name": "audio_service",

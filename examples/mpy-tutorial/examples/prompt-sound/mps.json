@@ -1,7 +1,7 @@
 {
   "name": "prompt-sound",
   "version": "1.0.0",
-  "description": "泡泡生成与破裂的可打断触摸提示音示例",
+  "description": "Interruptible touch-triggered Ogg Opus prompt sound demo",
   "dependencies": [
     {
       "name": "micropyxel",

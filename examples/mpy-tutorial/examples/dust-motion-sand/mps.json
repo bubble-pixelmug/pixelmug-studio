@@ -1,7 +1,7 @@
-﻿{
+{
   "name": "dust-motion-sand",
   "version": "1.0.0",
-  "description": "使用 G-sensor 控制 Dust 沙粒运动",
+  "description": "Use the G-sensor to control Dust particle movement",
   "dependencies": [
     {
       "name": "micropyxel",
@@ -9,6 +9,10 @@
     },
     {
       "name": "g_sensor",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "pixel_dust",
       "version": ">=1.0.0"
     }
   ]

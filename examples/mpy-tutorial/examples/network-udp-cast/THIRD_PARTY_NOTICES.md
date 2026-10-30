@@ -1,4 +1,4 @@
-﻿# Third-party notices
+# Third-party notices
 
 The animation algorithms in `host-effect-caster/effects.mjs` are adapted for a
 32×16 PixelMug display from `niji.py` in the `andzhelo/leds_wall` project:

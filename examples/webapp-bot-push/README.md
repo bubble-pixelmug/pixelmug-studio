@@ -1,21 +1,22 @@
-# Bot 向 WebApp 推送
+# Bot Push
 
-一个最小的 Bot 主动推送示例。WebApp 发起 `app.startTask` 请求，Bot 使用 `ctx.sendWebAppData()` 向当前页面推送进度，页面通过 `webapp.on()` 接收，最后显示请求的返回结果。
+This is a minimal example of a Bot pushing updates to a WebApp. The WebApp sends an `app.startTask` request, the Bot uses `ctx.sendWebAppData()` to push progress to the current page, and the page receives updates through `webapp.on()` before displaying the final response.
 
-## 运行
+## Run
 
-1. 在 Studio 中打开本目录，配置 Bot token 和 API 地址。
-2. 启动 Bot，不需要关联设备或运行设备代码。
-3. 在冒泡 App 中向 Bot 发送 `/open`。
-4. 打开 WebApp，点击“开始任务”。
+1. Open this directory in Studio and configure the Bot token and API URL.
+2. Start the Bot. No device binding or device-side project is required.
+3. In the Bubble app, send `/open` to the Bot.
+4. Open the WebApp and select **Start task**.
 
-## 文件
+## Files
 
-| 文件 | 内容 |
+| File | Purpose |
 | --- | --- |
-| `bot/index.js` | 提供 WebApp 入口，处理请求并推送进度 |
-| `webapp/index.html` | 页面结构 |
-| `webapp/main.js` | 发起请求并接收 Bot 推送 |
-| `webapp/style.css` | 页面样式 |
+| `bot/index.js` | Provides the WebApp entry, handles requests, and pushes progress updates |
+| `webapp/index.html` | Defines the page structure |
+| `webapp/src/main.js` | Sends the task request and receives Bot updates |
+| `webapp/src/style.css` | Styles the WebApp |
+| `webapp/vite.config.js` | Configures relative asset URLs for Studio |
 
-对应文档：[Bot 主动向 WebApp 推送](../../../../docs/webapp/push.md)。
+Related documentation: [Bot push updates](../../../../docs/webapp/push.md).

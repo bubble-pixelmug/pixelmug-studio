@@ -1,14 +1,14 @@
-# BLE Simple 控制示例
+# BLE Simple Control
 
-这个示例使用 BLE 高速数据通道（Simple），把 WebApp 触摸网格中的坐标实时发送给 PixelMug。
+This example uses the BLE Simple data channel to send coordinates from a WebApp touch grid to a PixelMug in real time.
 
-WebApp 显示一个 32 × 16 的网格。左上角坐标是 `(0,0)`，右下角坐标是 `(31,15)`。触摸或拖动时，页面在网格上方显示当前坐标，并通过两个字节发送：
+The WebApp displays a 32 × 16 grid. The top-left coordinate is `(0,0)` and the bottom-right coordinate is `(31,15)`. Touching or dragging updates the coordinate above the grid and sends two bytes:
 
 ```js
 await ble.sendSimpleRaw(new Uint8Array([x, y]));
 ```
 
-PixelMug 使用 `on_simple()` 接收坐标：
+The PixelMug receives the coordinate with `on_simple()`:
 
 ```python
 def receive_coordinate(data_type, payload, context):
@@ -19,11 +19,12 @@ def receive_coordinate(data_type, payload, context):
 ble.on_simple(receive_coordinate)
 ```
 
-## 运行
+## Run
 
-1. 在 Studio 中启动项目并运行 `mpy` 设备代码。
-2. 在 Bot 中使用 `/bindPixelMug` 关联设备。
-3. 使用 `/webApp` 打开页面。
-4. 点击“连接蓝牙”，然后在网格上触摸或拖动。
+1. Start the project in Studio and run the `mpy` device code.
+2. In the Bot chat, use `/bindPixelMug` to bind a device.
+3. Use `/webApp` to open the page.
+4. Select **Install MPY** and wait for the installation to start.
+5. Select **Connect Bluetooth**, then touch or drag on the grid.
 
-连接前 PixelMug 显示 `DISC`，连接后显示 `CONN`，收到坐标后显示 `(x,y)`。
+The WebApp receives the MPS ID and version from the Bot URL and calls `talMpyExecOneScript` before connecting over Bluetooth. The PixelMug shows `DISC` before connecting, `CONN` after connecting, and `(x,y)` for each received coordinate.

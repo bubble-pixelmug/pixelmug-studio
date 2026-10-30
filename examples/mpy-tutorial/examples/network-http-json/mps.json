@@ -1,7 +1,7 @@
 {
   "name": "network-http-json",
   "version": "1.0.0",
-  "description": "通过 HTTPS 获取并显示 Chicago 当前温度",
+  "description": "Fetch and display the current temperature in Chicago over HTTPS",
   "dependencies": [
     {
       "name": "micropyxel",

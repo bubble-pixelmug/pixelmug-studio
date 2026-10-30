@@ -1,4 +1,9 @@
 {
+  "name": "pixelmug-studio-example-bot-first-bot",
   "private": true,
-  "type": "module"
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@jeejio-bubble/bot": "0.1.9"
+  }
 }

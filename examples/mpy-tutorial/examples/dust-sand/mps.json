@@ -1,5 +1,15 @@
-﻿{
+{
   "name": "dust-sand",
   "version": "1.0.0",
-  "description": "Dust 粒子基础示例"
+  "description": "Basic Dust particle simulation example",
+  "dependencies": [
+    {
+      "name": "micropyxel",
+      "version": ">=1.0.0"
+    },
+    {
+      "name": "pixel_dust",
+      "version": ">=1.0.0"
+    }
+  ]
 }

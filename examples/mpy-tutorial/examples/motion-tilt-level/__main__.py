@@ -1,7 +1,7 @@
-# G-sensor 倾斜水平仪示例。
-# 启动时保持水杯竖直、屏幕面向用户；程序记录初始姿态作为中心位置。
-# 随后缓慢倾斜水杯，白色气泡会根据 X/Y 两轴的重力投影移动并停留。
-# 该示例展示 get_accel() 对静态倾斜的响应，与 motion-show-axis 的平移惯性不同。
+# G-sensor tilt level example.
+# Keep the mug upright with the screen facing you at startup; the initial pose becomes the center.
+# Then tilt the mug slowly. The white bubble moves and settles according to gravity projected on X/Y.
+# This example demonstrates get_accel() responding to static tilt, unlike the translational inertia in motion-show-axis.
 
 import time
 import g_sensor
@@ -41,7 +41,7 @@ def wait_until_ready(timeout_ms=5000):
 
 def measure_baseline():
     sx = sy = sz = 0.0
-    print("保持水杯竖直且静止，正在记录水平仪中心……")
+    print("Keep the mug upright and still while recording the level center...")
     for _ in range(BASELINE_SAMPLES):
         ax, ay, az = g_sensor.get_accel()
         sx += ax
@@ -82,7 +82,7 @@ def main():
             rt.circ(int(bubble_x + 0.5), int(bubble_y + 0.5), BUBBLE_RADIUS, BUBBLE_COLOR)
             rt.rectb(0, 0, rt.width, rt.height, BORDER_COLOR)
 
-        print("倾斜水平仪开始：缓慢向不同方向倾斜水杯")
+        print("Tilt level started: slowly tilt the mug in different directions")
         upyxel.run(update, draw, fps=FPS)
     finally:
         try:

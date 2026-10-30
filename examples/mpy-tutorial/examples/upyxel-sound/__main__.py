@@ -1,7 +1,9 @@
-# MicroPyxel Sound API 示例：依次演示声音资源、播放位置和通道控制。
-# 展示 API：sounds().set()、total_sec()、play()、play_pos()、stop()。
-# play() 参数覆盖 sec、should_loop 和 should_resume。
-# 屏幕顶部显示 channels，下一行显示 0～3；黄色表示正在播放，灰色表示停止。
+# MicroPyxel Sound API example: demonstrate sound resources, playback positions,
+# and channel control in several phases.
+# Demonstrates sounds().set(), total_sec(), play(), play_pos(), stop(), and
+# the sec, should_loop, and should_resume arguments to play().
+# The top row shows channel labels and the next row shows channel positions;
+# yellow means playing and gray means stopped.
 
 import time
 
@@ -13,11 +15,11 @@ FPS = 10
 PHASE_GAP_MS = 2000
 RESUME_EFFECT_DELAY_MS = 2500
 
-# (显示名称, 持续时间 ms)
+# (display name, duration in milliseconds)
 PHASES = (
-    ("通道单独播放、合奏与依次停止", 29000),
-    ("Sound 0 从第 2 秒开始播放", 4000),
-    ("C0 背景旋律中插入短提示音", 10000),
+    ("Individual channels, chord, and sequential stop", 29000),
+    ("Sound 0 starts at 2 seconds", 4000),
+    ("Insert a short effect into the C0 background melody", 10000),
 )
 
 
@@ -58,7 +60,7 @@ def setup_sounds():
         25,
     )
 
-    # 独立的短提示音：高低音快速切换，便于听出临时音效和背景旋律。
+    # A separate short effect with a quick pitch change for testing foreground effects.
     upyxel.sounds(5).set(
         "c4g3c4",
         "p",
@@ -68,7 +70,7 @@ def setup_sounds():
     )
 
     print(
-        "Sound 0～5 预计时长（秒）：",
+        "Sound durations (seconds):",
         [upyxel.sounds(i).total_sec() for i in range(6)],
     )
 
@@ -90,7 +92,8 @@ def start_phase(phase_index):
     elif phase_index == 2:
         upyxel.play(0, [0, 1], should_loop=True)
 
-    print("当前模式：", name)
+    print("Current phase:", name)
+
 
 def main():
     audio = audio_service.audio
@@ -98,7 +101,7 @@ def main():
     upyxel_inited = False
 
     try:
-        print("MicroPyxel Sound API 演示开始")
+        print("MicroPyxel Sound API demo started")
         audio.init(
             enable_input=False,
             enable_output=True,
@@ -124,14 +127,14 @@ def main():
 
             now = time.ticks_ms()
 
-            # 首次播放和对应日志在同一次 update() 中发生。
+            # Start playback and its corresponding log entry in one update call.
             if phase_started is None:
                 phase_started = now
                 start_phase(phase_index)
-                print("通道演示：C0 单独播放")
+                print("Channel demo: play C0 alone")
                 return
 
-            # 阶段之间保持两秒静音，再启动下一项测试。
+            # Keep a two-second silent gap between phases before starting the next test.
             if gap_until is not None:
                 if time.ticks_diff(now, gap_until) < 0:
                     return
@@ -146,52 +149,56 @@ def main():
                 if phase_index == 2:
                     effect_at = time.ticks_add(
                         phase_started, RESUME_EFFECT_DELAY_MS
-                    )                    
+                    )
                 return
 
             elapsed = time.ticks_diff(now, phase_started)
 
-
-            # 到达独立的触发时间后，才使用提示音暂时替换 C0 的背景旋律。
+            # Replace the C0 background melody with the short effect at its trigger time.
             if (
                 phase_index == 2
                 and phase_action == 0
                 and effect_at is not None
                 and time.ticks_diff(now, effect_at) >= 0
             ):
-                print("背景旋律已播放", elapsed, "ms，插入短提示音 Sound 5")
-                upyxel.play(0, 5, should_resume=True)                
+                print(
+                    "Background melody has played for",
+                    elapsed,
+                    "ms; inserting short effect Sound 5",
+                )
+                upyxel.play(0, 5, should_resume=True)
                 phase_action = 1
 
-            # 一个阶段内连续试听三个通道、合奏，再逐个停止。
+            # In the first phase, play three channels together and stop them one by one.
             if phase_index == 0:
                 if phase_action == 0 and elapsed >= 6000:
                     upyxel.stop()
                     upyxel.play(1, [2, 3], should_loop=True)
-                    print("通道演示：C1 单独播放")
+                    print("Channel demo: play C1 alone")
                     phase_action = 1
                 elif phase_action == 1 and elapsed >= 12000:
                     upyxel.stop()
                     upyxel.play(2, 4, should_loop=True)
-                    print("通道演示：C2 单独播放")
+                    print("Channel demo: play C2 alone")
                     phase_action = 2
                 elif phase_action == 2 and elapsed >= 18000:
                     upyxel.stop()
                     play_three_channels()
-                    print("通道演示：C0、C1、C2 一起播放")
+                    print("Channel demo: play C0, C1, and C2 together")
                     phase_action = 3
                 elif phase_action == 3 and elapsed >= 24000:
                     upyxel.stop(0)
-                    print("停止 C0")
+                    print("Stopped C0")
                     phase_action = 4
                 elif phase_action == 4 and elapsed >= 26000:
                     upyxel.stop(1)
-                    print("停止 C1")
+                    print("Stopped C1")
                     phase_action = 5
                 elif phase_action == 5 and elapsed >= 28000:
                     upyxel.stop(2)
-                    print("停止 C2")
+                    print("Stopped C2")
                     phase_action = 6
+
             if elapsed < PHASES[phase_index][1]:
                 return
 
@@ -200,7 +207,8 @@ def main():
                 return
 
             upyxel.stop()
-            gap_until = time.ticks_add(now, PHASE_GAP_MS)            
+            gap_until = time.ticks_add(now, PHASE_GAP_MS)
+
         def draw(rt):
             rt.cls(1)
             rt.text(0, 0, "channels", 7)
@@ -208,9 +216,8 @@ def main():
                 color = 10 if rt.play_pos(channel) is not None else 13
                 rt.text(2 + channel * 8, 8, str(channel), color)
 
-        
         upyxel.run(update, draw, fps=FPS)
-        print("MicroPyxel Sound API 演示结束")
+        print("MicroPyxel Sound API demo finished")
     finally:
         if upyxel_inited:
             try:

@@ -1,7 +1,7 @@
-# MicroPyxel Channel API 示例：比较通道增益和音高微调。
-# 展示 API：channels()、gain()、set_gain()、detune()、set_detune()、
-# Channel.play()、Channel.play_pos() 和 Channel.stop()。
-# Gain 和 Detune 是两个测试阶段，阶段之间静音 2 秒。
+# MicroPyxel Channel API example: compare channel gain and pitch detune.
+# Demonstrates channels(), gain(), set_gain(), detune(), set_detune(),
+# Channel.play(), Channel.play_pos(), and Channel.stop().
+# Gain and detune are tested in separate phases with a two-second silent gap.
 
 import time
 
@@ -47,10 +47,10 @@ def main():
             20,
         )
 
-        # channels(0) 返回参与 MicroPyxel 实际混音的全局通道。
+        # channels(0) returns the global channel used by MicroPyxel mixing.
         channel = upyxel.channels(0)
         print(
-            "Channel 0 默认值：gain =",
+            "Channel 0 defaults: gain =",
             channel.gain(),
             "detune =",
             channel.detune(),
@@ -67,7 +67,7 @@ def main():
             channel.play(0, should_loop=True)
             mode = "gain"
             value_text = str(value)
-            print("Channel 0 gain：", channel.gain())
+            print("Channel 0 gain:", channel.gain())
 
         def play_detune(value):
             nonlocal mode, value_text
@@ -76,7 +76,7 @@ def main():
             channel.play(0, should_loop=True)
             mode = "detune"
             value_text = "{:+d}".format(value)
-            print("Channel 0 detune：", channel.detune(), "cents")
+            print("Channel 0 detune:", channel.detune(), "cents")
 
         def update(rt):
             nonlocal test_started, step_index, mode, value_text
@@ -102,7 +102,7 @@ def main():
                     step_index = 0
                     mode = "gap"
                     value_text = "NEXT"
-                    print("Gain 测试结束，静音 2 秒")
+                    print("Gain test finished; quiet for 2 seconds")
                 return
 
             if mode == "gap" and elapsed >= PHASE_GAP_MS:
@@ -132,9 +132,9 @@ def main():
             rt.text(0, 0, title, color)
             rt.text(0, 8, value_text, color)
 
-        print("MicroPyxel Channel API 演示开始")
+        print("MicroPyxel Channel API demo started")
         upyxel.run(update, draw, fps=FPS)
-        print("MicroPyxel Channel API 演示结束")
+        print("MicroPyxel Channel API demo finished")
     finally:
         if channel is not None:
             try:

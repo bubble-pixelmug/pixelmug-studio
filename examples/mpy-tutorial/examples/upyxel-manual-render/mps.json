@@ -1,7 +1,7 @@
 {
   "name": "upyxel-manual-render",
   "version": "1.0.0",
-  "description": "MicroPyxel手动刷新像素点移动动画",
+  "description": "MicroPyxel manual pixel refresh animation",
   "dependencies": [
     {
       "name": "micropyxel",

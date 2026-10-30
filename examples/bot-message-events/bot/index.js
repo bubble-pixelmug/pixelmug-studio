@@ -1,13 +1,11 @@
 import { BubbleBot } from '@jeejio-bubble/bot/sdk';
 
 const token = process.env.BOT_TOKEN;
-const apiBaseUrl = process.env.BOT_API_BASE_URL;
+if (!token) throw new Error('BOT_TOKEN is required');
 
-if (!token || !apiBaseUrl) {
-  throw new Error('请配置 Bot token 和 API 地址');
-}
-
-const bot = new BubbleBot(token, { apiBaseUrl });
+const bot = new BubbleBot(token, {
+  apiBaseUrl: process.env.BOT_API_BASE_URL,
+});
 
 bot.on('error', (ctx) => {
   console.error('[bot-message-events]', ctx.error?.message || ctx.error);
@@ -18,34 +16,30 @@ bot.use(async (ctx, next) => {
 
   try {
     await next();
-    console.log(
-      '[' + ctx.event + '] 处理完成，耗时 ' + (Date.now() - started) + ' ms',
-    );
+    console.log(`[${ctx.event}] handled in ${Date.now() - started} ms`);
   } catch (error) {
-    console.error('[' + ctx.event + '] 处理失败', error);
+    console.error(`[${ctx.event}] failed`, error);
     throw error;
   }
 });
 
 bot.on('message:text', async (ctx, next) => {
   if (ctx.message.text.trim() === '/help') {
-    await ctx.sendText('发送任意文字，观察处理链的执行顺序。');
+    await ctx.sendText('Send any text to observe the handler execution order.');
     return;
   }
 
-  console.log('message:text 处理器先收到文字消息');
+  console.log('message:text handler received a text message first');
   await next();
 });
 
 bot.on('message', async (ctx) => {
   if (!ctx.message?.text) return;
 
-  const sender = ctx.from?.name || '朋友';
-  await ctx.sendText(
-    sender + '，通用 message 处理器收到：' + ctx.message.text,
-  );
+  const sender = ctx.from?.name || 'friend';
+  await ctx.sendText(`${sender}, the general message handler received: ${ctx.message.text}`);
 });
 
 await bot.start({ device: false });
 
-console.log('事件处理链示例已启动。');
+console.log('Message events example started.');
