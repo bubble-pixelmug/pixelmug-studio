@@ -557,18 +557,18 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
            </section>
            <section v-if="selectedDeploymentServer" class="deployment-detail-stack">
              <section v-if="selectedDeploymentServer.kind==='byoc'" class="card vps-management-card">
-               <div class="section-heading"><div><span class="eyebrow">VPS MANAGEMENT</span><h2>{{ selectedDeploymentServer.label || selectedDeploymentServer.hostname || selectedDeploymentServer.id }}</h2></div><span class="badge">{{ byocCleanupServer ? 'Deleted' : serverStatusLabel(selectedDeploymentServer) }}</span></div>
+               <div class="section-heading"><div><span class="eyebrow">VPS MANAGEMENT</span><h2>{{ selectedDeploymentServer.label || selectedDeploymentServer.hostname || selectedDeploymentServer.id }} <span v-if="!byocCleanupServer" class="agent-connection-state" :class="selectedDeploymentServer.online ? 'connected' : 'disconnected'">{{ selectedDeploymentServer.online ? 'connected' : 'disconnected' }}</span></h2></div><span class="badge">{{ byocCleanupServer ? 'Deleted' : serverStatusLabel(selectedDeploymentServer) }}</span></div>
                <div v-if="byocCleanupServer" class="byoc-detail-install byoc-cleanup-detail">
                  <h3>Clean up your VPS</h3>
                  <p class="byoc-warning">Studio has removed this VPS. Run the command below on the VPS to remove the PixelMug Agent, its service file, and its persistent token. This command is not executed by Studio.</p>
                  <textarea readonly rows="6" :value="byocCleanupCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
-                 <div class="actions"><button class="danger" @click="finishByocCleanup">Cleanup Your VPS</button></div>
+                 <div class="actions"><span class="cleanup-confirm-note">Please run the cleanup command above on this VPS.</span><button class="danger" @click="finishByocCleanup">OK</button></div>
                </div>
                <div v-else class="byoc-detail-install">
                  <h3>{{ byocCommandView==='check' ? 'Check the VPS connection' : byocCommandView==='cleanup' ? 'Clean up the VPS Agent' : 'Run this one-time install command on your VPS' }}</h3>
                  <p>{{ byocCommandDescription() }}</p>
                  <textarea readonly rows="9" :value="byocCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
-                 <p v-if="selectedDeploymentServer.online" class="byoc-warning">Already connected — you do not need to run this install command.</p>
+                 <p v-if="selectedDeploymentServer.online && byocCommandView==='install'" class="byoc-warning">Already connected — you do not need to run this install command.</p>
                  <div class="actions"><button :class="{primary:byocCommandView==='install'}" :disabled="deploymentBusy||working" @click="refreshByocConnection(selectedDeploymentServer)">Refresh install command</button><button :class="{primary:byocCommandView==='check'}" @click="byocCommandView='check'">Check connection command</button><button class="danger" :disabled="deploymentBusy||working||!canDeleteByoc(selectedDeploymentServer)" @click="deleteByocServer(selectedDeploymentServer)">Delete VPS</button></div>
                  <p class="subtle">Connection command expires: {{ selectedDeploymentServer.registration_expires_at || 'Already connected; no registration command is required.' }}</p>
                </div>
