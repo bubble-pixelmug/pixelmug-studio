@@ -34,7 +34,7 @@ const accountType = ref('PHONE'), accountValue = ref(''), loginCode = ref(''), c
 const botEntry = ref(''), autoRunMpy = ref(false), botApi = ref('');
 const directory = ref(null), directoryDialog = ref(null);
 const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
-const byocSetup = ref(null), byocRegistrations = ref({}), byocCleanupCommand = ref(''), byocCommandView = ref('install');
+const byocSetup = ref(null), byocRegistrations = ref({}), byocCleanupServer = ref(null), byocCommandView = ref('install');
 const deploymentRemoteLogKeys = new Set();
 const deploymentLogElement = ref(null);
 const deploymentTextMap = {
@@ -172,8 +172,9 @@ async function deleteByocServer(server){
   const registration=byocRegistrations.value[server.id];
   const cleanup=registration?.cleanup_command || byocCleanupCommandFor(server);
   if(!window.confirm('Delete this VPS connection? Run the cleanup command on the VPS afterwards.')) return;
-  await perform(async()=>{ await api(`deploy/byoc/${encodeURIComponent(server.id)}/delete`,{}); byocCleanupCommand.value=cleanup; byocSetup.value=null; const next={...byocRegistrations.value}; delete next[server.id]; byocRegistrations.value=next; await refreshDeploymentServers(); selectedServerId.value=null; notify('VPS connection deleted. Run the cleanup command on the VPS.'); });
+  await perform(async()=>{ await api(`deploy/byoc/${encodeURIComponent(server.id)}/delete`,{}); byocCleanupServer.value={...server, status:'deleted', online:false, deployment:null, cleanup_command:cleanup}; byocSetup.value=null; const next={...byocRegistrations.value}; delete next[server.id]; byocRegistrations.value=next; await refreshDeploymentServers(); selectedServerId.value=server.id; byocCommandView.value='cleanup'; notify('VPS deleted from Studio. Run the cleanup command on your VPS.'); });
 }
+function finishByocCleanup(){ byocCleanupServer.value=null; selectedServerId.value=null; byocCommandView.value='install'; }
 async function refreshByocConnection(server){
   if(!server?.id?.startsWith('byoc_')) return;
   await perform(async()=>{ const result=await api(`deploy/byoc/${encodeURIComponent(server.id)}/refresh`,{}); byocSetup.value=result; byocRegistrations.value={...byocRegistrations.value,[server.id]:result}; byocCommandView.value='install'; await refreshDeploymentServers(); selectedServerId.value=server.id; notify('A new connection command is ready.'); });
@@ -296,7 +297,7 @@ async function stopCloudDeployment(){ const server=deploymentServers.value.find(
 async function retryCloudDeployment(){ const server=deploymentServers.value.find(item=>item.id===selectedServerId.value); if(!server?.deployment || server.deployment.status!=='unhealthy') return; await perform(async()=>{ const reset=await api('deploy/retry/'+server.deployment.deployment_id,{}); updateDeploymentSnapshot(reset); deploymentLog.value.push(t('正在重试部署')); await uploadDeployment(reset); }); }
 
 const project = computed(()=>state.value?.project);
-const selectedDeploymentServer = computed(()=>deploymentServers.value.find(server=>server.id===selectedServerId.value)||null);
+const selectedDeploymentServer = computed(()=>deploymentServers.value.find(server=>server.id===selectedServerId.value)||byocCleanupServer.value||null);
 const deploymentHasMpy = computed(()=>Boolean(deploymentProjectInfo.value?.mps?.name || selectedDeploymentServer.value?.deployment?.mps_id));
 watch(deploymentProjectInfo, info => {
   if(info && !info.mps && !deploymentMpsId.value) deploymentMpsId.value='__no_mpy__';
@@ -538,7 +539,6 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
       </section>
 
        <section v-show="activeSection==='deploy'" class="section-page deploy-page">
-         <section v-if="byocCleanupCommand" class="card byoc-install-card"><div class="section-heading"><div><span class="eyebrow">VPS CLEANUP</span><h3>Run this cleanup command on the VPS</h3></div><button @click="byocCleanupCommand=''">Close</button></div><p>Studio and auto-deploy have removed the connection. Run this command on the VPS to remove the PixelMug Agent.</p><textarea readonly rows="4" :value="byocCleanupCommand" @focus="$event.target.select()"></textarea><div class="actions"><button class="primary" @click="navigator.clipboard?.writeText(byocCleanupCommand)">Copy cleanup command</button></div></section>
          <div class="section-intro deployment-section-intro-v2"><div><span class="eyebrow">{{ deployText('deployApplication') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ deployText('cloudServers') }}</h2><p>{{ deployText('description') }}</p></div><div class="actions"><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ deployText('applyServer') }}</button><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
          <div class="section-intro"><div><span class="eyebrow">{{ t('部署应用') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ t('云服务器') }}</h2><p>{{ t('将当前在 Studio 中打开的项目部署到云服务器。') }}</p></div><div class="actions"><button class="primary" :disabled="deploymentBusy||working" @click="applyDeploymentServer">{{ t('申请服务器') }}</button><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
          <div class="deployment-redesign">
@@ -557,17 +557,23 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
            </section>
            <section v-if="selectedDeploymentServer" class="deployment-detail-stack">
              <section v-if="selectedDeploymentServer.kind==='byoc'" class="card vps-management-card">
-               <div class="section-heading"><div><span class="eyebrow">VPS MANAGEMENT</span><h2>{{ selectedDeploymentServer.label || selectedDeploymentServer.hostname || selectedDeploymentServer.id }}</h2></div><span class="badge">{{ serverStatusLabel(selectedDeploymentServer) }}</span></div>
-               <div class="byoc-detail-install">
+               <div class="section-heading"><div><span class="eyebrow">VPS MANAGEMENT</span><h2>{{ selectedDeploymentServer.label || selectedDeploymentServer.hostname || selectedDeploymentServer.id }}</h2></div><span class="badge">{{ byocCleanupServer ? 'Deleted' : serverStatusLabel(selectedDeploymentServer) }}</span></div>
+               <div v-if="byocCleanupServer" class="byoc-detail-install byoc-cleanup-detail">
+                 <h3>Clean up your VPS</h3>
+                 <p class="byoc-warning">Studio has removed this VPS. Run the command below on the VPS to remove the PixelMug Agent, its service file, and its persistent token. This command is not executed by Studio.</p>
+                 <textarea readonly rows="6" :value="byocCleanupCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
+                 <div class="actions"><button class="danger" @click="finishByocCleanup">Cleanup Your VPS</button></div>
+               </div>
+               <div v-else class="byoc-detail-install">
                  <h3>{{ byocCommandView==='check' ? 'Check the VPS connection' : byocCommandView==='cleanup' ? 'Clean up the VPS Agent' : 'Run this one-time install command on your VPS' }}</h3>
                  <p>{{ byocCommandDescription() }}</p>
                  <textarea readonly rows="9" :value="byocCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
                  <p v-if="selectedDeploymentServer.online" class="byoc-warning">Already connected — you do not need to run this install command.</p>
-                 <div class="actions"><button :class="{primary:byocCommandView==='install'}" :disabled="deploymentBusy||working" @click="refreshByocConnection(selectedDeploymentServer)">Refresh install command</button><button :class="{primary:byocCommandView==='check'}" @click="byocCommandView='check'">Check connection command</button><button :class="{primary:byocCommandView==='cleanup'}" @click="byocCommandView='cleanup'">Cleanup command</button><button class="danger" :disabled="deploymentBusy||working||!canDeleteByoc(selectedDeploymentServer)" @click="deleteByocServer(selectedDeploymentServer)">Delete VPS</button></div>
+                 <div class="actions"><button :class="{primary:byocCommandView==='install'}" :disabled="deploymentBusy||working" @click="refreshByocConnection(selectedDeploymentServer)">Refresh install command</button><button :class="{primary:byocCommandView==='check'}" @click="byocCommandView='check'">Check connection command</button><button class="danger" :disabled="deploymentBusy||working||!canDeleteByoc(selectedDeploymentServer)" @click="deleteByocServer(selectedDeploymentServer)">Delete VPS</button></div>
                  <p class="subtle">Connection command expires: {{ selectedDeploymentServer.registration_expires_at || 'Already connected; no registration command is required.' }}</p>
                </div>
              </section>
-             <section class="card deployment-management-v3">
+             <section v-if="!byocCleanupServer" class="card deployment-management-v3">
                <div class="section-heading"><div><span class="eyebrow">{{ deployText('management') }}</span><h2>{{ deployText('management') }}</h2></div><span class="badge">{{ deploymentStatusLabel(selectedDeploymentServer.deployment?.status || selectedDeploymentServer.status) }}</span></div>
              <div class="deployment-columns">
                <div class="deployment-column"><h3>{{ deployText('currentProject') }}</h3><button class="load-project-button" :disabled="deploymentBusy||working||Boolean(selectedDeploymentServer.deployment)" @click="loadCurrentProjectForDeployment">{{ deployText('loadProject') }}</button><p><span>{{ deployText('project') }}</span><strong>{{ deploymentProjectInfo?.project_id || selectedDeploymentServer.deployment?.project_id || deployText('notLoaded') }}</strong></p><p><span>{{ deployText('deploymentId') }}</span><strong>{{ selectedDeploymentServer.deployment?.deployment_id || deployText('notCreated') }}</strong></p></div>
