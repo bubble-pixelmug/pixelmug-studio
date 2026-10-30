@@ -18,6 +18,15 @@ import { prepareProjectDependencies } from './project-dependencies.mjs';
 const DEFAULT_CREATOR_API_URL = 'https://us-connector.jeejio.com';
 const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
 
+function buildByocCommands(result, fallbackControlUrl) {
+  const control = String(result.control_url || fallbackControlUrl).replace(/\/$/, '');
+  const token = result.registration_token;
+  const command = `sudo systemctl stop pixelmug-agent 2>/dev/null || true; sudo rm -f /var/lib/pixelmug-agent/agent-token; sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-agent && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-agent')} -o /opt/pixelmug-agent/pixelmug-agent.mjs && sudo tee /etc/systemd/system/pixelmug-agent.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug BYOC Agent\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${token}\nExecStart=/usr/bin/node /opt/pixelmug-agent/pixelmug-agent.mjs\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-agent`;
+  const check_command = `systemctl is-active --quiet pixelmug-agent && echo 'PixelMug Agent service is running' || echo 'PixelMug Agent service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-agent -n 30 --no-pager`;
+  const cleanup_command = `sudo systemctl disable --now pixelmug-agent 2>/dev/null || true; sudo rm -f /etc/systemd/system/pixelmug-agent.service /opt/pixelmug-agent/pixelmug-agent.mjs /var/lib/pixelmug-agent/agent-token; sudo systemctl daemon-reload`;
+  return { command, check_command, cleanup_command };
+}
+
 export async function startWorkbench(options = {}) {
   const deploymentServiceUrl = String(options.deploymentServiceUrl || process.env.STUDIO_DEPLOYMENT_SERVICE_URL || 'http://127.0.0.1:8788').replace(/\/$/, '');
   const deploymentAccessToken = String(options.deploymentAccessToken || process.env.STUDIO_DEPLOYMENT_ACCESS_TOKEN || '');
@@ -175,9 +184,13 @@ export async function startWorkbench(options = {}) {
           if (!creator.session) throw new Error('请先登录冒泡账号');
           const body = await bodyOf(req);
           const result = await deploymentRequest('/api/byoc/registrations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ label: body.label || 'BYOC server' }) });
-          const control = result.control_url || deploymentServiceUrl;
-          const command = `sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-agent && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-agent')} -o /opt/pixelmug-agent/pixelmug-agent.mjs && sudo tee /etc/systemd/system/pixelmug-agent.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug BYOC Agent\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${result.registration_token}\nExecStart=/usr/bin/node /opt/pixelmug-agent/pixelmug-agent.mjs\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-agent`;
-          return reply(res, 200, { ...result, command });
+          return reply(res, 200, { ...result, ...buildByocCommands(result, deploymentServiceUrl) });
+        }
+        const refreshByocMatch = url.pathname.match(/^\/api\/deploy\/byoc\/([^/]+)\/refresh$/);
+        if (req.method === 'POST' && refreshByocMatch) {
+          if (!creator.session) throw new Error('请先登录冒泡账号');
+          const result = await deploymentRequest(`/api/byoc/registrations/${encodeURIComponent(refreshByocMatch[1])}/refresh`, { method: 'POST' });
+          return reply(res, 200, { ...result, ...buildByocCommands(result, deploymentServiceUrl) });
         }
         if (req.method === 'GET' && url.pathname === '/api/deploy/project-info') {
           if (!project) throw new Error('Please open a project first');
