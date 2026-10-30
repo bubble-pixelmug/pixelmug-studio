@@ -20,6 +20,7 @@ const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
 
 export async function startWorkbench(options = {}) {
   const deploymentServiceUrl = String(options.deploymentServiceUrl || process.env.STUDIO_DEPLOYMENT_SERVICE_URL || 'http://127.0.0.1:8788').replace(/\/$/, '');
+  const deploymentAccessToken = String(options.deploymentAccessToken || process.env.STUDIO_DEPLOYMENT_ACCESS_TOKEN || '');
   const creator = new CreatorClient({ baseUrl: options.creatorUrl || DEFAULT_CREATOR_API_URL, fetchImpl: options.fetchImpl });
   const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'https://bubble-pixelmug.github.io/pixelmug-docs/en/');
   if (!['http:', 'https:'].includes(docsUrl.protocol) || docsUrl.username || docsUrl.password) throw new Error('Invalid documentation URL');
@@ -131,7 +132,10 @@ export async function startWorkbench(options = {}) {
     const requestUrl = deploymentServiceUrl + path;
     let response;
     try {
-      response = await fetch(requestUrl, { ...init, signal: init.signal || AbortSignal.timeout(180000) });
+      const headers = { ...(init.headers || {}) };
+      if (deploymentAccessToken) headers.authorization = `Bearer ${deploymentAccessToken}`;
+      if (creator.session?.id) headers['x-pixelmug-account-id'] = creator.session.id;
+      response = await fetch(requestUrl, { ...init, headers, signal: init.signal || AbortSignal.timeout(180000) });
     } catch (error) {
       throw new Error(`Deployment service unavailable at ${requestUrl}: ${error.message}`);
     }
@@ -166,6 +170,14 @@ export async function startWorkbench(options = {}) {
         }
         if (req.method === 'GET' && url.pathname === '/api/deploy/servers') {
           return reply(res, 200, await deploymentRequest('/api/cloud/nodes'));
+        }
+        if (req.method === 'POST' && url.pathname === '/api/deploy/byoc/register') {
+          if (!creator.session) throw new Error('请先登录冒泡账号');
+          const body = await bodyOf(req);
+          const result = await deploymentRequest('/api/byoc/registrations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ label: body.label || 'BYOC server' }) });
+          const control = result.control_url || deploymentServiceUrl;
+          const command = `sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-agent && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-agent')} -o /opt/pixelmug-agent/pixelmug-agent.mjs && sudo tee /etc/systemd/system/pixelmug-agent.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug BYOC Agent\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${result.registration_token}\nExecStart=/usr/bin/node /opt/pixelmug-agent/pixelmug-agent.mjs\nRestart=always\nRestartSec=3\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-agent`;
+          return reply(res, 200, { ...result, command });
         }
         if (req.method === 'GET' && url.pathname === '/api/deploy/project-info') {
           if (!project) throw new Error('Please open a project first');
@@ -213,6 +225,8 @@ export async function startWorkbench(options = {}) {
             const releaseUrl = deploymentServiceUrl + `/api/cloud/deployments/${encodeURIComponent(deploymentId)}/releases`;
             let response;
             try {
+              if (deploymentAccessToken) headers.authorization = `Bearer ${deploymentAccessToken}`;
+              if (creator.session?.id) headers['x-pixelmug-account-id'] = creator.session.id;
               response = await fetch(releaseUrl, { method: 'POST', headers, body: createReadStream(archive.path), duplex: 'half', signal: AbortSignal.timeout(600000) });
             } catch (error) {
               throw new Error(`Deployment service unavailable at ${releaseUrl}: ${error.message}`);

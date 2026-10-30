@@ -129,3 +129,13 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
 
 This project is licensed under the [MIT License](LICENSE).
 
+## Cloud deployment configuration
+
+When using the deployment control service, Studio can attach its access token and the logged-in PixelMug account ID to deployment requests:
+
+```text
+STUDIO_DEPLOYMENT_SERVICE_URL=http://127.0.0.1:8788
+STUDIO_DEPLOYMENT_ACCESS_TOKEN=the-same-token-as-auto-deploy
+```
+
+The deploy page keeps the existing Lighthouse pool flow for the allowlisted account and also provides “连接已有 VPS”. That action creates a one-time BYOC registration and shows a command to run on an Ubuntu VPS. The VPS agent then registers over HTTPS and can receive one project at a time; stopping a deployment leaves the agent installed so another project can be deployed later.
