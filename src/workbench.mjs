@@ -36,7 +36,6 @@ function buildByocUtilityCommands(fallbackControlUrl) {
 
 export async function startWorkbench(options = {}) {
   const deploymentServiceUrl = String(options.deploymentServiceUrl || process.env.STUDIO_DEPLOYMENT_SERVICE_URL || 'http://127.0.0.1:8788').replace(/\/$/, '');
-  const deploymentAccessToken = String(options.deploymentAccessToken || process.env.STUDIO_DEPLOYMENT_ACCESS_TOKEN || '');
   const creator = new CreatorClient({ baseUrl: options.creatorUrl || DEFAULT_CREATOR_API_URL, fetchImpl: options.fetchImpl });
   const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'https://bubble-pixelmug.github.io/pixelmug-docs/en/');
   if (!['http:', 'https:'].includes(docsUrl.protocol) || docsUrl.username || docsUrl.password) throw new Error('Invalid documentation URL');
@@ -149,8 +148,7 @@ export async function startWorkbench(options = {}) {
     let response;
     try {
       const headers = { ...(init.headers || {}) };
-      if (deploymentAccessToken) headers.authorization = `Bearer ${deploymentAccessToken}`;
-      if (creator.session?.id) headers['x-pixelmug-account-id'] = creator.session.id;
+      if (creator.session?.token) headers.authorization = `Bearer ${creator.session.token}`;
       response = await fetch(requestUrl, { ...init, headers, signal: init.signal || AbortSignal.timeout(180000) });
     } catch (error) {
       throw new Error(`Deployment service unavailable at ${requestUrl}: ${error.message}`);
@@ -246,8 +244,7 @@ export async function startWorkbench(options = {}) {
             const releaseUrl = deploymentServiceUrl + `/api/cloud/deployments/${encodeURIComponent(deploymentId)}/releases`;
             let response;
             try {
-              if (deploymentAccessToken) headers.authorization = `Bearer ${deploymentAccessToken}`;
-              if (creator.session?.id) headers['x-pixelmug-account-id'] = creator.session.id;
+              if (creator.session?.token) headers.authorization = `Bearer ${creator.session.token}`;
               response = await fetch(releaseUrl, { method: 'POST', headers, body: createReadStream(archive.path), duplex: 'half', signal: AbortSignal.timeout(600000) });
             } catch (error) {
               throw new Error(`Deployment service unavailable at ${releaseUrl}: ${error.message}`);
