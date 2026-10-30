@@ -271,6 +271,7 @@ dialog{width:min(720px,calc(100vw - 36px));border:1px solid var(--border);border
 .vps-management-card .section-heading{margin-bottom:18px}
 .vps-management-card .byoc-detail-install{padding:22px}
 .vps-management-card .byoc-detail-install p{max-width:1100px;line-height:1.55;color:#536b88}
+.vps-management-card .byoc-detail-install .byoc-warning{color:#b42318;font-weight:700}
 .vps-management-card .byoc-detail-install textarea{min-height:190px}
 .vps-management-card .byoc-detail-install .actions button{margin:0}
 .deployment-management-v3 .section-heading{margin-bottom:22px}
