@@ -33,7 +33,7 @@ const notice = ref({visible:false,error:false,message:''});
 const accountType = ref('PHONE'), accountValue = ref(''), loginCode = ref(''), creatorUrl = ref('https://us-connector.jeejio.com');
 const botEntry = ref(''), autoRunMpy = ref(false), botApi = ref('');
 const directory = ref(null), directoryDialog = ref(null);
-const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentRefreshing = ref(false), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
+const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentRefreshing = ref(false), deploymentError = ref(''), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
 const byocSetup = ref(null), byocRegistrations = ref({}), byocCleanupServer = ref(null), byocCommandView = ref('install');
 const byocClock = ref(Date.now());
 const deploymentRemoteLogKeys = new Set();
@@ -52,7 +52,7 @@ const deploymentTextMap = {
   deploy: ['\u90e8\u7f72', 'Deploy application'], retry: ['\u91cd\u8bd5\u90e8\u7f72', 'Retry deployment'],
   mpsPackage: ['\u6b63\u5728\u6253\u5305 MPS', 'Packaging MPS'], mpsUpload: ['\u6b63\u5728\u4e0a\u4f20 MPS', 'Uploading MPS'], mpsUploaded: ['MPS \u5305\u5df2\u4e0a\u4f20', 'MPS package uploaded'],
   cancel: ['\u53d6\u6d88\u90e8\u7f72', 'Cancel deployment'], stop: ['\u505c\u6b62\u90e8\u7f72', 'Stop deployment'], status: ['\u5237\u65b0\u72b6\u6001', 'Refresh status'],
-  idle: ['\u7a7a\u95f2', 'Idle'], ready: ['\u53ef\u90e8\u7f72', 'Ready to deploy'], waitingAgent: ['\u7b49\u5f85 Agent \u8fde\u63a5', 'Waiting for Agent'], pending: ['\u7b49\u5f85 Agent \u6ce8\u518c', 'Waiting for Agent'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
+  idle: ['\u7a7a\u95f2', 'Idle'], ready: ['\u53ef\u90e8\u7f72', 'Ready to deploy'], waitingAgent: ['\u7b49\u5f85 Agent \u8fde\u63a5', 'Waiting for Agent'], pending: ['\u7b49\u5f85 Agent \u6ce8\u518c', 'Waiting for Agent'], deployed: ['\u5df2\u90e8\u7f72', 'Deployed'], deploying: ['\u90e8\u7f72\u4e2d', 'Deploying'], stopping: ['\u505c\u6b62\u4e2d', 'Stopping'], reserved: ['\u5df2\u9884\u7559', 'Reserved'],
 };
 function deployText(key){ const value=deploymentTextMap[key]; return value ? value[language.value==='en'?1:0] : key; }
 let lastRefresh = 0, initialized = false, pollTimer, cooldownTimer, noticeTimer;
@@ -156,8 +156,23 @@ async function runMpyAgain(device){
 async function refreshDeploymentServers(){
   if(deploymentRefreshing.value) return;
   deploymentRefreshing.value=true;
-  try { const result=await api('deploy/servers'); deploymentServers.value=result.nodes||[]; if(selectedServerId.value&&!deploymentServers.value.some(server=>server.id===selectedServerId.value)) selectedServerId.value=null; }
-  catch(error){ notify(error.message,true); }
+  let lastError=null;
+  try {
+    for(let attempt=0;attempt<3;attempt++){
+      try {
+        const result=await api('deploy/servers');
+        deploymentServers.value=result.nodes||[];
+        deploymentError.value='';
+        if(selectedServerId.value&&!deploymentServers.value.some(server=>server.id===selectedServerId.value)) selectedServerId.value=null;
+        return;
+      } catch(error) {
+        lastError=error;
+        if(attempt<2) await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
+      }
+    }
+    deploymentError.value=`Unable to refresh cloud servers: ${lastError?.message || 'request failed'}`;
+    notify(deploymentError.value,true);
+  } finally { deploymentRefreshing.value=false; }
   finally { deploymentRefreshing.value=false; }
 }
 async function connectByocServer(){
@@ -195,7 +210,7 @@ async function syncDeploymentMetadata(server){
   deploymentProjectInfo.value=info;
 }
 function backToDeploymentServers(){ selectedServerId.value=null; deploymentProjectInfo.value=null; deploymentMpsId.value=''; deploymentBotId.value=''; deploymentLog.value=[]; deploymentRemoteLogKeys.clear(); }
-function deploymentStatusLabel(status){ return deployText(status==='pending'?'pending':status==='deployed'?'deployed':status==='deploying'?'deploying':status==='reserved'?'reserved':'idle'); }
+function deploymentStatusLabel(status){ return deployText(status==='pending'?'pending':status==='deployed'?'deployed':status==='deploying'?'deploying':status==='cleaning'?'stopping':status==='reserved'?'reserved':'idle'); }
 function byocAwaitingAgent(server){ return server?.kind==='byoc' && !server.online; }
 function serverStatusLabel(server){ if(server?.kind==='byoc' && !server.online) return deployText('waitingAgent'); if(['available','assigned'].includes(server?.status)) return deployText('ready'); return deploymentStatusLabel(server?.deployment?.status || server?.status); }
 function byocCleanupCommandFor(server){ return byocRegistrations.value[server?.id]?.cleanup_command || server?.cleanup_command || 'sudo /opt/pixelmug-agent/cleanup.sh'; }
@@ -546,7 +561,8 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
        <section v-show="activeSection==='deploy'" class="section-page deploy-page">
          <div class="section-intro deployment-section-intro-v2"><div><span class="eyebrow">{{ deployText('deployApplication') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ deployText('cloudServers') }}</h2><p>{{ deployText('description') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
          <div class="section-intro"><div><span class="eyebrow">{{ t('部署应用') }}</span><h2 class="servers-page-title" :class="{clickable:Boolean(selectedDeploymentServer)}" @click="selectedDeploymentServer&&backToDeploymentServers()">{{ t('云服务器') }}</h2><p>{{ t('将当前在 Studio 中打开的项目部署到云服务器。') }}</p></div><div class="actions"><button :disabled="deploymentBusy||working" @click="connectByocServer">{{ language==='en' ? 'Connect to your VPS' : '连接你的云服务器' }}</button></div></div>
-         <div class="deployment-redesign">
+          <div v-if="deploymentError" class="deployment-error" role="alert"><span>{{ deploymentError }}</span><button :disabled="deploymentRefreshing" @click="refreshDeploymentServers">Retry</button></div>
+          <div class="deployment-redesign">
            <div v-if="selectedDeploymentServer?.deployment" class="deployment-id-strip"><span>Deployment ID</span>: <strong>{{ selectedDeploymentServer.deployment.deployment_id }}</strong></div>
            <div v-if="!selectedDeploymentServer" class="server-card-grid"><button v-for="server in deploymentServers" :key="server.id" type="button" class="server-card" :class="{selected:selectedServerId===server.id}" @click="selectDeploymentServer(server)"><span class="server-cloud-art"><img :src="cloudServerIcon" alt=""></span><span class="server-card-main"><strong>{{ server.label || server.hostname || server.id }}</strong><span class="server-state"><i :class="server.deployment?.status || server.status"></i>{{ serverStatusLabel(server) }}</span><span v-if="server.deployment" class="server-card-summary"><small>Project: {{ server.deployment.project_id }}</small><small>Deploy ID: {{ server.deployment.deployment_id }}</small><small>Bot: {{ server.deployment.bot_name || '—' }}</small><small>MPS: {{ server.deployment.mps_name || '—' }} · {{ server.deployment.mps_version || '—' }} · {{ server.deployment.mps_id || '—' }}</small></span></span></button><p v-if="!deploymentServers.length" class="empty">No server is connected.</p></div>
            <section v-else class="card deployment-management"><div class="section-heading"><div><span class="eyebrow">DEPLOYMENT MANAGEMENT</span><h2>{{ selectedDeploymentServer.label || selectedDeploymentServer.hostname || selectedDeploymentServer.id }}</h2></div><span class="badge">{{ deploymentStatusLabel(selectedDeploymentServer.deployment?.status || selectedDeploymentServer.status) }}</span></div><div class="deployment-info-grid"><div><h3>Current project</h3><p><span>Project</span><strong>{{ deploymentProjectInfo?.project_id || selectedDeploymentServer.deployment?.project_id || 'Not loaded' }}</strong></p><p><span>Bot</span><strong>{{ deploymentProjectInfo ? ((state?.bots||[]).find(bot=>bot.id===deploymentBotId)?.name || 'Not selected') : (selectedDeploymentServer.deployment?.bot_name || 'Not loaded') }}</strong></p></div><div><h3>MPS</h3><p><span>Name</span><strong>{{ deploymentProjectInfo?.mps?.name || selectedDeploymentServer.deployment?.mps_name || 'Not loaded' }}</strong></p><p><span>Version</span><strong>{{ deploymentProjectInfo?.mps?.version || selectedDeploymentServer.deployment?.mps_version || '—' }}</strong></p><p><span>ID</span><strong>{{ selectedDeploymentServer.deployment?.mps_id || deploymentMpsId || 'Select MPS ID' }}</strong></p></div></div><div class="deployment-form-row"><label>Bot<select v-model="deploymentBotId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">Select a Bot</option><option v-for="bot in state?.bots||[]" :key="bot.key||bot.id" :value="bot.id">{{ bot.name||'Unnamed Bot' }}</option></select></label><label>MPS<select v-model="deploymentMpsId" :disabled="Boolean(selectedDeploymentServer.deployment)||working"><option value="">Select MPS ID</option><option v-for="mps in state?.mps||[]" :key="mps.appId" :value="mps.appId">{{ mps.appName || 'Unnamed MPS' }} · {{ mps.appId }}</option></select></label></div><div class="actions"><button :disabled="deploymentBusy||working||Boolean(selectedDeploymentServer.deployment)" @click="loadCurrentProjectForDeployment">Load current project information</button><button class="primary" :disabled="deploymentBusy||working||!deploymentProjectInfo||!deploymentMpsId.trim()||Boolean(selectedDeploymentServer.deployment)" @click="createCloudDeployment">Deploy application</button><button v-if="selectedDeploymentServer.deployment?.status==='deployed'" class="danger" :disabled="deploymentBusy||working" @click="stopCloudDeployment">Stop deployment</button><button v-if="['deployed','unhealthy'].includes(selectedDeploymentServer.deployment?.status)" :disabled="deploymentBusy||working" @click="queryCloudDeployment">Refresh status</button></div><pre v-if="deploymentLog.length" ref="deploymentLogElement" class="deployment-log">{{ deploymentLog.join('\n') }}</pre></section>
