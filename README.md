@@ -131,12 +131,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Cloud deployment configuration
 
-When using the BYOC deployment control service, point Studio at the public HTTPS
-address of auto-deploy:
-
-```text
-STUDIO_DEPLOYMENT_SERVICE_URL=https://auto-deploy.lh-01.deploy.jeejio.com
-```
+Studio uses the official auto-deploy control service at
+`https://auto-deploy.lh-01.deploy.jeejio.com`.
 
 Studio forwards the logged-in Creator session token to auto-deploy. Auto-deploy
 validates that token through Creator's introspection endpoint, so no shared

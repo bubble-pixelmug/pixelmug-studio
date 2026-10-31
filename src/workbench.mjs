@@ -17,6 +17,7 @@ import { prepareProjectDependencies } from './project-dependencies.mjs';
 
 const DEFAULT_CREATOR_API_URL = 'https://us-connector.jeejio.com';
 const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
+const DEFAULT_DEPLOYMENT_SERVICE_URL = 'https://auto-deploy.lh-01.deploy.jeejio.com';
 
 function buildByocCommands(result, fallbackControlUrl) {
   const control = String(result.control_url || fallbackControlUrl).replace(/\/$/, '');
@@ -35,7 +36,7 @@ function buildByocUtilityCommands(fallbackControlUrl) {
 }
 
 export async function startWorkbench(options = {}) {
-  const deploymentServiceUrl = String(options.deploymentServiceUrl || process.env.STUDIO_DEPLOYMENT_SERVICE_URL || 'http://127.0.0.1:8788').replace(/\/$/, '');
+  const deploymentServiceUrl = String(options.deploymentServiceUrl || DEFAULT_DEPLOYMENT_SERVICE_URL).replace(/\/$/, '');
   const creator = new CreatorClient({ baseUrl: options.creatorUrl || DEFAULT_CREATOR_API_URL, fetchImpl: options.fetchImpl });
   const docsUrl = new URL(options.docsUrl || process.env.STUDIO_DOCS_URL || 'https://bubble-pixelmug.github.io/pixelmug-docs/en/');
   if (!['http:', 'https:'].includes(docsUrl.protocol) || docsUrl.username || docsUrl.password) throw new Error('Invalid documentation URL');
