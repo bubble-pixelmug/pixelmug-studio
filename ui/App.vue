@@ -586,7 +586,13 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
                  <textarea readonly rows="6" :value="byocCleanupCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
                  <div class="actions"><span class="cleanup-confirm-note">Please run the cleanup command above on this VPS.</span><button class="danger" @click="finishByocCleanup">OK</button></div>
                </div>
-                <div v-else-if="!selectedDeploymentServer.online" class="byoc-detail-install">
+                <div v-else-if="selectedDeploymentServer.online" class="byoc-detail-install">
+                  <h3>Check the VPS connection</h3>
+                  <p>Run this command on the VPS to verify that the Agent service is running, the control URL is reachable, and recent Agent logs contain a successful connection.</p>
+                  <textarea readonly rows="9" :value="byocRegistrations[selectedDeploymentServer.id]?.check_command || selectedDeploymentServer.check_command || 'Connection check command is not available in this Studio session.'" @focus="$event.target.select()"></textarea>
+                  <div class="actions"><button class="primary" @click="$event.target.previousElementSibling?.select(); navigator.clipboard?.writeText(byocRegistrations[selectedDeploymentServer.id]?.check_command || selectedDeploymentServer.check_command || '')">Copy check command</button><button class="danger" :disabled="deploymentBusy||working||!canDeleteByoc(selectedDeploymentServer)" @click="deleteByocServer(selectedDeploymentServer)">Delete VPS</button></div>
+                </div>
+                <div v-else class="byoc-detail-install">
                  <h3>{{ byocCommandView==='check' ? 'Check the VPS connection' : byocCommandView==='cleanup' ? 'Clean up the VPS Agent' : 'Run this one-time install command on your VPS' }}</h3>
                  <p>{{ byocCommandDescription() }}</p>
                  <textarea readonly rows="9" :value="byocCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
