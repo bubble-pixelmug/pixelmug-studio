@@ -22,7 +22,7 @@ const DEFAULT_DEPLOYMENT_SERVICE_URL = 'https://auto-deploy.lh-01.deploy.jeejio.
 function buildByocCommands(result, fallbackControlUrl) {
   const control = String(result.control_url || fallbackControlUrl).replace(/\/$/, '');
   const token = result.registration_token;
-  const command = `sudo systemctl stop pixelmug-agent 2>/dev/null || true; sudo rm -f /var/lib/pixelmug-agent/agent-token; sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-agent && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-agent')} -o /opt/pixelmug-agent/pixelmug-agent.mjs && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/cleanup-agent')} -o /opt/pixelmug-agent/cleanup.sh && sudo sed -i 's/\r$//' /opt/pixelmug-agent/cleanup.sh && sudo chmod 755 /opt/pixelmug-agent/cleanup.sh && sudo tee /etc/systemd/system/pixelmug-agent.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug BYOC Agent\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${token}\nExecStart=/usr/bin/node /opt/pixelmug-agent/pixelmug-agent.mjs\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-agent`;
+  const command = `sudo systemctl stop pixelmug-agent 2>/dev/null || true; sudo rm -f /var/lib/pixelmug-agent/agent-token; sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-agent && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-agent')} -o /opt/pixelmug-agent/pixelmug-agent.mjs && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/cleanup-agent')} -o /opt/pixelmug-agent/cleanup.sh && sudo chmod 755 /opt/pixelmug-agent/cleanup.sh && sudo tee /etc/systemd/system/pixelmug-agent.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug BYOC Agent\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${token}\nExecStart=/usr/bin/node /opt/pixelmug-agent/pixelmug-agent.mjs\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-agent`;
   const check_command = `systemctl is-active --quiet pixelmug-agent && echo 'PixelMug Agent service is running' || echo 'PixelMug Agent service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-agent -n 30 --no-pager`;
   const cleanup_command = 'sudo /opt/pixelmug-agent/cleanup.sh';
   return { command, check_command, cleanup_command };
@@ -45,7 +45,7 @@ export async function startWorkbench(options = {}) {
   let webAppHostname = defaultWebAppHostname;
   const addressChoices = () => webAppAddresses(defaultWebAppHostname);
   function validateWebAppHostname(host) {
-    if (!addressChoices().some(item => item.host === host)) throw new Error('鎵€閫夎闂湴鍧€宸蹭笉鍙敤锛岃閲嶆柊閫夋嫨褰撳墠鐢佃剳鐨勫眬鍩熺綉 IP 鎴?.local 鍦板潃');
+    if (!addressChoices().some(item => item.host === host)) throw new Error('所选访问地址已不可用，请重新选择当前电脑的局域网 IP 或 .local 地址');
     return host;
   }
   const gateway = await startWebAppGateway({ port: options.gatewayPort ?? (options.port === 0 ? 0 : 7979),
@@ -100,12 +100,12 @@ export async function startWorkbench(options = {}) {
   async function events(after) {
     if (!run) return null;
     const response = await fetch('http://127.0.0.1:' + run.port + '/api/events?after=' + (Number(after) || 0), { headers: { Authorization: 'Bearer ' + run.studioToken }, signal: AbortSignal.timeout(5000) });
-    if (!response.ok) throw new Error('杩愯鏃ュ織鎺ユ敹绔笉鍙敤');
+    if (!response.ok) throw new Error('运行日志接收端不可用');
     return response.json();
   }
   async function launch(body) {
-    if (!creator.session) throw new Error('璇峰厛鐧诲綍鍐掓场璐﹀彿');
-    if (!project) throw new Error('璇峰厛鎵撳紑椤圭洰鐩綍');
+    if (!creator.session) throw new Error('请先登录冒泡账号');
+    if (!project) throw new Error('请先打开项目目录');
     const selectedProject = await validateProjectRun(project.path, { bot: body.bot });
     const root = selectedProject.path;
     const bot = selectedProject.bot;
@@ -165,7 +165,7 @@ export async function startWorkbench(options = {}) {
       const url = new URL(req.url, 'http://localhost');
       if (url.pathname.startsWith('/api/')) {
         const actual = Buffer.from(req.headers.authorization || ''), expected = Buffer.from('Bearer ' + credential);
-        if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return reply(res, 401, { error: '璇蜂娇鐢ㄥ惎鍔ㄧ粓绔彁渚涚殑瀹屾暣 Studio 鍦板潃' });
+        if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return reply(res, 401, { error: '请使用启动终端提供的完整 Studio 地址' });
         if (req.method === 'GET' && url.pathname === '/api/state') return reply(res, 200, {
           bots: creator.publicBots(), botsError: creator.botsError, mps: creator.publicMps(), mpsError: creator.mpsError,
           user: creator.publicSession(), creatorUrl: creator.baseUrl, devices: creator.devices, devicesUpdatedAt: creator.updatedAt,
@@ -188,14 +188,14 @@ export async function startWorkbench(options = {}) {
           return reply(res, 200, { ...result, nodes: (result.nodes || []).map(node => node.kind === 'byoc' ? { ...node, ...buildByocUtilityCommands(deploymentServiceUrl) } : node) });
         }
         if (req.method === 'POST' && url.pathname === '/api/deploy/byoc/register') {
-          if (!creator.session) throw new Error('璇峰厛鐧诲綍鍐掓场璐﹀彿');
+          if (!creator.session) throw new Error('请先登录冒泡账号');
           const body = await bodyOf(req);
           const result = await deploymentRequest('/api/byoc/registrations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ label: body.label || 'BYOC server' }) });
           return reply(res, 200, { ...result, ...buildByocCommands(result, deploymentServiceUrl) });
         }
         const refreshByocMatch = url.pathname.match(/^\/api\/deploy\/byoc\/([^/]+)\/refresh$/);
         if (req.method === 'POST' && refreshByocMatch) {
-          if (!creator.session) throw new Error('璇峰厛鐧诲綍鍐掓场璐﹀彿');
+          if (!creator.session) throw new Error('请先登录冒泡账号');
           const result = await deploymentRequest(`/api/byoc/registrations/${encodeURIComponent(refreshByocMatch[1])}/refresh`, { method: 'POST' });
           return reply(res, 200, { ...result, ...buildByocCommands(result, deploymentServiceUrl) });
         }
@@ -281,8 +281,8 @@ export async function startWorkbench(options = {}) {
             if (fileSession !== creator.session) throw new Error("Login session changed; please retry");
             if (stopped) throw new Error('Studio is stopping');
             let result;
-            if (!creator.session || !project) throw new Error('璇峰厛鐧诲綍骞堕€夋嫨搴旂敤');
-            if (body.project !== project.path) throw new Error('褰撳墠搴旂敤宸插彉鍖栵紝璇峰埛鏂板悗閲嶈瘯');
+            if (!creator.session || !project) throw new Error('请先登录并选择应用');
+            if (body.project !== project.path) throw new Error('当前应用已变化，请刷新后重试');
             const files = new ProjectFiles(project.path);
             const action = url.pathname.split('/').pop();
             if (action === 'list') result = await files.list(body.path);
@@ -293,7 +293,7 @@ export async function startWorkbench(options = {}) {
           fileQueue = operation.catch(() => {});
           return reply(res, 200, await operation);
         }
-        if (busy || stopped) return reply(res, 409, { error: '姝ｅ湪澶勭悊涓婁竴椤规搷浣滐紝璇风◢鍚庨噸璇? });
+        if (busy || stopped) return reply(res, 409, { error: '正在处理上一项操作，请稍后重试' });
         busy = true;
         try {
           let result = { ok: true };
@@ -305,20 +305,20 @@ export async function startWorkbench(options = {}) {
             case '/api/bots/refresh': result = await creator.refreshBots(); break;
             case '/api/mps/refresh': result = await creator.refreshMps(); break;
             case '/api/bots/token':
-              if (run && runtimeConfig.botId === body.botId) throw new Error('璇峰厛鍋滄鏅鸿兘浣擄紝鍐嶄慨鏀规鍦ㄤ娇鐢ㄧ殑 Bot token');
+              if (run && runtimeConfig.botId === body.botId) throw new Error('请先停止智能体，再修改正在使用的 Bot token');
               creator.setBotToken(String(body.botId || ''), body.token); break;
             case '/api/bots/select': {
-              if (run) throw new Error('璇峰厛鍋滄鏅鸿兘浣擄紝鍐嶉€夋嫨 Bot');
+              if (run) throw new Error('请先停止智能体，再选择 Bot');
               const botId = String(body.botId || '');
-              if (!creator.session || !creator.bots.some(bot => bot.id && bot.id === botId)) throw new Error('璇烽€夋嫨褰撳墠璐﹀彿涓嬬殑 Bot');
+              if (!creator.session || !creator.bots.some(bot => bot.id && bot.id === botId)) throw new Error('请选择当前账号下的 Bot');
               runtimeConfig = { ...runtimeConfig, botId, botToken: undefined };
               break;
             }
             case '/api/auth/logout': await stopRun(); runtimeConfig = {}; await creator.logout(); break;
             case '/api/project/open': {
               const next = await inspect(String(body.path || ''));
-              if (!body.path) throw new Error('璇烽€夋嫨椤圭洰鐩綍');
-              if (run) throw new Error('鍒囨崲椤圭洰涔嬪墠璇峰厛鍋滄褰撳墠璋冭瘯');
+              if (!body.path) throw new Error('请选择项目目录');
+              if (run) throw new Error('切换项目之前请先停止当前调试');
               if (project?.path !== next.path) runtimeConfig = { botId: runtimeConfig.botId };
               project = next; result = project; break;
             }
@@ -333,16 +333,16 @@ export async function startWorkbench(options = {}) {
               break;
             }
             case '/api/webapp/address':
-              if (run) throw new Error('璇峰厛鍋滄鏅鸿兘浣擄紝鍐嶄慨鏀?WebApp 璁块棶鍦板潃');
+              if (run) throw new Error('请先停止智能体，再修改 WebApp 访问地址');
               webAppHostname = validateWebAppHostname(String(body.host || ''));
               result = { host: webAppHostname }; break;
             case '/api/run/start': result = await launch(body); break;
             case '/api/run/stop': result = await stopRun(true); break;
             case '/api/run/slots/refresh':
-              if (!run || body.runId !== run.runId) throw new Error('杩愯宸插彉鍖栵紝璇峰埛鏂板悗閲嶈瘯');
+              if (!run || body.runId !== run.runId) throw new Error('运行已变化，请刷新后重试');
               await refreshSlots(); result = slotState; break;
             case '/api/run/slots/bind':
-              if (!run || body.runId !== run.runId) throw new Error('杩愯宸插彉鍖栵紝璇峰埛鏂板悗閲嶈瘯');
+              if (!run || body.runId !== run.runId) throw new Error('运行已变化，请刷新后重试');
               clearTimeout(slotTimer);
               if (slotPending) await slotPending;
               clearTimeout(slotTimer);
@@ -353,13 +353,13 @@ export async function startWorkbench(options = {}) {
               }
               result = slotState; break;
             case '/api/run/device':
-              if (!run) throw new Error('灏氭湭寮€濮嬭皟璇?);
+              if (!run) throw new Error('尚未开始调试');
               result = await run.launches.bindings.run(body.bindingId); break;
             case '/api/run/rerun':
-              if (!run) throw new Error('灏氭湭寮€濮嬭皟璇?);
+              if (!run) throw new Error('尚未开始调试');
               result = await run.launches.rerun(body.launchId); break;
             case '/api/run/mpy/again':
-              if (!run) throw new Error('灏氭湭寮€濮嬭皟璇?);
+              if (!run) throw new Error('尚未开始调试');
               result = await run.launches.runMpyAgain(body.launchId); break;
             default: return reply(res, 404, { error: 'Not found' });
           }
@@ -374,7 +374,7 @@ export async function startWorkbench(options = {}) {
         : url.pathname.endsWith('.png') ? 'image/png' : 'application/octet-stream';
       return reply(res, 200, await readFile(new URL('../ui-dist' + url.pathname, import.meta.url)), type);
     } catch (error) {
-      const message = String(error.message || '鎿嶄綔澶辫触');
+      const message = String(error.message || '操作失败');
       let safe = message;
       for (const secret of [creator.session?.token, runtimeConfig.botToken, ...creator.botTokens.values()]) {
         if (secret) safe = safe.replaceAll(secret, '[REDACTED]');
