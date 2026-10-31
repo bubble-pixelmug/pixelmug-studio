@@ -173,7 +173,6 @@ async function refreshDeploymentServers(){
     deploymentError.value=`Unable to refresh cloud servers: ${lastError?.message || 'request failed'}`;
     notify(deploymentError.value,true);
   } finally { deploymentRefreshing.value=false; }
-  finally { deploymentRefreshing.value=false; }
 }
 async function connectByocServer(){
   const label=window.prompt(language.value==='en'?'Name this VPS':'给这台 VPS 起个名字','My VPS'); if(label===null) return;
