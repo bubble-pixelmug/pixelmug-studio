@@ -586,7 +586,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
                  <textarea readonly rows="6" :value="byocCleanupCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
                  <div class="actions"><span class="cleanup-confirm-note">Please run the cleanup command above on this VPS.</span><button class="danger" @click="finishByocCleanup">OK</button></div>
                </div>
-               <div v-else class="byoc-detail-install">
+                <div v-else-if="!selectedDeploymentServer.online" class="byoc-detail-install">
                  <h3>{{ byocCommandView==='check' ? 'Check the VPS connection' : byocCommandView==='cleanup' ? 'Clean up the VPS Agent' : 'Run this one-time install command on your VPS' }}</h3>
                  <p>{{ byocCommandDescription() }}</p>
                  <textarea readonly rows="9" :value="byocCommandFor(selectedDeploymentServer)" @focus="$event.target.select()"></textarea>
