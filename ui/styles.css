@@ -317,3 +317,4 @@ body.deployment-no-mpy .deployment-management-v3 .deployment-column:nth-child(3)
   .deployment-management .deployment-form-row label:last-child{font-size:15px}
 }
 
+.vps-storage-summary{display:flex;flex-wrap:wrap;gap:18px;margin:12px 0;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--panel-soft,#f7f9fc)}.vps-storage-summary div{display:flex;flex-direction:column;gap:4px}.vps-storage-summary span{font-size:12px;color:var(--muted)}.vps-storage-summary strong{color:var(--navy)}
