@@ -33,7 +33,7 @@ const notice = ref({visible:false,error:false,message:''});
 const accountType = ref('PHONE'), accountValue = ref(''), loginCode = ref(''), creatorUrl = ref('https://us-connector.jeejio.com');
 const botEntry = ref(''), autoRunMpy = ref(false), botApi = ref('');
 const directory = ref(null), directoryDialog = ref(null);
-const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
+const deploymentServers = ref([]), selectedServerId = ref(null), deploymentMpsId = ref(''), deploymentBusy = ref(false), deploymentRefreshing = ref(false), deploymentLog = ref([]), deploymentProjectInfo = ref(null), deploymentBotId = ref('');
 const byocSetup = ref(null), byocRegistrations = ref({}), byocCleanupServer = ref(null), byocCommandView = ref('install');
 const byocClock = ref(Date.now());
 const deploymentRemoteLogKeys = new Set();
@@ -154,10 +154,11 @@ async function runMpyAgain(device){
   });
 }
 async function refreshDeploymentServers(){
-  deploymentBusy.value=true;
+  if(deploymentRefreshing.value) return;
+  deploymentRefreshing.value=true;
   try { const result=await api('deploy/servers'); deploymentServers.value=result.nodes||[]; if(selectedServerId.value&&!deploymentServers.value.some(server=>server.id===selectedServerId.value)) selectedServerId.value=null; }
   catch(error){ notify(error.message,true); }
-  finally { deploymentBusy.value=false; }
+  finally { deploymentRefreshing.value=false; }
 }
 async function connectByocServer(){
   const label=window.prompt(language.value==='en'?'Name this VPS':'给这台 VPS 起个名字','My VPS'); if(label===null) return;
