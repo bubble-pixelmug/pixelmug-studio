@@ -131,11 +131,17 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Cloud deployment configuration
 
-When using the deployment control service, Studio can attach its access token and the logged-in PixelMug account ID to deployment requests:
+When using the BYOC deployment control service, point Studio at the public HTTPS
+address of auto-deploy:
 
 ```text
-STUDIO_DEPLOYMENT_SERVICE_URL=http://127.0.0.1:8788
-STUDIO_DEPLOYMENT_ACCESS_TOKEN=the-same-token-as-auto-deploy
+STUDIO_DEPLOYMENT_SERVICE_URL=https://auto-deploy.lh-01.deploy.jeejio.com
 ```
 
-The deploy page keeps the existing Lighthouse pool flow for the allowlisted account and also provides “连接已有 VPS”. That action creates a one-time BYOC registration and shows a command to run on an Ubuntu VPS. The VPS agent then registers over HTTPS and can receive one project at a time; stopping a deployment leaves the agent installed so another project can be deployed later.
+Studio forwards the logged-in Creator session token to auto-deploy. Auto-deploy
+validates that token through Creator's introspection endpoint, so no shared
+deployment access token is needed. The deploy page supports BYOC only: it creates
+a one-time registration command for a VPS purchased and managed by the user.
+After the agent registers over HTTPS, the VPS can run one project at a time;
+stopping a deployment leaves the agent installed so another project can be
+deployed later.
