@@ -22,16 +22,16 @@ const DEFAULT_DEPLOYMENT_SERVICE_URL = 'https://auto-deploy.lh-01.deploy.jeejio.
 function buildByocCommands(result, fallbackControlUrl) {
   const control = String(result.control_url || fallbackControlUrl).replace(/\/$/, '');
   const token = result.registration_token;
-  const command = `sudo systemctl stop pixelmug-agent 2>/dev/null || true; sudo rm -f /var/lib/pixelmug-agent/agent-token; sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-agent && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-agent')} -o /opt/pixelmug-agent/pixelmug-agent.mjs && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/cleanup-agent')} -o /opt/pixelmug-agent/cleanup.sh && sudo chmod 755 /opt/pixelmug-agent/cleanup.sh && sudo tee /etc/systemd/system/pixelmug-agent.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug BYOC Agent\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${token}\nExecStart=/usr/bin/node /opt/pixelmug-agent/pixelmug-agent.mjs\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-agent`;
-  const check_command = `systemctl is-active --quiet pixelmug-agent && echo 'PixelMug Agent service is running' || echo 'PixelMug Agent service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-agent -n 30 --no-pager`;
-  const cleanup_command = 'sudo /opt/pixelmug-agent/cleanup.sh';
+  const command = `sudo systemctl stop pixelmug-vps-runner 2>/dev/null || true; sudo rm -f /var/lib/pixelmug-vps-runner/runner-token; sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl nodejs && if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sudo sh; fi && sudo mkdir -p /opt/pixelmug-vps-runner && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/install-runner')} -o /opt/pixelmug-vps-runner/pixelmug-vps-runner.mjs && sudo curl -fsSL ${JSON.stringify(control + '/api/byoc/cleanup-runner')} -o /opt/pixelmug-vps-runner/cleanup.sh && sudo chmod 755 /opt/pixelmug-vps-runner/cleanup.sh && sudo tee /etc/systemd/system/pixelmug-vps-runner.service >/dev/null <<'EOF'\n[Unit]\nDescription=PixelMug VPS Runner\nAfter=docker.service network-online.target\nWants=network-online.target\n[Service]\nType=simple\nEnvironment=PIXELMUG_CONTROL_URL=${control}\nEnvironment=PIXELMUG_REGISTRATION_TOKEN=${token}\nExecStart=/usr/bin/node /opt/pixelmug-vps-runner/pixelmug-vps-runner.mjs\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\nEOF\nsudo systemctl daemon-reload && sudo systemctl enable --now pixelmug-vps-runner`;
+  const check_command = `systemctl is-active --quiet pixelmug-vps-runner && echo 'PixelMug VPS Runner service is running' || echo 'PixelMug VPS Runner service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-vps-runner -n 30 --no-pager`;
+  const cleanup_command = 'sudo /opt/pixelmug-vps-runner/cleanup.sh';
   return { command, check_command, cleanup_command };
 }
 function buildByocUtilityCommands(fallbackControlUrl) {
   const control = String(fallbackControlUrl || '').replace(/\/$/, '');
   return {
-    check_command: `systemctl is-active --quiet pixelmug-agent && echo 'PixelMug Agent service is running' || echo 'PixelMug Agent service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-agent -n 30 --no-pager`,
-    cleanup_command: 'sudo /opt/pixelmug-agent/cleanup.sh',
+    check_command: `systemctl is-active --quiet pixelmug-vps-runner && echo 'PixelMug VPS Runner service is running' || echo 'PixelMug VPS Runner service is not running'; curl -fsS ${control}/health; sudo journalctl -u pixelmug-vps-runner -n 30 --no-pager`,
+    cleanup_command: 'sudo /opt/pixelmug-vps-runner/cleanup.sh',
   };
 }
 

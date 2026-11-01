@@ -72,7 +72,7 @@ try:
 
     playback_pcm = load_recording_for_playback("recording.pcm")
 
-    audio.configure(output_volume=100)
+    audio.configure(output_volume=100, input_gain=150)
     player = audio.player("pcm", sample_rate=48000, frame_ms=20)
     print("Starting recording playback...")
     play_session = player.play(playback_pcm)

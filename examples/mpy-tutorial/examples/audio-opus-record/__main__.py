@@ -18,7 +18,7 @@ def main():
     audio.init(enable_input=True, enable_output=True,
                with_opus_encoder=True, with_opus_decoder=True)
     try:
-        audio.configure(output_volume=100)
+        audio.configure(output_volume=100, input_gain=150)
         audio.on("record_frame", on_frame)
         print("Starting Opus recording; speak for about 3 seconds...")
         record_session = audio.recorder("opus").start(sink="event")
