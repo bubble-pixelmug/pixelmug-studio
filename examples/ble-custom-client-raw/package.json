@@ -1,9 +1,0 @@
-{
-  "name": "pixelmug-studio-example-ble-custom-client-raw",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@jeejio-bubble/bot": "0.1.9"
-  }
-}

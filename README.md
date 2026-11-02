@@ -70,7 +70,6 @@ Read the developer documentation at [PixelMug Docs](https://bubble-pixelmug.gith
 ```sh
 npm run dev       # Start the Vite development server
 npm run build     # Build the Studio UI into ui-dist/
-npm test          # Build the UI and run the test suite
 npm start         # Start the Studio server
 ```
 
@@ -80,10 +79,10 @@ npm start         # Start the Studio server
 src/               Node.js server, runtime adapters, deployment, and gateway code
 ui/                Vue user interface source
 ui-dist/           Generated UI build output
-getting-started/   Progressive runnable projects
-examples/          Focused runnable examples
 test/              Automated tests
 ```
+
+Runnable projects and development resources live in the separate `dev-resources` repository. In the monorepo workspace it is expected at `../../dev-resources` relative to this package. The Studio installer does not bundle those resources; clone that repository separately when running the resource-backed example commands or tests.
 
 
 ## Windows package

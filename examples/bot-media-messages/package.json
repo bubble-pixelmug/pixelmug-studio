@@ -1,9 +1,0 @@
-{
-  "name": "pixelmug-studio-example-bot-media-messages",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@jeejio-bubble/bot": "0.1.9"
-  }
-}

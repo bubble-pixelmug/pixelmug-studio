@@ -1,8 +1,0 @@
-{
-  "name": "pixelmug-getting-started-ble-play",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@jeejio-bubble/bot": "0.1.9"
-  }
-}

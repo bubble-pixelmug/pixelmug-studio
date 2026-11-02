@@ -1,8 +1,0 @@
-{
-  "name": "pixelmug-examples-mpy-tutorial",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@jeejio-bubble/bot": "0.1.9"
-  }
-}
