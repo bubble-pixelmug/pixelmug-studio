@@ -22,12 +22,12 @@ Open the Studio URL printed in the terminal. The management service listens only
 
 ```text
 example-app/
-鈹溾攢鈹€ bot/                 # Required
-鈹?  鈹斺攢鈹€ index.js         # Select this as the Bot entry in Studio
-鈹溾攢鈹€ webapp/              # Optional; contains index.html
-鈹斺攢鈹€ mpy/                 # Optional on-device MicroPython application
-    鈹溾攢鈹€ __main__.py
-    鈹斺攢鈹€ mps.json
+├─ bot/                  # Required
+│  └─ index.js           # Select this as the Bot entry in Studio
+├─ webapp/               # Optional; contains index.html
+└─ mpy/                  # Optional on-device MicroPython application
+   ├─ __main__.py        # Required 
+   └─ mps.json           # Required
 ```
 
 Studio supports Bot-only applications as well as applications that combine a Bot with a WebApp, MicroPython code, or both.
