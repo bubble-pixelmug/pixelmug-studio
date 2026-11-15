@@ -14,6 +14,7 @@ import { createProjectArchive, readMpsMetadata } from './cloud-deployment.mjs';
 import { createMpsArchive } from './mps-package.mjs';
 import { uploadMpsPackage } from './mps-upload.mjs';
 import { prepareProjectDependencies } from './project-dependencies.mjs';
+import { displayBotSlots } from './slot-display.mjs';
 
 const DEFAULT_CREATOR_API_URL = 'https://us-connector.jeejio.com';
 const DEFAULT_BOT_API_URL = 'https://us.jeejio.com/im';
@@ -56,6 +57,7 @@ export async function startWorkbench(options = {}) {
   let deviceRefresh;
   let slotState = { list: [], loading: false, error: '', updatedAt: null };
   let slotTimer, slotGeneration = 0, slotPending;
+  const visibleSlots = () => ({ ...slotState, list: displayBotSlots(slotState.list, run?.launches.bindings.list() || [], creator.devices) });
   function clearSlots() {
     clearTimeout(slotTimer);
     slotGeneration++;
@@ -125,7 +127,7 @@ export async function startWorkbench(options = {}) {
     run = await startStudio({ project: root, bot, webRoot, mpsId: 'local-debug', mpsVersion: mps?.version || 'local', host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl,
       captureProcessLogs: true,
       botToken, botApiBaseUrl: botApiBaseUrl || process.env.BOT_API_BASE_URL,
-      launchOptions: { authorizeDevice: (ref, options) => creator.authorize(ref, options), restartDevices: prepared.devices,
+      launchOptions: { authorizeDevice: function (ref, options) { return this.authorizeBoundDevice(ref, options); }, restartDevices: prepared.devices,
         prepareOnBinding: selectedProject.mpy, autoRunOnBinding: autoRunMpy },
     });
     if (webRoot) gateway.activate(root, run);
@@ -169,7 +171,7 @@ export async function startWorkbench(options = {}) {
         if (req.method === 'GET' && url.pathname === '/api/state') return reply(res, 200, {
           bots: creator.publicBots(), botsError: creator.botsError, mps: creator.publicMps(), mpsError: creator.mpsError,
           user: creator.publicSession(), creatorUrl: creator.baseUrl, devices: creator.devices, devicesUpdatedAt: creator.updatedAt,
-          botSlots: creator.session ? slotState : { list: [], loading: false, error: '', updatedAt: null },
+          botSlots: creator.session ? visibleSlots() : { list: [], loading: false, error: '', updatedAt: null },
           project, runtimeConfig: { botApiBaseUrl: runtimeConfig.botApiBaseUrl || '', autoRunMpy: runtimeConfig.autoRunMpy === true, botId: runtimeConfig.botId || '', hasBotToken: Boolean(creator.botTokens.get(runtimeConfig.botId)) }, webAppHostname, webAppAddresses: addressChoices(), webAppPort: gateway.port, docsUrl: docsUrl.href, busy,
           run: run ? { runId: run.runId, webAppUrl: run.webAppUrl, debugDir: run.debugDir } : null,
           events: await events(url.searchParams.get('runId') === run?.runId ? url.searchParams.get('after') : 0),
@@ -340,18 +342,20 @@ export async function startWorkbench(options = {}) {
             case '/api/run/stop': result = await stopRun(true); break;
             case '/api/run/slots/refresh':
               if (!run || body.runId !== run.runId) throw new Error('运行已变化，请刷新后重试');
-              await refreshSlots(); result = slotState; break;
+              await refreshSlots(); result = visibleSlots(); break;
             case '/api/run/slots/bind':
               if (!run || body.runId !== run.runId) throw new Error('运行已变化，请刷新后重试');
               clearTimeout(slotTimer);
               if (slotPending) await slotPending;
               clearTimeout(slotTimer);
+              if (visibleSlots().list.find(slot => slot.id === body.slotId)?.groupBound)
+                throw new Error('该槽位已在群聊中绑定设备，请在冒泡群聊中更换绑定');
               try {
                 await creator.bindBotSlot(runtimeConfig.botToken, body.slotId, body.deviceId);
               } finally {
                 await refreshSlots();
               }
-              result = slotState; break;
+              result = visibleSlots(); break;
             case '/api/run/device':
               if (!run) throw new Error('尚未开始调试');
               result = await run.launches.bindings.run(body.bindingId); break;

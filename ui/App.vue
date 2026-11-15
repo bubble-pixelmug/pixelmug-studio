@@ -96,6 +96,10 @@ function notify(message,error=false){
   notice.value={visible:true,error,message};
   if(!error) noticeTimer=setTimeout(()=>{ notice.value={...notice.value,visible:false}; },4000);
 }
+function dismissNotice(){
+  clearTimeout(noticeTimer);
+  notice.value={...notice.value,visible:false};
+}
 async function api(path,body){
   const response = await fetch('/api/'+path,{
     method:body===undefined?'GET':'POST',
@@ -103,9 +107,14 @@ async function api(path,body){
     ...(body===undefined?{}:{body:JSON.stringify(body)}),
   });
   const result = await response.json();
-  if(!response.ok) throw new Error(result.error?.message || result.error || t('请求失败'));
+  if(!response.ok){
+    const error=new Error(result.error?.message || result.error || t('请求失败'));
+    error.status=response.status;
+    throw error;
+  }
   return result;
 }
+function isRateLimitError(error){ return Number(error?.status)===429 || /\b429\b|rate limit/i.test(String(error?.message||error)); }
 async function perform(fn){
   if(working.value) return;
   working.value=true;
@@ -207,7 +216,7 @@ async function refreshDeploymentServers({automatic=false}={}){
         if(selectedServerId.value&&!deploymentServers.value.some(server=>server.id===selectedServerId.value)) { selectedServerId.value=null; sessionStorage.removeItem('pixelmug-selected-deployment-server'); loadDeploymentLog(null); }
         const selectedAfterRefresh=deploymentServers.value.find(server=>server.id===selectedServerId.value);
         if(selectedAfterRefresh && deploymentLogServerId!==selectedAfterRefresh.id) loadDeploymentLog(selectedAfterRefresh.id);
-        return;
+        return true;
       } catch(error) {
         lastError=error;
         if(attempt<2) await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
@@ -216,6 +225,7 @@ async function refreshDeploymentServers({automatic=false}={}){
     deploymentError.value=`Unable to refresh cloud servers: ${lastError?.message || 'request failed'}`;
     if(!automatic) notify(deploymentError.value,true);
     scheduleDeploymentRefreshRetry();
+    return false;
   } finally { deploymentRefreshing.value=false; }
 }
 async function connectByocServer(){
@@ -286,17 +296,28 @@ async function uploadDeployment(deployment){
      const result=await response.json(); updateDeploymentSnapshot(result); appendDeploymentLogs(result);
      if(!response.ok) throw new Error(`Studio ${response.status} /api/deploy/upload: ${result.error||t('发布版本上传失败')}`);
      appendDeploymentLog(t('发布版本已上传，容器正在运行'));
-     await waitForDeployment(deployment.deployment_id);
+     return await waitForDeployment(deployment.deployment_id);
    } finally {}
 }
 async function waitForDeployment(deploymentId){
   const deadline=Date.now()+15*60*1000;
   while(Date.now()<deadline){
     await new Promise(resolve=>setTimeout(resolve,1500));
-    const latest=await api('deploy/status/'+deploymentId);
+    let latest;
+    try {
+      latest=await api('deploy/status/'+deploymentId);
+    } catch(error) {
+      if(isRateLimitError(error)){
+        appendDeploymentLog('Deployment status polling was rate limited; retrying.');
+        await new Promise(resolve=>setTimeout(resolve,3000));
+        continue;
+      }
+      throw error;
+    }
     updateDeploymentSnapshot(latest); appendDeploymentLogs(latest);
     if(['deployed','unhealthy','stopped'].includes(latest.status)){
       if(latest.status==='unhealthy') throw new Error(latest.error?.message || 'VPS Runner deployment failed');
+      if(latest.status==='stopped') throw new Error('VPS Runner stopped the deployment before it became ready');
       return latest;
     }
   }
@@ -334,15 +355,16 @@ async function createCloudDeployment(){
     updateDeploymentSnapshot(withMetadata);
     if(mpsUpload) deploymentProjectInfo.value={...deploymentProjectInfo.value,mps:{name:mpsUpload.name||deploymentProjectInfo.value?.mps?.name||'',version:mpsUpload.version||deploymentProjectInfo.value?.mps?.version||''}};
     appendDeploymentLog(t('部署已预留：{0}',[created.deployment_id]));
-    await refreshDeploymentServers();
+    await refreshDeploymentServers({automatic:true});
     try {
       await uploadDeployment(created);
-      await refreshDeploymentServers();
+      const refreshed=await refreshDeploymentServers({automatic:true});
+      if(!refreshed) appendDeploymentLog('Deployment completed; the server list refresh was rate limited and will retry automatically.');
       notify(t('部署正在运行。'));
     } catch(error) {
       appendDeploymentLog(t('部署失败，正在释放服务器'));
       try { await api('deploy/stop/'+created.deployment_id,{}); appendDeploymentLog(t('部署预留已释放')); } catch(cleanupError) { appendDeploymentLog(t('无法释放部署：{0}',[cleanupError.message])); }
-      await refreshDeploymentServers();
+      await refreshDeploymentServers({automatic:true});
       throw error;
     }
   });
@@ -571,7 +593,10 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
     <div class="brand"><span class="mark"><img :src="deviceIcon" alt="PixelMug"></span><div>PixelMug <b>Studio</b><small>DEVELOPER WORKSPACE</small></div></div>
     <div class="header-right"><LanguageSwitcher /><span id="user-name">{{ state?.user?.name || '' }}</span><button id="logout" :hidden="!state?.user" :disabled="working" @click="logout">{{ t('退出登录') }}</button></div>
   </header>
-  <div id="notice" role="status" aria-live="polite" :hidden="!notice.visible" :class="{error:notice.error}">{{ serviceMessage(notice.message) }}</div>
+  <div id="notice" role="status" aria-live="polite" :hidden="!notice.visible" :class="{error:notice.error}">
+    <span class="notice-message">{{ serviceMessage(notice.message) }}</span>
+    <button type="button" class="notice-close" :aria-label="t('关闭')" @click="dismissNotice">×</button>
+  </div>
 
   <section id="login-view" class="login-shell" :hidden="Boolean(state?.user)" :style="{backgroundImage:`url(${indexBackground})`}">
     <LanguageSwitcher id="login-language" class="login-language" />
@@ -676,6 +701,7 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
             </div>
           </details>
           <p class="project-requirements">{{ t('冒泡智能体应用至少应包含 bot/ 目录及智能体启动入口；还可包含 webapp/ 目录和 mpy/ 设备代码目录。包含设备代码时，请在 mpy/ 目录中使用 ') }}<code>__main__.py</code>{{ t(' 作为执行入口。') }}</p>
+          <p class="subtle">{{ t('Studio 会通过 npm 安装 Bot 和 WebApp 依赖，但会跳过依赖的安装脚本（preinstall、install、postinstall）；需要这些脚本的原生模块可能无法使用。') }}</p>
         </section>
       </section>
 

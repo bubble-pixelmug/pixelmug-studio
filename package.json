@@ -18,7 +18,7 @@
     "package:mac": "npm run package:mac:x64 && npm run package:mac:arm64"
   },
   "engines": {
-    "node": ">=20.6"
+    "node": ">=24"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",

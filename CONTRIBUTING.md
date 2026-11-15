@@ -4,7 +4,7 @@ Thank you for contributing to PixelMug Studio.
 
 ## Development setup
 
-1. Install Node.js 20.6 or later.
+1. Install Node.js 24 or later.
 2. Run `npm ci` from the repository root.
 3. Run `npm run build` before starting Studio or running tests.
 4. Run `npm test` before opening a pull request.

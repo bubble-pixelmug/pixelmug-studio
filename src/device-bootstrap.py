@@ -6,6 +6,11 @@ import io
 
 def run(launch_id, nonce):
     prefix = "\x1eSTUDIO:" + nonce + ":"
+    def report_event(value):
+        if not isinstance(value, str) or not value or len(value) > 512:
+            return False
+        print(prefix + json.dumps({"launchId": launch_id, "type": "mpyVmEvent", "value": value}))
+        return True
     def state(value, message=""):
         print(prefix + json.dumps({"launchId": launch_id, "state": value, "message": message}))
     def exception(error):
@@ -22,7 +27,8 @@ def run(launch_id, nonce):
     try:
         with open("/__main__.py", "r") as source:
             code = compile(source.read(), "/__main__.py", "exec")
-        namespace = {"__name__": "__main__", "__file__": "/__main__.py"}
+        namespace = {"__name__": "__main__", "__file__": "/__main__.py",
+                     "__studio_report_event__": report_event}
         state("running")
         exec(code, namespace, namespace)
         state("completed")

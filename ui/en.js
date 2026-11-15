@@ -1,5 +1,6 @@
 ﻿export default {
   '请求失败': 'Request failed',
+  'Studio 会通过 npm 安装 Bot 和 WebApp 依赖，但会跳过依赖的安装脚本（preinstall、install、postinstall）；需要这些脚本的原生模块可能无法使用。': 'Studio installs Bot and WebApp dependencies with npm, but skips package install scripts (preinstall, install, postinstall). Native modules that need these scripts may not work.',
   '验证码已发送，请查看手机或邮箱。': 'Verification code sent. Check your phone or email.',
   '登录成功，正在更新我的冒泡。': 'Signed in. Updating your Bubble devices and bots.',
   '已退出登录，本地调试环境已停止。': 'Signed out. Local debugging has stopped.',
@@ -182,6 +183,7 @@
   '● 在线': '● Online',
   '○ 离线': '○ Offline',
   '更换关联设备': 'Change linked device',
+  '已在群聊中绑定': 'Linked in group chat',
   '选择并关联设备': 'Select and link device',
   '选择关联设备': 'Select a device to link',
   '关闭': 'Close',

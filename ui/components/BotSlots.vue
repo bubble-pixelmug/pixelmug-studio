@@ -9,6 +9,7 @@ const selected = computed(() => props.slots?.list?.find(slot => slot.id === sele
 const candidates = computed(() => (props.devices || []).filter(device => device.talId && selected.value &&
   [selected.value.talId, ...selected.value.compatible].includes(device.talId)));
 function choose(slot) {
+  if (slot.groupBound) return;
   selectedId.value = slot.id;
   picker.value.showModal();
   emit('choose');
@@ -30,9 +31,9 @@ watch(selected, slot => { if (!slot) picker.value?.close(); });
         <p class="slot-types">TALID：{{ slot.talId || '—' }}<br>{{ t('兼容 TALID：') }}{{ slot.compatible.join(t('、')) || t('无') }}</p>
         <div v-if="slot.device" class="slot-device">
           <div class="device-image"><img v-if="deviceIconFor(slot.device).src" :src="deviceIconFor(slot.device).src" :alt="slot.device.name"></div>
-          <div class="slot-device-info"><strong>{{ slot.device.name }}</strong><p class="device-serial">SN {{ slot.device.sn || '—' }}</p><span class="online-status" :class="{offline: slot.device.online !== 'ONLINE'}">{{ slot.device.online === 'ONLINE' ? t('● 在线') : t('○ 离线') }}</span></div>
+          <div class="slot-device-info"><strong>{{ slot.device.name }}</strong><p v-if="slot.device.sn" class="device-serial">SN {{ slot.device.sn || '—' }}</p><span class="online-status" :class="{offline: slot.device.online !== 'ONLINE'}">{{ slot.device.online === 'ONLINE' ? t('● 在线') : t('○ 离线') }}</span></div>
         </div>
-        <div class="slot-action"><button :class="{primary: !slot.device}" :disabled="busy" @click="choose(slot)">{{ slot.device ? t('更换关联设备') : t('选择并关联设备') }}</button></div>
+        <div class="slot-action"><button :class="{primary: !slot.device}" :disabled="busy || slot.groupBound" @click="choose(slot)">{{ slot.groupBound ? t('已在群聊中绑定') : slot.device ? t('更换关联设备') : t('选择并关联设备') }}</button></div>
       </article>
     </div>
     <dialog ref="picker" class="slot-picker">

@@ -8,6 +8,14 @@ import { snapshotProject, deploy } from "./deploy.mjs";
 
 const terminal = new Set(["failed", "completed", "stopped", "unknown", "superseded"]);
 const active = job => !terminal.has(job.state) && job.state !== "running";
+export function reconcileRestartPlan(plans, device) {
+  const plan = plans.get(device.deviceId);
+  if (!plan || plan.slotId === device.slotId) return plan;
+  // The reboot is tied to the physical device, while the Bot assigns slot IDs.
+  if (plan.state === "waiting") { plan.slotId = device.slotId; return plan; }
+  plans.delete(device.deviceId);
+  return null;
+}
 const delay = (ms, signal) => new Promise((resolve, reject) => {
   if (signal.aborted) return reject(new Error("Launch cancelled"));
   const timer = setTimeout(done, ms);
@@ -56,6 +64,19 @@ export class LaunchManager {
       : ["accepted", "rebooting", "connecting", "uploading"].includes(state) ? "INSTALL_START" : undefined;
     this.push(owner.key, { type: "event", ownerId: owner.ownerId, launchId: job.id,
       device: job.device, state, value, message: job.error || "", terminal: terminal.has(state) });
+  }
+  deviceEvent(job, value) {
+    if (typeof value !== "string" || !value || Buffer.byteLength(value, "utf8") > 512) return false;
+    const sent = new Set();
+    for (const owner of job.owners.values()) {
+      const key = owner.key + ":" + owner.ownerId;
+      if (sent.has(key)) continue;
+      sent.add(key);
+      this.push(owner.key, { type: "event", ownerId: owner.ownerId, launchId: job.id,
+        device: job.device, state: job.state, value, message: "", terminal: false });
+    }
+    this.log(job, "info", "Studio MPY event forwarded to " + sent.size + " subscriber(s): " + value, "studio");
+    return true;
   }
   state(job, state, error) {
     if (terminal.has(state)) clearInterval(job.healthTimer);
@@ -156,6 +177,15 @@ export class LaunchManager {
     if (!match) throw new Error("Device is not authorized: add its deviceId and slotId to the local --devices file");
     return match;
   }
+  authorizeBoundDevice(ref, { allowOffline = false } = {}) {
+    const deviceId = String(ref?.deviceId || "");
+    const slotId = String(ref?.slotId || "");
+    const record = [...this.bindings.records.values()].find(item =>
+      item.device.deviceId === deviceId && item.device.slotId === slotId);
+    if (!record) throw new Error("Device is not bound to a slot of the current Bot run");
+    if (!allowOffline && record.device.online !== true) throw new Error("Bound device is not online");
+    return { deviceId, slotId };
+  }
   async handle(source, message) {
     if (this.stopped) throw new Error("Studio is closing");
     if (message?.runId !== this.runId) { const error = new Error("Studio run expired"); error.code = 401; throw error; }
@@ -221,6 +251,8 @@ export class LaunchManager {
   async runMpyAgain(launchId) {
     const job = [...this.jobs.values()].find(item => item.id === launchId);
     if (!job) throw new Error("Launch no longer exists");
+    if (this.authorizeDevice) await this.authorizeDevice(job.device);
+    else this.target(job.device);
     while (this.locks.has(job.device.deviceId)) await this.locks.get(job.device.deviceId);
     let releaseLock;
     const lock = new Promise(resolve => { releaseLock = resolve; });
@@ -274,7 +306,7 @@ export class LaunchManager {
         this.state(previous, "unknown", "原 WebREPL 连接无法确认；本次启动将重新部署");
       }
       if (this.stopping || this.stopped) throw new Error("Studio is stopping");
-      if (!force && previous && previous.fingerprint === snapshot.fingerprint && !terminal.has(previous.state)) {
+      if (!force && previous && previous.device.slotId === device.slotId && previous.fingerprint === snapshot.fingerprint && !terminal.has(previous.state)) {
         previous.owners.set(key + ":" + ownerId, owner); this.event(previous, owner);
         previous.executor = context.executor; previous.contextId = ref.contextId;
         previous.owners.set(context.executor.key + ":" + context.executor.ownerId, context.executor);
@@ -284,8 +316,7 @@ export class LaunchManager {
       if (previous) { this.state(previous, "superseded"); previous.abort.abort(); previous.repl?.close(); }
       let prepared = this.restartPlans.get(device.deviceId);
       if (prepared?.state === "preparing") await prepared.work;
-      prepared = this.restartPlans.get(device.deviceId);
-      if (prepared && prepared.slotId !== device.slotId) throw new Error("重启期间设备绑定已变化，拒绝部署到不同槽位");
+      prepared = reconcileRestartPlan(this.restartPlans, device);
       if (prepared?.state === "failed" && !previous) throw new Error(prepared.message || "设备重启准备失败");
       const reuseBoot = prepared?.state === "waiting";
       const id = reuseBoot ? prepared.requestId : "launch-" + randomUUID(), dir = join(this.debugDir, id);
@@ -407,6 +438,10 @@ export class LaunchManager {
         try {
           const event = JSON.parse(value.slice(i + prefix.length));
           if (event.launchId !== job.id) return;
+          if (event.type === "mpyVmEvent") {
+            this.deviceEvent(job, event.value);
+            return;
+          }
           if (event.type === "exception" && typeof event.message === "string") {
             this.log(job, "error", event.message, "console");
             return;

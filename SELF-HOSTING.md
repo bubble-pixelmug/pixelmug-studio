@@ -64,7 +64,7 @@ tools/studio/src/runtime/project-launcher.mjs
 在项目根目录创建：
 
 ```dockerfile
-FROM node:20-bookworm-slim
+FROM node:24-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./

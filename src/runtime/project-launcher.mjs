@@ -34,8 +34,24 @@ async function startStaticServer(root, port) {
       if (rel.startsWith('..') || rel.includes(':')) return send(res, 403, 'Forbidden');
       const info = await stat(filePath);
       if (!info.isFile()) return send(res, 404, 'Not found');
-      res.writeHead(200, { 'content-type': contentType(filePath), 'cache-control': 'no-store' });
-      createReadStream(filePath).pipe(res);
+      const headers = {
+        'content-type': contentType(filePath),
+        'cache-control': 'no-store',
+        'accept-ranges': 'bytes',
+      };
+      const range = parseRange(req.headers.range, info.size);
+      if (range) {
+        headers['content-range'] = `bytes ${range.start}-${range.end}/${info.size}`;
+        headers['content-length'] = String(range.end - range.start + 1);
+        res.writeHead(206, headers);
+        if (req.method !== 'HEAD') createReadStream(filePath, { start: range.start, end: range.end }).pipe(res);
+        else res.end();
+        return;
+      }
+      headers['content-length'] = String(info.size);
+      res.writeHead(200, headers);
+      if (req.method !== 'HEAD') createReadStream(filePath).pipe(res);
+      else res.end();
     } catch (error) {
       send(res, 404, error?.code === 'ENOENT' ? 'Build not found.' : 'Not found');
     }
@@ -49,6 +65,16 @@ async function startStaticServer(root, port) {
     });
   });
   return server;
+}
+
+function parseRange(value, size) {
+  const match = String(value || '').match(/^bytes=(\d*)-(\d*)$/);
+  if (!match) return null;
+  let start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2] || 0));
+  let end = match[2] ? Number(match[2]) : size - 1;
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || start >= size) return null;
+  end = Math.min(end, size - 1);
+  return { start, end };
 }
 
 function send(res, status, body) {
@@ -66,6 +92,9 @@ function contentType(filePath) {
     case '.png': return 'image/png';
     case '.jpg':
     case '.jpeg': return 'image/jpeg';
+    case '.mp4':
+    case '.m4v': return 'video/mp4';
+    case '.webm': return 'video/webm';
     default: return 'application/octet-stream';
   }
 }

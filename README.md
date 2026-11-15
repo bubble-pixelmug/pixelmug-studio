@@ -4,7 +4,7 @@ PixelMug Studio is a local development, run, and debugging environment for Bubbl
 
 ## Requirements
 
-- Node.js 20.6 or later
+- Node.js 24 or later
 - A Bubble account and Bot token
 - A PixelMug connected to the same local network as the computer and Bubble App
 
@@ -40,6 +40,8 @@ Studio supports Bot-only applications as well as applications that combine a Bot
 4. Start the application and test the Bot or WebApp in the Bubble App.
 5. For MicroPython applications, deploy code to supported devices or enable automatic deployment on start.
 6. Inspect Bot, WebApp, deployment, and device logs in **Run & debug**.
+
+In a group application, each player binds their own device to the Bot in the Bubble App. Studio can load MPY onto any online device bound to the running Bot, including a device owned by another player, when Studio and the device can reach each other over the local network. The device picker in **My Bubble** still lists only devices owned by the Studio login.
 
 Runtime logs are written to `debug/<runId>/` in the selected application directory. These generated directories are ignored by Git.
 

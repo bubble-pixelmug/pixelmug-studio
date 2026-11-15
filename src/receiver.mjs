@@ -18,7 +18,8 @@ const browserRuntime = new Set(["StudioDebug.js", "StudioDebugWeb.js", "StudioLa
 const MAX_BODY = 256 * 1024;
 const levels = new Set(["log", "info", "warn", "error", "debug"]);
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon" };
+  ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon",
+  ".mp4": "video/mp4", ".m4v": "video/mp4", ".webm": "video/webm" };
 
 export async function startStudio(options = {}) {
   const { redactText, serializeStudioValue } = await import(new URL("./runtime/StudioDebug.js", import.meta.url));
@@ -188,7 +189,25 @@ export async function startStudio(options = {}) {
         const rel = relative(webRoot, path);
         if (rel.startsWith("..") || isAbsolute(rel) || !statSync(path).isFile()) return reply(res, 403, { error: "Forbidden" });
       } else return reply(res, 404, { error: "Not found" });
-      return reply(res, 200, readFileSync(path), mime[extname(path)] || "application/octet-stream");
+      const data = readFileSync(path);
+      const range = parseByteRange(req.headers.range, data.length);
+      const type = mime[extname(path)] || "application/octet-stream";
+      const headers = {
+        "Content-Type": type,
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "Accept-Ranges": "bytes",
+      };
+      if (range) {
+        headers["Content-Range"] = `bytes ${range.start}-${range.end}/${data.length}`;
+        headers["Content-Length"] = String(range.end - range.start + 1);
+        res.writeHead(206, headers);
+        return req.method === "HEAD" ? res.end() : res.end(data.subarray(range.start, range.end + 1));
+      }
+      headers["Content-Length"] = String(data.length);
+      res.writeHead(200, headers);
+      return req.method === "HEAD" ? res.end() : res.end(data);
     } catch (error) {
       if (!res.headersSent) reply(res, error.code === "ENOENT" ? 404 : 400, { error: "Request rejected" });
       else res.destroy();
@@ -295,4 +314,14 @@ export async function startStudio(options = {}) {
     return closing;
   }
   return { server, runId, token, studioToken, port, baseUrl, webAppUrl, studioUrl, debugDir, child, launches, close };
+}
+
+function parseByteRange(value, size) {
+  const match = String(value || "").match(/^bytes=(\d*)-(\d*)$/);
+  if (!match) return null;
+  let start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2] || 0));
+  let end = match[2] ? Number(match[2]) : size - 1;
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || start >= size) return null;
+  end = Math.min(end, size - 1);
+  return { start, end };
 }
