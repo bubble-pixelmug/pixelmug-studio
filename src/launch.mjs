@@ -24,7 +24,8 @@ const delay = (ms, signal) => new Promise((resolve, reject) => {
   signal.addEventListener("abort", cancel, { once: true });
 });
 export class LaunchManager {
-  constructor({ project, debugDir, runId, devices = [], log, createRepl = () => new WebRepl(), timings = {}, authorizeDevice, restartDevices = [], prepareOnBinding = false, autoRunOnBinding = false }) {
+  constructor({ project, debugDir, runId, devices = [], log, createRepl = () => new WebRepl(), timings = {}, authorizeDevice, restartDevices = [], prepareOnBinding = false, autoRunOnBinding = false, requireTestChat = false, studioUserId = '' }) {
+    this.requireTestChat=requireTestChat;this.studioUserId=String(studioUserId);this.switchingChat=false;
     this.authorizeDevice = authorizeDevice;
     this.project = project; this.debugDir = debugDir; this.runId = runId; this.log = log;
     this.devices = devices.map(device => {
@@ -110,6 +111,8 @@ export class LaunchManager {
   restartList() { return [...this.restartPlans.values()].map(({deviceId, state, message}) => ({deviceId, state, message})); }
   bindingsChanged(records) {
     if (!this.prepareOnBinding || this.stopping || this.stopped) return;
+    if(this.requireTestChat && (!this.bindings.activeScope || this.switchingChat))return;
+    if(this.requireTestChat)records=records.filter(record=>this.bindings.matches(record.scope));
     queueMicrotask(() => { void this.handleBindingsChanged(records); });
   }
   async handleBindingsChanged(records) {
@@ -120,6 +123,7 @@ export class LaunchManager {
     const works = [];
     for (const record of records) {
       if (this.stopping || this.stopped) return;
+      if(this.requireTestChat && (this.switchingChat || !this.bindings.matches(record.scope)))continue;
       const device = record.device;
       if (device.online === false || this.jobs.has(device.deviceId) || this.restartPlans.has(device.deviceId)) continue;
       const requestId = "launch-" + randomUUID();
@@ -132,7 +136,7 @@ export class LaunchManager {
         owners: new Map(), abort: new AbortController(), startedAt: new Date().toISOString() };
       plan.work = (async () => {
         try {
-          if (this.authorizeDevice) await this.authorizeDevice(device); else this.target(device);
+          if (this.authorizeDevice) await this.authorizeDevice({ ...device, contextId: record.contextId }); else this.target(device);
           let value;
           try {
             value = await this.rpc(commandJob, "talMpyRebootStartREPL", this.timings.rpcTimeout, { requestId });
@@ -180,10 +184,18 @@ export class LaunchManager {
   authorizeBoundDevice(ref, { allowOffline = false } = {}) {
     const deviceId = String(ref?.deviceId || "");
     const slotId = String(ref?.slotId || "");
-    const record = [...this.bindings.records.values()].find(item =>
-      item.device.deviceId === deviceId && item.device.slotId === slotId);
+    if(this.requireTestChat && !this.bindings.activeScope)throw new Error('Send /test-in-this-chat from the Studio account in the chat you want to test first.');
+    const records = [...this.bindings.records.values()].filter(item =>
+      item.device.deviceId === deviceId && item.device.slotId === slotId &&
+      (!this.requireTestChat || this.bindings.matches(item.scope)));
+    // A binding context identifies one chat. SDK-registered launch contexts are
+    // separate, so those still use the current bound-device snapshot.
+    const bindingContext = ref?.contextId && [...this.bindings.records.values()].some(item => item.contextId === ref.contextId);
+    const record = bindingContext
+      ? records.find(item => item.contextId === ref.contextId)
+      : records.find(item => item.device.online !== false) || records[0];
     if (!record) throw new Error("Device is not bound to a slot of the current Bot run");
-    if (!allowOffline && record.device.online !== true) throw new Error("Bound device is not online");
+    if (!allowOffline && record.device.online === false) throw new Error("Bound device is not online");
     return { deviceId, slotId };
   }
   async handle(source, message) {
@@ -191,6 +203,33 @@ export class LaunchManager {
     if (message?.runId !== this.runId) { const error = new Error("Studio run expired"); error.code = 401; throw error; }
     if (!/^[\w-]{1,100}$/.test(message.clientId || "")) throw new Error("Invalid Studio client ID");
     const key = source + ":" + message.clientId, client = this.client(key);
+    if(message.op === 'selectTestChat') {
+      if(source!=='bot')throw new Error('Only the Bot can select a test chat');
+      if(this.stopping)throw new Error('Studio is stopping; start a new debug run first.');
+      if(!this.studioUserId || String(message.senderId)!==this.studioUserId)throw new Error('Only the account signed in to Studio can select the test chat.');
+      if(this.switchingChat)throw new Error('Studio is switching test chats; please try again shortly.');
+      // Validate the scope before touching devices.
+      const scope=this.bindings.validate(message.scope);
+      this.switchingChat=true;
+      try {
+        let stopped={devices:[],unconfirmed:0};
+        if(this.bindings.activeScope && !this.bindings.matches(message.scope)) {
+          stopped=await this.stopDevices();
+          this.jobs.clear();this.restartPlans.clear();this.autoRunDevices.clear();
+          this.contexts.clear();this.bindings.records.clear();
+          this.stopPromise=null;this.stopping=false;
+        }
+        this.bindings.select(scope);
+        this.testChatSwitchResult=stopped;
+        return {chat:this.bindings.displayedChat(),...stopped};
+      } finally {this.switchingChat=false;}
+    }
+    if(message.op === 'assertTestChat') {
+      if(source!=='bot')throw new Error('Only the Bot can verify a test chat');
+      if(this.requireTestChat && (this.switchingChat || !this.bindings.matches(message.scope)))
+        throw new Error('Send /test-in-this-chat from the Studio account in this chat before loading MPY.');
+      return {allowed:true};
+    }
     if (message.op === "bindingScopes" || message.op === "syncBindings") {
       if (source !== "bot") throw new Error("Only bot can synchronize bindings");
       return message.op === "bindingScopes" ? this.bindings.restore(message.botKey)
@@ -251,7 +290,7 @@ export class LaunchManager {
   async runMpyAgain(launchId) {
     const job = [...this.jobs.values()].find(item => item.id === launchId);
     if (!job) throw new Error("Launch no longer exists");
-    if (this.authorizeDevice) await this.authorizeDevice(job.device);
+    if (this.authorizeDevice) await this.authorizeDevice({ ...job.device, contextId: job.contextId });
     else this.target(job.device);
     while (this.locks.has(job.device.deviceId)) await this.locks.get(job.device.deviceId);
     let releaseLock;
@@ -283,6 +322,7 @@ export class LaunchManager {
     }
   }
   async launch(key, ownerId, ref, force = false) {
+    if(this.switchingChat)throw new Error('Studio is switching test chats');
     if (this.stopping || this.stopped) throw new Error("Studio is stopping");
     const authorizationPlan = this.restartPlans.get(String(ref?.deviceId));
     const allowOffline = authorizationPlan && authorizationPlan.slotId === String(ref?.slotId) &&
@@ -523,7 +563,7 @@ export class LaunchManager {
     const devices = await Promise.all(jobs.map(async job => {
       const result = { deviceId: job.device.deviceId, slotId: job.device.slotId, status: "unconfirmed", ...(enterRepl ? {requestId: "launch-" + randomUUID()} : {}) };
       try {
-        if (this.authorizeDevice) await this.authorizeDevice(job.device);
+        if (this.authorizeDevice) await this.authorizeDevice({ ...job.device, contextId: job.contextId });
         else this.target(job.device);
         const context = this.contexts.get(job.contextId);
         if (!context || String(context.device.deviceId) !== job.device.deviceId ||

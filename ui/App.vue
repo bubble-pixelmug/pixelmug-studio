@@ -7,6 +7,7 @@ import DocumentationPanel from './components/DocumentationPanel.vue';
 const FileWorkspace = defineAsyncComponent(() => import('./components/FileWorkspace.vue'));
 import DevicePanel from './components/DevicePanel.vue';
 import BotSlots from './components/BotSlots.vue';
+import { bindingsForDisplayedSlots } from '../src/slot-display.mjs';
 import BotPanel from './components/BotPanel.vue';
 import LogWorkspace from './components/LogWorkspace.vue';
 import deviceIcon from './assets/device-icon.png';
@@ -424,6 +425,7 @@ const pixelMugOnline = computed(()=>{
     bindings.value.some(binding=>online(binding.device?.online));
 });
 const bindings = computed(()=>state.value?.events?.bindings||[]);
+const displayedBindings = computed(()=>bindingsForDisplayedSlots(state.value?.botSlots?.list||[], bindings.value));
 const jobs = computed(()=>state.value?.events?.launches||[]);
 const launchRows = computed(()=>{
   const rows=bindings.value.map(binding=>({binding,job:latestJobs.value.find(job=>job.device.deviceId===binding.device.deviceId)}));
@@ -442,20 +444,26 @@ const deviceProcessStatus=job=>{
   return t(labels[job.state]||job.state);
 };
 const debugDevices=computed(()=>{
-  const seen=new Set(), result=[];
-  for(const binding of bindings.value){
-    const device=binding.device||{}, id=device.deviceId;
-    if(!id||seen.has(id)) continue;
-    seen.add(id);
+  if(!state.value?.botSlots?.testing || state.value?.botSlots?.switching)return [];
+  const result=[];
+  for(const [index,slot] of (state.value?.botSlots?.list||[]).entries()){
+    const device=slot.device||{}, id=device.id;
+    if(!id) continue;
+    const binding=displayedBindings.value[index];
     const accountDevice=(state.value?.devices||[]).find(item=>item.id===id)||{};
     const job=latestJobs.value.find(item=>item.device?.deviceId===id);
-    result.push({id,name:device.name||accountDevice.name||device.sn||accountDevice.sn||'PixelMug',sn:device.sn||accountDevice.sn||'',avatar:accountDevice.avatar||device.avatar||'',talId:accountDevice.talId||device.talId||'',status:deviceProcessStatus(job),canRunMpyAgain:Boolean(project.value?.mpy&&job?.canRunMpyAgain),binding,job});
+    result.push({id,slotId:slot.id,slot:index+1,name:device.name||accountDevice.name||device.sn||accountDevice.sn||'PixelMug',sn:device.sn||accountDevice.sn||'',avatar:accountDevice.avatar||device.avatar||'',talId:accountDevice.talId||device.talId||'',status:deviceProcessStatus(job),canRunMpyAgain:Boolean(project.value?.mpy&&job?.canRunMpyAgain),binding,job});
   }
   return result;
 });
-const selectedDeviceId=computed(()=>activeSection.value.startsWith('device:')?activeSection.value.slice(7):'');
-const selectedDevice=computed(()=>debugDevices.value.find(device=>device.id===selectedDeviceId.value));
-const selectedDeviceRow=computed(()=>launchRows.value.find(row=>rowDevice(row)?.deviceId===selectedDeviceId.value));
+const selectedDeviceSlotId=computed(()=>activeSection.value.startsWith('device:')?activeSection.value.slice(7):'');
+const selectedDevice=computed(()=>debugDevices.value.find(device=>device.slotId===selectedDeviceSlotId.value));
+const selectedDeviceId=computed(()=>selectedDevice.value?.id||'');
+const selectedDeviceRow=computed(()=>{
+  const bindingId=selectedDevice.value?.binding?.bindingId;
+  if (state.value?.botSlots?.chat) return bindingId ? launchRows.value.find(row=>row.binding?.bindingId===bindingId) : undefined;
+  return launchRows.value.find(row=>rowDevice(row)?.deviceId===selectedDeviceId.value);
+});
 const selectedDeviceJob=computed(()=>latestJobs.value.find(job=>job.device?.deviceId===selectedDeviceId.value));
 const selectedDeviceNetwork=computed(()=>selectedDeviceRow.value?.job?.network||latestJobs.value.find(job=>job.device?.deviceId===selectedDeviceId.value&&job.network)?.network);
 const selectedDeviceIcon=computed(()=>deviceIconFor(selectedDevice.value));
@@ -465,7 +473,7 @@ const webAppReady=computed(()=>Boolean(state.value?.run?.webAppUrl));
 const deviceCodeRunning=computed(()=>jobs.value.some(job=>job.state==='running'));
 const topologyWebAddress=computed(()=>state.value?.run?.webAppUrl?new URL(state.value.run.webAppUrl).origin:`http://${state.value?.webAppHostname||'pixelmug-studio.local'}:${state.value?.webAppPort||7979}`);
 watch([active,debugDevices],([running,devices])=>{
-  if(activeSection.value.startsWith('device:')&&(!running||!devices.some(device=>device.id===selectedDeviceId.value))) activeSection.value='debug';
+  if(activeSection.value.startsWith('device:')&&(!running||!devices.some(device=>device.slotId===selectedDeviceSlotId.value))) activeSection.value='debug';
 });
 watch(activeSection, value=>{ if(value==='deploy') void refreshDeploymentServers(); });
 watch(()=>state.value?.user, value=>{ if(value) void refreshDeploymentServers(); });
@@ -476,10 +484,11 @@ function networkText(network){
     (network.wifiConnected===false?t(' · Wi-Fi 未连接'):'')+
     t(' · 最近获取 {0}', [new Date(network.updatedAt).toLocaleTimeString()]);
 }
-function rowDevice(row){ return row.binding?.device || row.job?.device; }
+function rowDevice(row){ return row?.binding?.device || row?.job?.device; }
 function rowState(row){ return row.plan?.state || row.job?.state || 'bound'; }
 function rowTitle(row){ return row.plan ? (row.plan.state==='failed'?t('智能体重启未完成'):t('等待恢复设备运行')) : row.job ? labels[row.job.state]||row.job.state : t('已绑定，尚未运行'); }
 function rowDisabled(row){
+  if(!row) return true;
   if(row.plan) return true;
   return working.value || !project.value?.mpy || !botAlive.value ||
     (row.binding ? !row.binding.available : row.job?.canRerun===false) ||
@@ -754,10 +763,10 @@ onBeforeUnmount(()=>{ clearInterval(pollTimer); clearInterval(cooldownTimer); cl
               <div><span>Wi-Fi</span><strong>{{ selectedDeviceNetwork?.ssid||t('待获取') }}</strong></div>
               <div><span>{{ t('IP 地址') }}</span><strong>{{ selectedDeviceNetwork?.ip||t('待获取') }}</strong></div>
               <div><span>{{ t('最近获取时间') }}</span><strong>{{ selectedDeviceNetwork?.updatedAt?new Date(selectedDeviceNetwork.updatedAt).toLocaleTimeString():t('待获取') }}</strong></div>
-              <div><span>{{ t('Bot 绑定位置') }}</span><strong>{{ t('槽位 ') }}{{ rowDevice(selectedDeviceRow).slot }}</strong></div>
+              <div><span>{{ t('Bot 绑定位置') }}</span><strong>{{ t('槽位 ') }}{{ selectedDevice.slot }}</strong></div>
             </div>
           </div>
-          <details v-if="project?.mpy" class="device-actions"><summary>{{ t('设备高级操作') }}</summary><p class="subtle">{{ t('单独部署 MPY，不重启本地服务。设备将重启，旧应用及数据会被清除，保留引导配置。') }}</p><button :disabled="rowDisabled(selectedDeviceRow)" @click="runDevice(selectedDeviceRow)">{{ selectedDeviceRow.job?t('更新并运行设备代码'):t('上传并运行设备代码') }}</button></details>
+          <details v-if="project?.mpy" class="device-actions"><summary>{{ t('设备高级操作') }}</summary><p class="subtle">{{ t('单独部署 MPY，不重启本地服务。设备将重启，旧应用及数据会被清除，保留引导配置。') }}</p><button :disabled="rowDisabled(selectedDeviceRow)" @click="runDevice(selectedDeviceRow)">{{ selectedDeviceRow?.job?t('更新并运行设备代码'):t('上传并运行设备代码') }}</button></details>
         </section>
 
         <section v-if="project?.mpy" class="card process-card">

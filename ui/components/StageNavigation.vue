@@ -34,8 +34,8 @@ const statusText=status=>status==='ok'?t('Studio 服务正常'):status==='error'
         </button>
         <slot v-if="tab.id==='project'" name="files"></slot>
         <div v-if="tab.id==='debug'&&active&&debugDevices.length" class="debug-device-tabs">
-          <div v-for="device in debugDevices" :key="device.id" class="debug-device-entry" :class="{active:activeTab==='device:'+device.id}">
-            <button type="button" class="debug-device-card" @click="$emit('change','device:'+device.id)">
+          <div v-for="device in debugDevices" :key="device.slotId" class="debug-device-entry" :class="{active:activeTab==='device:'+device.slotId}">
+            <button type="button" class="debug-device-card" @click="$emit('change','device:'+device.slotId)">
               <span class="debug-device-image"><img v-if="deviceIconFor(device).src" :class="deviceIconFor(device).kind" :src="deviceIconFor(device).src" alt=""></span>
               <span><strong>{{ device.name||device.sn||'PixelMug' }}</strong><small>{{ device.status }}</small></span>
             </button>

@@ -37,7 +37,26 @@ export class StudioBindings {
     if (!to) return;
     const scope={botKey:await this.identity(), contactId:String(contactId), chat:participant(ctx.chat), to};
     const force=(ctx.events || []).includes("message:bind_device");
-    try { await this.refresh(scope, force); } catch (error) { this.report(error); }
+    const known=[...this.scopes.values()].find(item=>item.chat.id===scope.chat.id && item.chat.type===scope.chat.type);
+    if(!known)return;
+    try { await this.refresh(known, force); } catch (error) { this.report(error); }
+  }
+  async activate(chat, to, contactId) {
+    chat=participant(chat);to=participant(to);
+    if (!enabled() || this.stopped) return;
+    if(!chat?.id)throw new Error('Studio needs the test chat ID before loading MPY.');
+    const scope={botKey:await this.identity(), contactId:String(contactId || chat.id), chat, to};
+    await studioBindingControl('assertTestChat',{scope});
+    const known=[...this.scopes.values()].find(item=>item.chat.id===chat.id && item.chat.type===chat.type);
+    if(to)await this.refresh(scope,true);
+    else if(known)await this.refresh(known,true);
+  }
+  async select(ctx) {
+    const scope={botKey:await this.identity(),contactId:String(ctx.resolveBotDetailContactId?.() || ctx.chat.id),chat:participant(ctx.chat),to:participant(ctx.from)};
+    const result=await studioBindingControl('selectTestChat',{scope,senderId:String(ctx.from?.id || '')});
+    this.scopes.clear();this.last.clear();
+    await this.refresh(scope,true);
+    return result;
   }
   async refresh(scope, force=false) {
     if (this.stopped || !enabled()) return;

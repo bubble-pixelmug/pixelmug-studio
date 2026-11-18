@@ -37,11 +37,13 @@ Studio supports Bot-only applications as well as applications that combine a Bot
 1. Sign in with your Bubble account.
 2. Select a local application and configure its Bot entry.
 3. Set the Bot token in **My Bubble**.
-4. Start the application and test the Bot or WebApp in the Bubble App.
-5. For MicroPython applications, deploy code to supported devices or enable automatic deployment on start.
+4. Start the application. Using the account signed in to Studio, send `/test-in-this-chat` in the Bubble private or group chat you want to test. The **Run & debug** page provides a copy button.
+5. Studio prepares only that chat's bound devices for WebREPL. Enable automatic MPY deployment, or open the WebApp to load the application.
 6. Inspect Bot, WebApp, deployment, and device logs in **Run & debug**.
 
 In a group application, each player binds their own device to the Bot in the Bubble App. Studio can load MPY onto any online device bound to the running Bot, including a device owned by another player, when Studio and the device can reach each other over the local network. The device picker in **My Bubble** still lists only devices owned by the Studio login.
+
+Each new debug run waits for `/test-in-this-chat`. Until then, the device cards preview the last test chat and device shortcuts remain hidden. Send the command in another chat to switch: Studio cancels the previous deployment, requests a normal reboot of the old devices, then prepares the new chat's devices. Failed reboot acknowledgements appear in Studio. Ordinary messages, bindings in other chats, and WebApp opens do not select a test chat. The command is intercepted only in Studio and is never registered in the Bot's published command menu.
 
 Runtime logs are written to `debug/<runId>/` in the selected application directory. These generated directories are ignored by Git.
 

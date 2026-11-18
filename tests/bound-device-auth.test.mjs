@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { LaunchManager, reconcileRestartPlan } from '../src/launch.mjs';
-import { displayBotSlots } from '../src/slot-display.mjs';
+import { BindingRegistry } from '../src/bindings.mjs';
+import { bindingsForDisplayedSlots, displayBotSlots } from '../src/slot-display.mjs';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 function managerWithBindings(records) {
   const manager = Object.create(LaunchManager.prototype);
@@ -33,6 +37,26 @@ test('rejects unbound, mismatched, and offline devices', () => {
   assert.throws(() => manager.authorizeBoundDevice({ deviceId: 'mug-a', slotId: 'slot-1' }, { allowOffline: true }), /not bound/);
 });
 
+test('authorizes the selected chat binding when another chat has an offline snapshot', () => {
+  const manager = managerWithBindings([
+    { contextId: 'old-chat', device: { deviceId: 'shared-mug', slotId: 'slot-1', online: false } },
+    { contextId: 'current-chat', device: { deviceId: 'shared-mug', slotId: 'slot-1', online: true } },
+  ]);
+  const ref = { deviceId: 'shared-mug', slotId: 'slot-1' };
+  assert.deepEqual(manager.authorizeBoundDevice(ref), ref);
+  assert.deepEqual(manager.authorizeBoundDevice({ ...ref, contextId: 'current-chat' }), ref);
+  assert.deepEqual(manager.authorizeBoundDevice({ ...ref, contextId: 'sdk-launch-context' }), ref);
+  assert.throws(() => manager.authorizeBoundDevice({ ...ref, contextId: 'old-chat' }), /not online/);
+});
+
+test('unknown online status does not block a bound device', () => {
+  const manager = managerWithBindings([
+    { contextId: 'chat', device: { deviceId: 'mug-a', slotId: 'slot-1' } },
+  ]);
+  assert.deepEqual(manager.authorizeBoundDevice({ deviceId: 'mug-a', slotId: 'slot-1', contextId: 'chat' }),
+    { deviceId: 'mug-a', slotId: 'slot-1' });
+});
+
 test('reuses a reboot for the same physical device after its Bot slot changes', () => {
   const plan = { deviceId: 'mug-a', slotId: 'old-slot', requestId: 'launch-1', state: 'waiting' };
   const plans = new Map([['mug-a', plan]]);
@@ -48,18 +72,31 @@ test('discards an unfinished reboot plan when a device moves to another slot', (
   assert.equal(plans.size, 0);
 });
 
-test('shows a group-bound device even when the Studio account does not own it', () => {
+test('shows the selected chat in exactly the registered slots, including empty slots', () => {
   const slots = [{ id: 'creator-slot-1', device: { id: 'mine' } }, { id: 'creator-slot-2', device: null }];
-  const now = new Date().toISOString();
   const bindings = [
-    { chat: { id: 'group-a', type: 'group' }, device: { deviceId: 'mine', slot: 1, name: 'Mine', online: true }, updatedAt: now },
-    { chat: { id: 'group-a', type: 'group' }, device: { deviceId: 'theirs', slot: 2, name: 'Theirs', online: true }, updatedAt: now },
+    { chat: { id: 'group-a', type: 'group' }, device: { deviceId: 'theirs', slot: 2, name: 'Theirs', online: true } },
   ];
-  const visible = displayBotSlots(slots, bindings, [{ id: 'mine', name: 'Mine' }]);
+  const visible = displayBotSlots(slots, bindings, [], { id: 'group-a', type: 'group' });
+  assert.equal(visible.length, 2);
+  assert.equal(visible[0].device, null);
   assert.equal(visible[1].device.id, 'theirs');
   assert.equal(visible[1].device.name, 'Theirs');
-  assert.equal(visible[1].groupBound, true);
-  assert.equal(visible[1].groupId, 'group-a');
+  assert.equal(visible[0].chatBound, true);
+  assert.equal(visible[1].chatId, 'group-a');
+});
+
+test('debug navigation matches the selected chat and slot order', () => {
+  const slots = [{ id: 'slot-1' }, { id: 'slot-2' }];
+  const bindings = [
+    { chat: { id: 'group-a', type: 'group' }, device: { deviceId: 'astro', slot: 1, name: 'Astro' } },
+    { chat: { id: 'private-b', type: 'private' }, device: { deviceId: 'horse', slot: 1, name: 'horse' } },
+    { chat: { id: 'private-b', type: 'private' }, device: { deviceId: 'red-heart', slot: 2, name: 'red heart' } },
+  ];
+  const visibleSlots = displayBotSlots(slots, bindings, [], { id: 'private-b', type: 'private' });
+  assert.deepEqual(visibleSlots.map(slot => slot.device?.id), ['horse', 'red-heart']);
+  assert.deepEqual(bindingsForDisplayedSlots(visibleSlots, bindings).map(binding => binding?.device.deviceId), ['horse', 'red-heart']);
+  assert.deepEqual(bindingsForDisplayedSlots([], bindings), []);
 });
 
 test('forwards an MPY event from WebREPL to the Bot execution subscriber', () => {

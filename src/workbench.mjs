@@ -57,7 +57,13 @@ export async function startWorkbench(options = {}) {
   let deviceRefresh;
   let slotState = { list: [], loading: false, error: '', updatedAt: null };
   let slotTimer, slotGeneration = 0, slotPending;
-  const visibleSlots = () => ({ ...slotState, list: displayBotSlots(slotState.list, run?.launches.bindings.list() || [], creator.devices) });
+  const visibleSlots = () => {
+    const bindings = run?.launches.bindings;
+    const chat = bindings?.displayedChat() || null;
+    return { ...slotState, chat, testing:Boolean(bindings?.activeScope), switching:Boolean(run?.launches.switchingChat),
+      switchResult:run?.launches.testChatSwitchResult || null,
+      list: displayBotSlots(slotState.list, bindings?.list() || [], creator.devices, chat) };
+  };
   function clearSlots() {
     clearTimeout(slotTimer);
     slotGeneration++;
@@ -121,13 +127,13 @@ export async function startWorkbench(options = {}) {
     const mps = selectedProject.mpy ? await readMpsMetadata(root) : null;
     const autoRunMpy = selectedProject.mpy && (body.autoRunMpy === undefined ? runtimeConfig.autoRunMpy === true : body.autoRunMpy === true);
     if (webRoot) validateWebAppHostname(webAppHostname);
-    const prepared = run ? await run.launches.stopDevices({ enterRepl: true }) : { devices: [] };
+    if(run)await run.launches.stopDevices();
     await stopRun();
     const publicWebAppUrl = webRoot ? gateway.webAppUrl(root, webAppHostname) : null;
     run = await startStudio({ project: root, bot, webRoot, mpsId: 'local-debug', mpsVersion: mps?.version || 'local', host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl,
       captureProcessLogs: true,
       botToken, botApiBaseUrl: botApiBaseUrl || process.env.BOT_API_BASE_URL,
-      launchOptions: { authorizeDevice: function (ref, options) { return this.authorizeBoundDevice(ref, options); }, restartDevices: prepared.devices,
+      launchOptions: { authorizeDevice: function (ref, options) { return this.authorizeBoundDevice(ref, options); }, requireTestChat:true,studioUserId:creator.session.id,
         prepareOnBinding: selectedProject.mpy, autoRunOnBinding: autoRunMpy },
     });
     if (webRoot) gateway.activate(root, run);
@@ -348,8 +354,8 @@ export async function startWorkbench(options = {}) {
               clearTimeout(slotTimer);
               if (slotPending) await slotPending;
               clearTimeout(slotTimer);
-              if (visibleSlots().list.find(slot => slot.id === body.slotId)?.groupBound)
-                throw new Error('该槽位已在群聊中绑定设备，请在冒泡群聊中更换绑定');
+              if (visibleSlots().chat)
+                throw new Error('当前显示聊天中的设备槽位，请在冒泡聊天中更换绑定');
               try {
                 await creator.bindBotSlot(runtimeConfig.botToken, body.slotId, body.deviceId);
               } finally {

@@ -5,11 +5,16 @@ import { deviceIconFor } from '../deviceIcon.js';
 const props = defineProps({ slots: Object, devices: Array, busy: Boolean });
 const emit = defineEmits(['refresh', 'choose', 'bind']);
 const picker = ref(null), selectedId = ref('');
+const copied=ref(false);
+async function copyTestCommand() {
+  try {await navigator.clipboard.writeText('/test-in-this-chat');copied.value=true;}
+  catch {copied.value=false;}
+}
 const selected = computed(() => props.slots?.list?.find(slot => slot.id === selectedId.value));
 const candidates = computed(() => (props.devices || []).filter(device => device.talId && selected.value &&
   [selected.value.talId, ...selected.value.compatible].includes(device.talId)));
 function choose(slot) {
-  if (slot.groupBound) return;
+  if (slot.chatBound) return;
   selectedId.value = slot.id;
   picker.value.showModal();
   emit('choose');
@@ -24,6 +29,14 @@ watch(selected, slot => { if (!slot) picker.value?.close(); });
   <section class="card bot-slots" :aria-label="t('Bot 关联设备')">
     <div class="section-heading"><div><span class="eyebrow">BOT DEVICES</span><h2>{{ t('关联设备 ') }}<span class="count">{{ slots?.list?.length || 0 }}</span></h2></div><button :disabled="busy || slots?.loading" @click="emit('refresh')">{{ slots?.loading ? t('正在刷新…') : t('刷新') }}</button></div>
     <p v-if="slots?.error" class="slot-error" role="alert">{{ serviceMessage(slots.error) }}</p>
+    <div class="test-chat-prompt" aria-live="polite">
+      <strong>{{ slots?.switching ? t('正在切换测试聊天…') : slots?.testing ? t('当前聊天正在测试') : t('等待选择测试聊天') }}</strong>
+      <p>{{ t('使用 Studio 当前登录账号，在要测试的冒泡私聊或群聊中发送以下命令。再次发送可切换测试聊天。') }}</p>
+      <code>/test-in-this-chat</code> <button @click="copyTestCommand">{{ copied ? t('已复制') : t('复制命令') }}</button>
+      <p v-if="slots?.chat && !slots?.testing">{{ t('以下是上次测试聊天的设备，尚未开始测试。') }}</p>
+      <p v-if="slots?.chat" class="subtle">{{ t('聊天 ID：') }}{{ slots.chat.id }}</p>
+      <p v-for="device in (slots?.switchResult?.devices || []).filter(device=>device.status!=='rebootAccepted')" :key="device.deviceId" class="slot-error">{{ t('旧设备重启未确认：') }}{{ device.deviceId }} — {{ serviceMessage(device.message) }}</p>
+    </div>
     <p v-if="!slots?.list?.length" class="subtle">{{ slots?.loading ? t('正在查询 Bot 注册的设备槽位…') : slots?.error ? t('暂时无法获取槽位，请重试。') : t('Bot 尚未注册设备槽位，注册完成后将自动显示。') }}</p>
     <div class="slot-grid">
       <article v-for="(slot, index) in slots?.list || []" :key="slot.id" class="slot-card">
@@ -33,7 +46,7 @@ watch(selected, slot => { if (!slot) picker.value?.close(); });
           <div class="device-image"><img v-if="deviceIconFor(slot.device).src" :src="deviceIconFor(slot.device).src" :alt="slot.device.name"></div>
           <div class="slot-device-info"><strong>{{ slot.device.name }}</strong><p v-if="slot.device.sn" class="device-serial">SN {{ slot.device.sn || '—' }}</p><span class="online-status" :class="{offline: slot.device.online !== 'ONLINE'}">{{ slot.device.online === 'ONLINE' ? t('● 在线') : t('○ 离线') }}</span></div>
         </div>
-        <div class="slot-action"><button :class="{primary: !slot.device}" :disabled="busy || slot.groupBound" @click="choose(slot)">{{ slot.groupBound ? t('已在群聊中绑定') : slot.device ? t('更换关联设备') : t('选择并关联设备') }}</button></div>
+        <div class="slot-action"><button :class="{primary: !slot.device && !slot.chatBound}" :disabled="busy || slot.chatBound" @click="choose(slot)">{{ slot.chatBound ? slot.device ? t('已在当前聊天中绑定') : t('请在冒泡聊天中绑定') : slot.device ? t('更换关联设备') : t('选择并关联设备') }}</button></div>
       </article>
     </div>
     <dialog ref="picker" class="slot-picker">
@@ -53,6 +66,9 @@ watch(selected, slot => { if (!slot) picker.value?.close(); });
 </template>
 <style scoped>
 .slot-grid { display:grid; grid-template-columns:repeat(auto-fill,min(100%,340px)); gap:20px; }
+.test-chat-prompt { margin:0 0 20px; padding:16px; border-radius:12px; background:#eef5ff; }
+.test-chat-prompt p { line-height:1.6; }
+.test-chat-prompt code { user-select:all; }
 .slot-card { border:1px solid #d5e3f6; border-radius:20px; background:#f7faff; padding:22px; min-width:0; display:flex; flex-direction:column; }
 .slot-title { display:flex; gap:12px; align-items:center; justify-content:space-between; }
 .slot-types { color:#617997; font-size:14px; line-height:1.8; overflow-wrap:anywhere; }

@@ -79,7 +79,18 @@ export function installStudioLaunch(options, request) {
     return ownerId;
   }
   const client = {
-    bindingControl: call,
+    async bindingControl(op,payload) {
+      const result=await call(op,payload,op==='selectTestChat'?120000:10000);
+      if(op==='selectTestChat') {
+        const scope=payload.scope;
+        const selectedKey=JSON.stringify([scope.botKey,scope.contactId,scope.chat.id,scope.to?.id]);
+        for(const [key,previous] of bindingOwners)if(key!==selectedKey) {
+          for(const ownerId of previous.values())owners.delete(ownerId);
+          bindingOwners.delete(key);
+        }
+      }
+      return result;
+    },
     async syncBindings(scope, devices, makeHooks) {
       const scopeKey = JSON.stringify([scope.botKey, scope.contactId, scope.chat.id, scope.to?.id]);
       const previous = bindingOwners.get(scopeKey) || new Map(), next = new Map();
@@ -89,7 +100,7 @@ export function installStudioLaunch(options, request) {
           const ref = studioDeviceRef(device), key = ref.slotId + ":" + ref.deviceId;
           const ownerId = previous.get(key) || subscribe(makeHooks(device));
           owners.set(ownerId, makeHooks(device)); next.set(key, ownerId);
-          bindings.push({ ownerId, device: {...ref, name:device.name, online:device.online} });
+          bindings.push({ ownerId, device: {...ref, name:device.name, online:device.online,avatar:device.avatar,sn:device.sn,talId:device.deviceTalId || device.talId} });
         }
         const result = await call("syncBindings", {scope, bindings});
         for (const [key, ownerId] of previous) if (!next.has(key)) owners.delete(ownerId);
