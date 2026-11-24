@@ -5,10 +5,15 @@ export function createMpsHooks(chat, to, bound, slot, studioOptions = {}) {
   const pixelMug = new PixelMugS1();
   const route = studioDeviceRef(bound);
   return {
+    testChat: typeof chat === "string" ? {id:chat} : chat,
     executeRpc: async (command, timeout) => {
       const current = await this.getBoundDevices({ chat: typeof chat === "string" ? {id: chat} : chat, to }, {contactId: studioOptions.contactId});
       const target = current.find(d => String(d.deviceId) === route.deviceId && String(d.slotId) === route.slotId && Number(d.slot) === Number(slot));
-      if (!target) throw new Error("Device binding changed; refusing auxiliary RPC to a different device");
+      if (!target) {
+        const error = new Error("Device binding changed; refusing auxiliary RPC to a different device");
+        error.code = "STUDIO_BINDING_CHANGED";
+        throw error;
+      }
       // Studio commands are internal messages; build the device RPC via its SDK.
       let rpc;
       switch (command.method) {
@@ -27,6 +32,7 @@ export function createMpsHooks(chat, to, bound, slot, studioOptions = {}) {
         default:
           throw new Error("Unknown Studio control command");
       }
+      await command.assertActive?.();
       const result = await this.callDevice(chat, target, rpc, {
         ...studioOptions, slot, to, traceId: undefined, requireOnline: false, timeout,
       });

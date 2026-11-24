@@ -3,6 +3,7 @@ import { LaunchManager } from "./launch.mjs";
 import { buildWebApp } from "./webapp-build.mjs";
 import { prepareProjectDependencies } from "./project-dependencies.mjs";
 import { createServer } from "node:http";
+import { projectBotHttp } from "./runtime/bot-http.mjs";
 import { randomUUID, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, appendFileSync, writeFileSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { resolve, relative, extname, isAbsolute, join, delimiter } from "node:path";
@@ -24,6 +25,7 @@ const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
 export async function startStudio(options = {}) {
   const { redactText, serializeStudioValue } = await import(new URL("./runtime/StudioDebug.js", import.meta.url));
   const project = realpathSync(resolve(options.project || "."));
+  const botHttp = options.bot ? projectBotHttp(project) : null;
   let webRoot = options.webRoot ? realpathSync(resolve(project, options.webRoot)) : null;
   if (webRoot === project) throw new Error("webRoot must be a dedicated public directory, not the project root");
   const runId = "run-" + new Date().toISOString().replace(/[:.]/g, "-") + "-" + randomBytes(3).toString("hex");
@@ -104,6 +106,7 @@ export async function startStudio(options = {}) {
       // Same-origin WebApp traffic only; no permissive CORS / arbitrary Origin reflection.
       if (req.headers.origin && !allowedOrigins.has(req.headers.origin)) return reply(res, 403, { error: "Origin rejected" });
       if (!allowedHosts.has(req.headers.host)) return reply(res, 403, { error: "Host rejected" });
+      if (botHttp?.matches(url, req.method)) return botHttp.forward(req, res, url);
       if (url.pathname.startsWith("/api/")) {
         const canRead = authorized(req, studioToken);
         const canSend = authorized(req, token);
@@ -313,7 +316,7 @@ export async function startStudio(options = {}) {
     })();
     return closing;
   }
-  return { server, runId, token, studioToken, port, baseUrl, webAppUrl, studioUrl, debugDir, child, launches, close };
+  return { server, runId, token, studioToken, port, baseUrl, webAppUrl, studioUrl, debugDir, child, launches, botHttp, close };
 }
 
 function parseByteRange(value, size) {

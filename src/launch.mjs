@@ -1,3 +1,4 @@
+import { DeviceSessions } from "./device-sessions.mjs";
 import { BindingRegistry } from "./bindings.mjs";
 import { randomUUID, randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
@@ -36,6 +37,7 @@ export class LaunchManager {
     this.createRepl = createRepl; this.clients = new Map(); this.jobs = new Map(); this.commands = new Map();
     this.contexts = new Map();
     this.bindings = new BindingRegistry(this, project);
+    this.sessions = new DeviceSessions(this);
     this.locks = new Map(); this.stopped = false;
     this.prepareOnBinding = prepareOnBinding === true;
     this.autoRunOnBinding = autoRunOnBinding === true;
@@ -45,6 +47,7 @@ export class LaunchManager {
       message: d.status === "rebootAccepted" ? "已请求进入 Python Dev，等待在冒泡 App 中启动应用" : d.message }]));
     this.timings = { rebootWait: 3000, onlineTimeout: 90000, connectTimeout: 60000, retry: 1500, rpcTimeout: 10000, startTimeout: 20000, ...timings };
   }
+  wait(ms, signal) { return delay(ms, signal); }
   client(key) {
     if (!this.clients.has(key)) {
       if (this.clients.size >= 128) throw new Error("Too many Studio clients");
@@ -59,6 +62,7 @@ export class LaunchManager {
     if (client.events.length > 2048) client.events.shift();
   }
   event(job, owner, override) {
+    if (job.session?.revoked) return;
     const state = override || job.state;
     const value = state === "running" ? "MPS_IS_RUNNING" : state === "uploaded" ? "INSTALL_SUCCESS"
       : state === "failed" ? ((job.started || job.executing) ? "RUNNING_FAIL" : "INSTALL_FAIL")
@@ -67,6 +71,7 @@ export class LaunchManager {
       device: job.device, state, value, message: job.error || "", terminal: terminal.has(state) });
   }
   deviceEvent(job, value) {
+    if (job.session?.revoked) return false;
     if (typeof value !== "string" || !value || Buffer.byteLength(value, "utf8") > 512) return false;
     const sent = new Set();
     for (const owner of job.owners.values()) {
@@ -113,7 +118,7 @@ export class LaunchManager {
     if (!this.prepareOnBinding || this.stopping || this.stopped) return;
     if(this.requireTestChat && (!this.bindings.activeScope || this.switchingChat))return;
     if(this.requireTestChat)records=records.filter(record=>this.bindings.matches(record.scope));
-    queueMicrotask(() => { void this.handleBindingsChanged(records); });
+    queueMicrotask(() => { void this.handleBindingsChanged(records).catch(error => console.warn("[Studio] device preparation:", error.message)); });
   }
   async handleBindingsChanged(records) {
     await this.prepareBoundDevices(records);
@@ -124,27 +129,52 @@ export class LaunchManager {
     for (const record of records) {
       if (this.stopping || this.stopped) return;
       if(this.requireTestChat && (this.switchingChat || !this.bindings.matches(record.scope)))continue;
+      if (this.requireTestChat && this.bindings.records.get(record.bindingId)?.contextId !== record.contextId) continue;
       const device = record.device;
-      if (device.online === false || this.jobs.has(device.deviceId) || this.restartPlans.has(device.deviceId)) continue;
-      const requestId = "launch-" + randomUUID();
+      const session = this.requireTestChat ? this.sessions.forBinding(record) : undefined;
+      if (session?.revoked) continue;
+      if (session) {
+        try { await this.sessions.ready(session); }
+        catch { continue; }
+      }
+      const previousPlan = this.restartPlans.get(device.deviceId);
+      if (device.online === false || this.jobs.has(device.deviceId) ||
+          (previousPlan && previousPlan.state !== "failed")) continue;
+      const requestId = previousPlan?.requestId || "launch-" + randomUUID();
       const dir = join(this.debugDir, "prepare-" + requestId);
       mkdirSync(dir, { recursive: true });
       const plan = { deviceId: device.deviceId, slotId: device.slotId, requestId,
-        state: "preparing", message: "正在让设备进入 Python Dev" };
+        session, state: "preparing", message: "正在让设备进入 Python Dev" };
       this.restartPlans.set(device.deviceId, plan);
-      const commandJob = { id: requestId, dir, device, executor: record.executor,
+      const commandJob = { session, id: requestId, dir, device, executor: record.executor,
         owners: new Map(), abort: new AbortController(), startedAt: new Date().toISOString() };
+      if (session) session.preparation = commandJob;
       plan.work = (async () => {
         try {
           if (this.authorizeDevice) await this.authorizeDevice({ ...device, contextId: record.contextId }); else this.target(device);
+          if (session) await this.sessions.recover(session, commandJob);
+          this.sessions.assert(session);
+          // A failed request may have rebooted despite a lost reply. Reuse its boot ID.
           let value;
+          if (previousPlan?.state === 'failed') {
+            let status = await this.rpc(commandJob, 'talMpyGetStudioState', 5000);
+            this.sessions.assert(session);
+            if (typeof status === 'string') status = JSON.parse(status);
+            if (status?.requestId === previousPlan.requestId && status.mode === 'MpyReplMode') {
+              plan.requestId = previousPlan.requestId;
+              value = true;
+            } else if (status?.mode !== 'normal') {
+              throw new Error('Previous REPL request remains unconfirmed; waiting for a known device state');
+            }
+          }
           try {
-            value = await this.rpc(commandJob, "talMpyRebootStartREPL", this.timings.rpcTimeout, { requestId });
+            if (value !== true) value = await this.rpc(commandJob, "talMpyRebootStartREPL", this.timings.rpcTimeout, { requestId });
           } catch (error) {
             if (error.code === "STUDIO_EXECUTOR_UNAVAILABLE" || !/timed out|timeout|disconnected|network|abort/i.test(error.message)) throw error;
             value = true;
             plan.message = "重启回包未确认；等待应用启动时核验设备状态";
           }
+          this.sessions.assert(session);
           if (value !== true) throw new Error("设备未确认接受 Python Dev 重启请求");
           plan.state = "waiting";
           if (plan.message === "正在让设备进入 Python Dev") plan.message = "设备已进入 Python Dev，等待在冒泡 App 中启动应用";
@@ -154,6 +184,7 @@ export class LaunchManager {
           writeFileSync(join(this.debugDir, "restart.json"), JSON.stringify(this.restartList(), null, 2));
         }
       })();
+      if (session) session.preparationWork = plan.work;
       works.push(plan.work);
     }
     await Promise.all(works);
@@ -165,12 +196,15 @@ export class LaunchManager {
       const plan = this.restartPlans.get(deviceId);
       const prepared = plan?.state === "preparing" || plan?.state === "waiting";
       if (seen.has(deviceId) || (record.device.online === false && !prepared) || this.jobs.has(deviceId) || this.autoRunDevices.has(deviceId)) continue;
-      seen.add(deviceId); this.autoRunDevices.add(deviceId);
+      seen.add(deviceId);
       if (plan?.work) await plan.work;
       if (this.stopping || this.stopped || this.jobs.has(deviceId) || plan?.state !== "waiting") continue;
       try {
+        this.sessions.assert(plan.session);
+        this.autoRunDevices.add(deviceId);
         await this.bindings.run(record.bindingId, false);
       } catch (error) {
+        this.autoRunDevices.delete(deviceId);
         plan.state = "failed"; plan.message = "自动运行失败：" + (error.message || String(error));
         writeFileSync(join(this.debugDir, "restart.json"), JSON.stringify(this.restartList(), null, 2));
       }
@@ -232,11 +266,17 @@ export class LaunchManager {
     }
     if (message.op === "bindingScopes" || message.op === "syncBindings") {
       if (source !== "bot") throw new Error("Only bot can synchronize bindings");
-      return message.op === "bindingScopes" ? this.bindings.restore(message.botKey)
-        : this.bindings.sync(key, message.scope, message.bindings);
+      if (message.op === "bindingScopes") return this.bindings.restore(message.botKey);
+      const result = this.bindings.sync(key, message.scope, message.bindings);
+      // Keep old executor subscriptions alive until their cleanup has settled.
+      await Promise.all([...this.sessions.pending.values()]);
+      return result;
     }
     if (message.op === "register") {
       if (source !== "bot") throw new Error("Only bot can register an RPC executor");
+      if (this.requireTestChat && (this.switchingChat || !this.bindings.matches({
+        botKey:this.bindings.activeScope?.botKey, chat:message.chat,
+      }))) throw new Error('The launch executor belongs to an inactive Studio test chat');
       if (!/^[\w-]{1,100}$/.test(message.ownerId || "")) throw new Error("Invalid executor owner");
       if (!message.device?.deviceId || !message.device?.slotId) throw new Error("Device binding required");
       if (this.contexts.size >= 1024) throw new Error("Too many Studio execution contexts; restart the environment");
@@ -265,6 +305,12 @@ export class LaunchManager {
         id: c.id, ownerId: c.ownerId, method: c.method, params: c.params, timeoutMillis: c.timeoutMillis,
       })) };
     }
+    if (message.op === "assertCommand") {
+      const command = this.commands.get(message.commandId);
+      if (!command || command.key !== key) throw new Error('Studio RPC expired or cancelled');
+      if (!command.job.cleanup) this.sessions.assert(command.job.session);
+      return {allowed:true};
+    }
     if (message.op === "reply") {
       const command = this.commands.get(message.commandId);
       if (!command) return { accepted: false };
@@ -292,7 +338,9 @@ export class LaunchManager {
     if (!job) throw new Error("Launch no longer exists");
     if (this.authorizeDevice) await this.authorizeDevice({ ...job.device, contextId: job.contextId });
     else this.target(job.device);
+    this.sessions.assert(job.session);
     while (this.locks.has(job.device.deviceId)) await this.locks.get(job.device.deviceId);
+    this.sessions.assert(job.session);
     let releaseLock;
     const lock = new Promise(resolve => { releaseLock = resolve; });
     this.locks.set(job.device.deviceId, lock);
@@ -324,20 +372,27 @@ export class LaunchManager {
   async launch(key, ownerId, ref, force = false) {
     if(this.switchingChat)throw new Error('Studio is switching test chats');
     if (this.stopping || this.stopped) throw new Error("Studio is stopping");
+    const epoch = this.sessions.epoch;
     const authorizationPlan = this.restartPlans.get(String(ref?.deviceId));
     const allowOffline = authorizationPlan && authorizationPlan.slotId === String(ref?.slotId) &&
       ["preparing", "waiting", "deploying"].includes(authorizationPlan.state);
     const device = this.authorizeDevice ? await this.authorizeDevice(ref, { allowOffline: Boolean(allowOffline) }) : this.target(ref);
+    if (epoch !== this.sessions.epoch) throw new Error("Studio chat changed during launch authorization");
     const context = this.contexts.get(ref?.contextId);
     if (!context || String(context.device.deviceId) !== device.deviceId || String(context.device.slotId) !== device.slotId) throw new Error("Missing or mismatched bot execution context");
     const executorClient = this.clients.get(context.executor.key);
     if (!executorClient?.lastPollAt || Date.now() - executorClient.lastPollAt > 10000) throw new Error("本地 bot 执行器未连接，请检查 bot 进程后重新发起启动");
+    const session = this.requireTestChat ? this.sessions.forRef(ref, context) : undefined;
+    this.sessions.assert(session);
     while (this.locks.has(device.deviceId)) await this.locks.get(device.deviceId);
     let releaseLock;
     const lock = new Promise(resolve => { releaseLock = resolve; });
     this.locks.set(device.deviceId, lock);
     try {
+      if (session) await this.sessions.ready(session);
+      this.sessions.assert(session);
       const snapshot = await snapshotProject(this.project);
+      this.sessions.assert(session);
       if (this.stopping || this.stopped) throw new Error("Studio is closing");
       const previous = this.jobs.get(device.deviceId);
       const owner = { key, ownerId };
@@ -345,6 +400,7 @@ export class LaunchManager {
           && previous.state === "running") {
         this.state(previous, "unknown", "原 WebREPL 连接无法确认；本次启动将重新部署");
       }
+      this.sessions.assert(session);
       if (this.stopping || this.stopped) throw new Error("Studio is stopping");
       if (!force && previous && previous.device.slotId === device.slotId && previous.fingerprint === snapshot.fingerprint && !terminal.has(previous.state)) {
         previous.owners.set(key + ":" + ownerId, owner); this.event(previous, owner);
@@ -355,7 +411,13 @@ export class LaunchManager {
       if (previous && active(previous)) throw new Error("A different build is deploying to this device; wait for completion");
       if (previous) { this.state(previous, "superseded"); previous.abort.abort(); previous.repl?.close(); }
       let prepared = this.restartPlans.get(device.deviceId);
+      if (session && prepared?.state === "failed") {
+        await this.prepareBoundDevices([session.record]);
+        this.sessions.assert(session);
+        prepared = this.restartPlans.get(device.deviceId);
+      }
       if (prepared?.state === "preparing") await prepared.work;
+      this.sessions.assert(session);
       prepared = reconcileRestartPlan(this.restartPlans, device);
       if (prepared?.state === "failed" && !previous) throw new Error(prepared.message || "设备重启准备失败");
       const reuseBoot = prepared?.state === "waiting";
@@ -365,11 +427,12 @@ export class LaunchManager {
       for (const file of snapshot.files) {
         const path = join(dir, "source", file.name); mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, file.bytes);
       }
-      const job = { id, dir, device, fingerprint: snapshot.fingerprint, state: "accepted",
+      const job = { session, id, dir, device, fingerprint: snapshot.fingerprint, state: "accepted",
         startedAt: new Date().toISOString(), owners: new Map([[key + ":" + ownerId, owner]]),
         executor: context.executor, contextId: ref.contextId, abort: new AbortController(), nonce: randomBytes(16).toString("hex"), started: false, reuseBoot };
       if (reuseBoot) { prepared.state = "deploying"; prepared.message = "绑定已确认，正在连接设备并上传代码"; }
       job.owners.set(context.executor.key + ":" + context.executor.ownerId, context.executor);
+      if (session) session.job = job;
       this.jobs.set(device.deviceId, job); this.state(job, "accepted");
       // Return the RPC preparation status first; continue deployment in the background.
       job.work = Promise.resolve().then(() => this.run(job, snapshot)).catch(error => {
@@ -382,6 +445,7 @@ export class LaunchManager {
     }
   }
   rpc(job, method, timeoutMillis = this.timings.rpcTimeout, params = {}) {
+    if (!job.cleanup) this.sessions?.assert(job.session);
     if (job.abort.signal.aborted) return Promise.reject(new Error("Launch cancelled"));
     return new Promise((resolve, reject) => {
       const id = randomUUID(), { key, ownerId } = job.executor;
@@ -400,14 +464,17 @@ export class LaunchManager {
   async retry(job, timeout, operation) {
     const deadline = Date.now() + timeout; let error;
     do {
+      this.sessions?.assert(job.session);
       if (job.abort.signal.aborted) throw new Error("Launch cancelled");
-      try { return await operation(); } catch (caught) { if (["WEBREPL_AUTH", "STUDIO_BOOT_FAILED", "STUDIO_EXECUTOR_UNAVAILABLE"].includes(caught.code)) throw caught; error = caught; }
+      try { return await operation(); } catch (caught) { if (["WEBREPL_AUTH", "STUDIO_BOOT_FAILED", "STUDIO_EXECUTOR_UNAVAILABLE", "STUDIO_SESSION_EXPIRED"].includes(caught.code)) throw caught; error = caught; }
       await delay(this.timings.retry, job.abort.signal);
     } while (Date.now() < deadline);
     throw error || new Error("Device operation timed out");
   }
   async run(job, snapshot) {
     if (job.abort.signal.aborted) return;
+    this.sessions?.assert(job.session);
+    if (job.session && !job.reuseBoot) await this.sessions.recover(job.session, job);
     this.state(job, "rebooting");
     // The response can be lost while rebooting. Do not repeat the destructive reboot command.
     let rebootResult;
@@ -422,6 +489,7 @@ export class LaunchManager {
     if (!job.reuseBoot) await delay(this.timings.rebootWait, job.abort.signal);
     const readyIP = async () => {
       let status = await this.rpc(job, "talMpyGetStudioState", 5000);
+      this.sessions?.assert(job.session);
       if (typeof status === "string") {
         try { status = JSON.parse(status); } catch { throw new Error("设备未返回有效 Studio 状态；请更新固件"); }
       }
@@ -453,6 +521,9 @@ export class LaunchManager {
       this.log(job, "info", "WebREPL connecting to " + ip + ":8266 (attempt " + attempt + ")", "studio");
       try {
         await repl.connect(ip);
+        this.sessions?.assert(job.session);
+        job.connectingRepl = null;
+        job.repl = repl;
         this.log(job, "info", "WebREPL authenticated and REPL probe passed: " + ip + ":8266", "studio");
         return repl;
       } catch (error) {
@@ -463,10 +534,13 @@ export class LaunchManager {
     if (job.abort.signal.aborted) { job.repl.close(); return; }
     this.state(job, "uploading");
     await deploy(job.repl, snapshot, progress => this.log(job, "info", "Upload " + progress.index + "/" + progress.total + " " + progress.file, "studio"));
+    this.sessions?.assert(job.session);
     job.deployed = true;
     this.state(job, "uploaded");
     let pending = "", readyResolve, readyReject;
     const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+    const cancelStartup = () => readyReject(new Error("Launch cancelled"));
+    job.abort.signal.addEventListener("abort", cancelStartup, { once: true });
     // Observe rejection immediately, including if start() itself fails.
     ready.catch(() => {});
     const readyTimer = setTimeout(() => readyReject(new Error("Application start confirmation timed out")), this.timings.startTimeout);
@@ -512,7 +586,7 @@ export class LaunchManager {
       job.executing = true;
       await job.repl.start("import __studio_bootstrap__; __studio_bootstrap__.run(" + JSON.stringify(job.id) + ", " + JSON.stringify(job.nonce) + ")");
       await ready;
-    } finally { clearTimeout(readyTimer); }
+    } finally { clearTimeout(readyTimer); job.abort.signal.removeEventListener("abort", cancelStartup); }
   }
   async checkRunning(job) {
     if (job.state !== "running" || job.abort.signal.aborted) return false;
@@ -531,7 +605,13 @@ export class LaunchManager {
   stopDevices({ enterRepl = false } = {}) {
     if (this.stopPromise) return this.stopPromise;
     this.stopping = true;
-    this.stopPromise = this.stopDevicesOnce(enterRepl);
+    if (this.requireTestChat) {
+      this.sessions.invalidateAll();
+      this.stopPromise = this.sessions.stopAll().then(result => {
+        writeFileSync(join(this.debugDir, "stop.json"), JSON.stringify({ ...result, stoppedAt: new Date().toISOString() }, null, 2));
+        return result;
+      });
+    } else this.stopPromise = this.stopDevicesOnce(enterRepl);
     return this.stopPromise;
   }
   async stopDevicesOnce(enterRepl = false) {
@@ -600,6 +680,7 @@ export class LaunchManager {
   }
   async close() {
     this.stopped = true;
+    this.sessions.invalidateAll();
     for (const job of this.jobs.values()) {
       if (!terminal.has(job.state)) this.state(job, "unknown", "Studio closed; device may still be running");
       job.abort.abort(); job.repl?.close(); job.connectingRepl?.close();
@@ -607,6 +688,7 @@ export class LaunchManager {
     for (const command of this.commands.values()) { clearTimeout(command.timer); command.reject(new Error("Studio closed")); }
     this.commands.clear();
     await Promise.allSettled([...this.jobs.values()].map(job => job.work));
+    await Promise.allSettled([...this.sessions.pending.values()]);
   }
 }
 

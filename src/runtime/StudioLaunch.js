@@ -27,7 +27,7 @@ export function installStudioLaunch(options, request) {
   if (!options.enabled) return () => {};
   if (globalThis[KEY]) return () => {};
   const clientId = options.clientId || id(), owners = new Map(), commands = new Map(), bindingOwners = new Map();
-  let after = 0, timer, disposed = false, polling = false;
+  let after = 0, timer, disposed = false, polling = false, bindingGeneration = 0;
   async function call(op, payload, timeout = 10000) {
     try { return await request({ op, runId: options.runId, clientId, ...payload }, timeout); }
     catch (error) {
@@ -47,7 +47,8 @@ export function installStudioLaunch(options, request) {
             const params = command.method === "talMpyRebootStartREPL" ? { requestId: command.params?.requestId } : {};
             if (command.method === "talMpyRebootStartREPL" && !/^[\w-]{1,100}$/.test(params.requestId || ""))
               throw new Error("Invalid Studio boot request ID");
-            return owner.executeRpc({ method: command.method, params }, command.timeoutMillis);
+            return owner.executeRpc({ method: command.method, params,
+              assertActive: () => call("assertCommand", {commandId:command.id}) }, command.timeoutMillis);
           }).then(value => ({ value }), error => ({ error: { message: error.message, code: error.code } })));
         }
         // Do not block polling on a device RPC; re-send its cached reply if HTTP was interrupted.
@@ -80,6 +81,7 @@ export function installStudioLaunch(options, request) {
   }
   const client = {
     async bindingControl(op,payload) {
+      if (op==='selectTestChat') bindingGeneration++;
       const result=await call(op,payload,op==='selectTestChat'?120000:10000);
       if(op==='selectTestChat') {
         const scope=payload.scope;
@@ -92,6 +94,7 @@ export function installStudioLaunch(options, request) {
       return result;
     },
     async syncBindings(scope, devices, makeHooks) {
+      const generation = bindingGeneration;
       const scopeKey = JSON.stringify([scope.botKey, scope.contactId, scope.chat.id, scope.to?.id]);
       const previous = bindingOwners.get(scopeKey) || new Map(), next = new Map();
       const bindings = [];
@@ -102,7 +105,11 @@ export function installStudioLaunch(options, request) {
           owners.set(ownerId, makeHooks(device)); next.set(key, ownerId);
           bindings.push({ ownerId, device: {...ref, name:device.name, online:device.online,avatar:device.avatar,sn:device.sn,talId:device.deviceTalId || device.talId} });
         }
-        const result = await call("syncBindings", {scope, bindings});
+        const result = await call("syncBindings", {scope, bindings}, 120000);
+        if (generation !== bindingGeneration) {
+          for (const [key, ownerId] of next) if (!previous.has(key)) owners.delete(ownerId);
+          return result;
+        }
         for (const [key, ownerId] of previous) if (!next.has(key)) owners.delete(ownerId);
         bindingOwners.set(scopeKey, next);
         return result;
@@ -114,7 +121,7 @@ export function installStudioLaunch(options, request) {
     async prepare(route, hooks, timeoutMillis) {
       if (!hooks.executeRpc) throw new Error("Bot RPC executor required");
       const ownerId = subscribe(hooks);
-      try { return await call("register", { ownerId, device: route }, timeoutMillis || 15000); }
+      try { return await call("register", { ownerId, device: route, chat: hooks.testChat }, timeoutMillis || 15000); }
       catch (error) { owners.delete(ownerId); throw error; }
     },
     async launch(route, hooks, timeoutMillis) {
@@ -122,7 +129,7 @@ export function installStudioLaunch(options, request) {
       try {
         let contextId = route.contextId;
         if (hooks.executeRpc) {
-          const registered = await call("register", { ownerId, device: route }, timeoutMillis || 15000);
+          const registered = await call("register", { ownerId, device: route, chat: hooks.testChat }, timeoutMillis || 15000);
           contextId = registered.contextId;
         }
         return await call("launch", { ownerId, device: { ...route, contextId } }, timeoutMillis || 15000);

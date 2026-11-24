@@ -56,9 +56,10 @@ export class WebRepl extends EventEmitter {
       throw error;
     }
   }
-  send(data) {
+  send(data, callback) {
+    if (this.cancelled) throw new Error("WebREPL operation cancelled");
     if (this.closed || this.ws?.readyState !== WebSocket.OPEN) throw new Error("WebREPL not connected");
-    this.ws.send(data);
+    this.ws.send(data, callback);
   }
   fail(error) {
     this.lastError = error;
@@ -76,6 +77,7 @@ export class WebRepl extends EventEmitter {
     p.resolve(result);
   }
   take(match, timeout = this.timeout) {
+    if (this.cancelled) return Promise.reject(new Error("WebREPL operation cancelled"));
     if (this.pending) return Promise.reject(new Error("Concurrent WebREPL operation"));
     if (this.lastError) return Promise.reject(this.lastError);
     return new Promise((resolve, reject) => {
@@ -170,6 +172,59 @@ export class WebRepl extends EventEmitter {
     catch { check.finish(false); }
     return promise;
   }
+  cancelOperations() {
+    this.cancelled = true;
+    this.healthCheck?.finish(false);
+    if (this.pending) {
+      const pending = this.pending; this.pending = null;
+      clearTimeout(pending.timer); pending.reject(new Error("WebREPL operation cancelled"));
+    }
+  }
+  async reboot(progress = () => {}) {
+    if (this.closed || this.lastError || this.ws?.readyState !== WebSocket.OPEN)
+      throw new Error("Original authenticated WebREPL connection is unavailable");
+    this.cancelled = false;
+    this.healthCheck?.finish(false);
+    this.streaming = false; this.buffer = Buffer.alloc(0); this.decoder = new TextDecoder();
+    const marker = "studio-reset-" + randomBytes(12).toString("hex");
+    let stage = "waiting for raw REPL prompt after interrupt";
+    try {
+      // Interrupt only this authenticated VM. Never reconnect to a remembered IP.
+      progress(stage);
+      await this.raw();
+      progress("raw REPL prompt received after interrupt");
+
+      // Verify an entire non-destructive command before sending any reset code.
+      stage = "waiting for probe command acknowledgement";
+      progress(stage);
+      this.send("print(" + JSON.stringify(marker) + ")\x04");
+      const ack = await this.take(buffer => buffer.length >= 2 ? 2 : undefined);
+      if (ack.toString() !== "OK") throw new Error("Raw REPL probe was not accepted");
+      progress("probe command acknowledged");
+      stage = "waiting for probe output and raw REPL prompt";
+      progress(stage);
+      const stdout = await this.until("\x04");
+      const stderr = await this.until("\x04");
+      await this.until(">");
+      if (stderr.slice(0, -1).trim()) throw new Error(stderr.slice(0, -1).trim());
+      if (stdout.slice(0, -1).trim() !== marker) throw new Error("Raw REPL probe marker did not match");
+      progress("probe marker and raw REPL prompt verified");
+
+      // Only the probe requires a remote acknowledgement. Reset may discard
+      // both its ACK and TCP close notification. Flush the local send before the
+      // caller closes this connection, without treating it as a completed reboot.
+      stage = "sending separate reboot command";
+      await new Promise((resolve, reject) => {
+        this.send("import machine; machine.reset()\x04", error => error ? reject(error) : resolve());
+      });
+      progress("separate reboot command sent; normal-mode recovery is not yet verified");
+    } catch (cause) {
+      const error = new Error("WebREPL cleanup [" + stage + "]: " + cause.message, { cause });
+      error.code = "STUDIO_WEBREPL_CLEANUP_FAILED";
+      throw error;
+    }
+  }
+
   close() { this.closed = true; this.fail(new Error("WebREPL closed")); this.ws?.terminate(); }
 }
 

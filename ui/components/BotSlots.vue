@@ -35,7 +35,7 @@ watch(selected, slot => { if (!slot) picker.value?.close(); });
       <code>/test-in-this-chat</code> <button @click="copyTestCommand">{{ copied ? t('已复制') : t('复制命令') }}</button>
       <p v-if="slots?.chat && !slots?.testing">{{ t('以下是上次测试聊天的设备，尚未开始测试。') }}</p>
       <p v-if="slots?.chat" class="subtle">{{ t('聊天 ID：') }}{{ slots.chat.id }}</p>
-      <p v-for="device in (slots?.switchResult?.devices || []).filter(device=>device.status!=='rebootAccepted')" :key="device.deviceId" class="slot-error">{{ t('旧设备重启未确认：') }}{{ device.deviceId }} — {{ serviceMessage(device.message) }}</p>
+      <p v-for="device in (slots?.cleanup || slots?.switchResult?.devices || []).filter(device=>device.status!=='rebootAccepted')" :key="device.deviceId" class="slot-error">{{ t('旧设备停止未确认：') }}{{ device.deviceId }} — {{ serviceMessage(device.message) }}</p>
     </div>
     <p v-if="!slots?.list?.length" class="subtle">{{ slots?.loading ? t('正在查询 Bot 注册的设备槽位…') : slots?.error ? t('暂时无法获取槽位，请重试。') : t('Bot 尚未注册设备槽位，注册完成后将自动显示。') }}</p>
     <div class="slot-grid">

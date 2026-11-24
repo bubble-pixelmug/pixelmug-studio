@@ -45,6 +45,10 @@ In a group application, each player binds their own device to the Bot in the Bub
 
 Each new debug run waits for `/test-in-this-chat`. Until then, the device cards preview the last test chat and device shortcuts remain hidden. Send the command in another chat to switch: Studio cancels the previous deployment, requests a normal reboot of the old devices, then prepares the new chat's devices. Failed reboot acknowledgements appear in Studio. Ordinary messages, bindings in other chats, and WebApp opens do not select a test chat. The command is intercepted only in Studio and is never registered in the Bot's published command menu.
 
+Replacing a device in the selected chat also stops its previous debug session. If its old binding is no longer valid, Studio can reboot it through the original authenticated WebREPL connection. Unconfirmed cleanup remains visible in Studio and is recorded in `debug/<runId>/device-cleanup.json`. When another chat reuses that device, Studio waits for normal mode and network recovery before preparing REPL again.
+
+WebREPL cleanup first verifies a separate probe command's `OK`, random marker, and return to the raw REPL prompt. It then sends the reset command without waiting for another `OK` or a disconnect notification, since rebooting can discard both. This records a reboot request sent, rather than a completed reboot.
+
 Runtime logs are written to `debug/<runId>/` in the selected application directory. These generated directories are ignored by Git.
 
 ## Cloud deployment (MVP)

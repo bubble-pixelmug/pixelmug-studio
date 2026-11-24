@@ -62,6 +62,7 @@ export async function startWorkbench(options = {}) {
     const chat = bindings?.displayedChat() || null;
     return { ...slotState, chat, testing:Boolean(bindings?.activeScope), switching:Boolean(run?.launches.switchingChat),
       switchResult:run?.launches.testChatSwitchResult || null,
+      cleanup:run?.launches.sessions.warnings() || [],
       list: displayBotSlots(slotState.list, bindings?.list() || [], creator.devices, chat) };
   };
   function clearSlots() {

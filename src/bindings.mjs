@@ -74,6 +74,7 @@ export class BindingRegistry {
     const scopes=new Map(this.scopes);scopes.set(sid,scope);
     this.scopes=scopes;this.save();
     for(const [id,record] of this.records) if(record.scopeId===sid&&!next.has(id)) {
+      if (this.manager.requireTestChat) this.manager.sessions.retire(record);
       this.manager.contexts.delete(record.contextId);this.records.delete(id);
     }
     for(const [id,record] of next){

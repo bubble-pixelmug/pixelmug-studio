@@ -42,7 +42,7 @@ export async function startWebAppGateway({ port = 7979, bind = "0.0.0.0", hostna
       } else if (!active) {
         return reply(res, 503, html("智能体尚未运行，请在 Studio 中启动后重新打开本页面。"), "text/html; charset=utf-8");
       }
-      if (!match && !url.pathname.startsWith("/api/") && url.pathname !== "/studio-debug-config.js" &&
+      if (!match && !active.run.botHttp?.matches(url, req.method) && !url.pathname.startsWith("/api/") && url.pathname !== "/studio-debug-config.js" &&
           url.pathname !== "/@studio-bootstrap" &&
           !url.pathname.startsWith("/studio-runtime/") && !url.pathname.startsWith("/sdk/") &&
           !url.pathname.startsWith("/bubble-sdk/")) {

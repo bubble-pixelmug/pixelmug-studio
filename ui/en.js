@@ -194,6 +194,8 @@
   '以下是上次测试聊天的设备，尚未开始测试。': 'Devices from the last test chat are shown below. Testing has not started.',
   '聊天 ID：': 'Chat ID: ',
   '旧设备重启未确认：': 'Previous device reboot not confirmed: ',
+  '旧设备停止未确认：': 'Previous device stop not confirmed: ',
+  '旧设备绑定已解除，且无可用的 WebREPL 连接，无法确认停止旧设备。': 'The previous device is no longer bound and has no available WebREPL connection; Studio cannot confirm that it has stopped.',
   '选择并关联设备': 'Select and link device',
   '选择关联设备': 'Select a device to link',
   '关闭': 'Close',

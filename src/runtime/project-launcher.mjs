@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { projectBotHttp } from './bot-http.mjs';
 import { extname, join, normalize, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -10,7 +11,7 @@ const webPort = Number(process.env.WEBAPP_PORT || 8799);
 
 if (!appEntry) throw new Error('PIXELMUG_APP_ENTRY is required');
 const staticServer = process.env.SERVE_WEBAPP === 'true' && webRoot && await isDirectory(resolve(webRoot))
-  ? await startStaticServer(resolve(webRoot), webPort)
+  ? await startStaticServer(resolve(webRoot), webPort, projectBotHttp(process.cwd()))
   : null;
 
 try {
@@ -24,10 +25,11 @@ async function isDirectory(path) {
   try { return (await stat(path)).isDirectory(); } catch { return false; }
 }
 
-async function startStaticServer(root, port) {
+async function startStaticServer(root, port, botHttp) {
   const server = createServer(async (req, res) => {
     try {
       const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+      if (botHttp?.matches(requestUrl, req.method)) return botHttp.forward(req, res, requestUrl);
       const pathname = requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname;
       const filePath = normalize(join(root, decodeURIComponent(pathname)));
       const rel = relative(root, filePath);
