@@ -233,6 +233,7 @@ export async function startStudio(options = {}) {
   const baseUrl = "http://" + host + ":" + port;
   const localWebAppUrl = webRoot ? baseUrl + "/app/#studioToken=" + token : null;
   const webAppUrl = webRoot ? (options.publicWebAppUrl || localWebAppUrl) : null;
+  const botPublicBaseUrl = options.botPublicBaseUrl || new URL("/", webAppUrl || baseUrl).href;
   const studioUrl = "http://127.0.0.1:" + port + "/#studioToken=" + studioToken;
 
   let processSeq = 0;
@@ -268,7 +269,7 @@ export async function startStudio(options = {}) {
       child = fork(fileURLToPath(launcher), [], {
         cwd: project, silent: true,
         execArgv: ["--import", new URL("./runtime/studio-preload.js", import.meta.url).href],
-        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), PIXELMUG_APP_ENTRY: resolve(project, options.bot), PIXELMUG_WEBAPP_ROOT: webRoot || '', SERVE_WEBAPP: 'false', ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_MPS_ID: options.mpsId || 'local-debug', STUDIO_MPS_VERSION: options.mpsVersion || 'local', STUDIO_WEBAPP_URL: webAppUrl || "",
+        env: { ...process.env, NODE_PATH: [studioNodeModules, process.env.NODE_PATH].filter(Boolean).join(delimiter), PIXELMUG_APP_ENTRY: resolve(project, options.bot), PIXELMUG_WEBAPP_ROOT: webRoot || '', SERVE_WEBAPP: 'false', ...(options.botToken ? { BOT_TOKEN: options.botToken } : {}), ...(options.botApiBaseUrl ? { BOT_API_BASE_URL: options.botApiBaseUrl } : {}), STUDIO_MPS_ID: options.mpsId || 'local-debug', STUDIO_MPS_VERSION: options.mpsVersion || 'local', STUDIO_WEBAPP_URL: webAppUrl || "", STUDIO_BOT_PUBLIC_BASE_URL: botPublicBaseUrl,
           PIXELMUG_STUDIO_DEBUG: JSON.stringify({ enabled: true, runId, buildId: options.buildId || null, transport: "ipc", token }) },
       });
       captureStream(child.stdout, "stdout");

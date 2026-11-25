@@ -22,9 +22,12 @@ export async function startWebAppGateway({ port = 7979, bind = "0.0.0.0", hostna
     });
     return projects.get(project);
   }
+  function botPublicBaseUrl(host) {
+    return `http://${host}:${server.address().port}/`;
+  }
   function webAppUrl(project, host) {
     const entry = access(project);
-    return `http://${host}:${server.address().port}/app/${entry.key}/#studioToken=${entry.credential}`;
+    return `${botPublicBaseUrl(host)}app/${entry.key}/#studioToken=${entry.credential}`;
   }
   function activate(project, run) { active = { ...access(project), run }; }
   function deactivate(run) { if (!run || active?.run === run) active = null; }
@@ -68,5 +71,5 @@ export async function startWebAppGateway({ port = 7979, bind = "0.0.0.0", hostna
     await new Promise((done, reject) => { server.once("error", reject); server.listen(port, bind, done); });
   } catch (error) { await responder?.close(); throw error; }
   async function close() { active = null; await responder?.close(); await new Promise(done => { server.close(done); server.closeAllConnections(); }); }
-  return { server, port: server.address().port, hostname, responder, access, webAppUrl, activate, deactivate, close };
+  return { server, port: server.address().port, hostname, responder, access, webAppUrl, botPublicBaseUrl, activate, deactivate, close };
 }

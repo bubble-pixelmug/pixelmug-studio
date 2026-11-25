@@ -104,6 +104,7 @@ chmod 600 bot.env
 | `BOT_TOKEN` | 必须 | Bot token |
 | `BOT_API_BASE_URL` | 可选 | 默认 `https://us.jeejio.com/im` |
 | `STUDIO_WEBAPP_URL` | 有 WebApp 时必须 | 用户打开的 HTTPS 地址 |
+| `STUDIO_BOT_PUBLIC_BASE_URL` | WebApp 与 Bot 分开托管时配置 | 设备访问 Bot HTTP 服务的基址，可以带路径前缀 |
 | `WEBAPP_URL` | 有 WebApp 时建议 | 通用 URL 别名 |
 | `SERVE_WEBAPP` | 有 WebApp 时为 `true` | 启动静态服务 |
 | `WEBAPP_PORT` | 可选 | 默认 `8799` |

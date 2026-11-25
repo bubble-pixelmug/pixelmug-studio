@@ -28,8 +28,9 @@ if (options.project) {
   const gateway = await startWebAppGateway();
   const publicWebAppUrl = options.webRoot ? gateway.webAppUrl(options.project, "pixelmug-studio.local") : null;
   try {
-    const run = await startStudio({ ...options, host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl });
-    if (options.webRoot) gateway.activate(options.project, run);
+    const run = await startStudio({ ...options, host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl,
+      botPublicBaseUrl: gateway.botPublicBaseUrl("pixelmug-studio.local") });
+    if (options.webRoot || run.botHttp) gateway.activate(options.project, run);
     studio = { ...run, webAppUrl: publicWebAppUrl, close: async closeOptions => {
       const result = await run.close(closeOptions); gateway.deactivate(run); await gateway.close(); return result;
     }};

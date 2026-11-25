@@ -10,10 +10,14 @@ export function projectBotHttp(project) {
     if (error.code === 'ENOENT') return null;
     throw error;
   }
-  const routes = manifest.pixelmug?.botHttpRoutes;
-  const prefixes = Object.entries(manifest.pixelmug?.botHttpRoutePrefixes ?? {});
+  return createBotHttp(manifest.pixelmug, Number(process.env.POLLING_PORT || 8817));
+}
+
+export function createBotHttp(pixelmug, port) {
+  const routes = pixelmug?.botHttpRoutes;
+  const prefixes = Object.entries(pixelmug?.botHttpRoutePrefixes ?? {});
   if (!routes && !prefixes.length) return null;
-  const port = Number(process.env.POLLING_PORT || 8817);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid Bot HTTP port');
   const methods = new Set(['GET', 'HEAD', 'POST']);
   for (const [prefix, allowed] of prefixes) {
     if (!prefix.startsWith('/mps/') || prefix === '/mps/' || !prefix.endsWith('/') ||
@@ -37,6 +41,8 @@ export function projectBotHttp(project) {
     const upstream = request({
       hostname: '127.0.0.1', port, method: req.method, path: url.pathname + url.search, headers,
     }, (response) => {
+      const vary = res.getHeader('vary');
+      if (vary && response.headers.vary) response.headers.vary += ', ' + vary;
       res.writeHead(response.statusCode || 502, response.headers);
       response.pipe(res);
       response.on('error', () => res.destroy());

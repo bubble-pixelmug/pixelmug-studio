@@ -132,12 +132,13 @@ export async function startWorkbench(options = {}) {
     await stopRun();
     const publicWebAppUrl = webRoot ? gateway.webAppUrl(root, webAppHostname) : null;
     run = await startStudio({ project: root, bot, webRoot, mpsId: 'local-debug', mpsVersion: mps?.version || 'local', host: "127.0.0.1", bind: "127.0.0.1", port: 0, publicWebAppUrl,
+      botPublicBaseUrl: gateway.botPublicBaseUrl(webAppHostname),
       captureProcessLogs: true,
       botToken, botApiBaseUrl: botApiBaseUrl || process.env.BOT_API_BASE_URL,
       launchOptions: { authorizeDevice: function (ref, options) { return this.authorizeBoundDevice(ref, options); }, requireTestChat:true,studioUserId:creator.session.id,
         prepareOnBinding: selectedProject.mpy, autoRunOnBinding: autoRunMpy },
     });
-    if (webRoot) gateway.activate(root, run);
+    if (webRoot || run.botHttp) gateway.activate(root, run);
     runtimeConfig = { botId, botToken, botApiBaseUrl, autoRunMpy };
     project = { ...selectedProject, bot, webRoot };
     void refreshSlots();
